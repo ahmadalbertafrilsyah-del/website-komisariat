@@ -115,21 +115,23 @@ export default function DetailRayonPage() {
 
         <div className="relative z-10 max-w-7xl mx-auto px-5 w-full">
           
-          {/* PERBAIKAN: Posisi Kembali dan Fakultas Sejajar */}
-          <div className="flex flex-row justify-between items-center mb-6 md:mb-10 gap-4">
+          {/* Tombol Kembali (Sendirian di atas agar lebih leluasa) */}
+          <div className="mb-6 md:mb-10">
             <button onClick={() => router.push('/rayon')} className="inline-flex items-center gap-1.5 text-slate-300 hover:text-white transition bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-bold w-max shrink-0">
               <ArrowLeft size={14} /> Kembali
             </button>
-            
-            <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-blue-400 bg-blue-500/20 border border-blue-400/30 px-3 py-2 rounded-full inline-flex items-center gap-1.5 w-max truncate shrink-0 backdrop-blur-sm">
-              <BookOpen size={14} className="shrink-0" /> <span className="truncate">{rayonData?.fakultas || "Fakultas"}</span>
-            </span>
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <h1 className="text-3xl md:text-6xl font-extrabold text-white mb-4 tracking-tight leading-snug">
+            <h1 className="text-3xl md:text-6xl font-extrabold text-white mb-3 tracking-tight leading-snug">
               Rayon <span className="text-yellow-400">{rayonData?.nama}</span>
             </h1>
+            
+            {/* Badge Fakultas dipindah ke bawah judul */}
+            <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-blue-400 bg-blue-500/20 border border-blue-400/30 px-3 py-1.5 rounded-full mb-5 inline-flex items-center gap-1.5 w-max truncate backdrop-blur-sm">
+              <BookOpen size={14} className="shrink-0" /> <span className="truncate">{rayonData?.fakultas || "Fakultas"}</span>
+            </span>
+
             <p className="text-slate-300 text-sm md:text-lg max-w-3xl leading-relaxed italic border-l-4 border-yellow-400 pl-4 bg-white/5 py-2 pr-4 rounded-r-lg backdrop-blur-sm">
               "{rayonData?.deskripsi || "Berproses bersama mengawal pergerakan di tingkat fakultas dengan nilai-nilai Ahlussunnah Wal Jama'ah."}"
             </p>

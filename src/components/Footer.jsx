@@ -31,12 +31,14 @@ export default function Footer() {
 
   return (
     <footer className="bg-[#0f172a] text-slate-300 pt-16 pb-8 border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+        
+        {/* PERUBAHAN: sm:grid-cols-2 lg:grid-cols-3 membuat layout sangat rapi di tablet */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12 mb-12">
           
           {/* Kolom 1: Tentang */}
-          <div>
-            <h3 className="text-xl font-bold text-yellow-400 mb-6">Tentang PMII Komisariat</h3>
+          <div className="sm:col-span-2 lg:col-span-1">
+            <h3 className="text-xl font-bold text-yellow-400 mb-5 md:mb-6">Tentang PMII Komisariat</h3>
             <p className="text-sm leading-relaxed text-slate-400 whitespace-pre-line">
               {config.tentangPmii}
             </p>
@@ -44,7 +46,7 @@ export default function Footer() {
           
           {/* Kolom 2: Link Cepat */}
           <div>
-            <h3 className="text-xl font-bold text-yellow-400 mb-6">Menu Kategori</h3>
+            <h3 className="text-xl font-bold text-yellow-400 mb-5 md:mb-6">Menu Kategori</h3>
             <ul className="space-y-3 text-sm">
               <li><Link href="/" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Beranda</Link></li>
               <li><Link href="/struktur" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Struktur Kepengurusan</Link></li>
@@ -56,7 +58,7 @@ export default function Footer() {
           
           {/* Kolom 3: Jam & Lokasi */}
           <div>
-            <h3 className="text-xl font-bold text-yellow-400 mb-6">Jam Operasional</h3>
+            <h3 className="text-xl font-bold text-yellow-400 mb-5 md:mb-6">Jam Operasional</h3>
             <div className="space-y-4 text-sm text-slate-400 mb-6">
               <div className="flex items-start gap-3">
                 <Clock size={18} className="text-yellow-400 shrink-0 mt-0.5" />

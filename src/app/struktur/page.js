@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import LoadingScreen from "@/components/LoadingScreen"; // Menggunakan loading screen global berlogo Anda
+import LoadingScreen from "@/components/LoadingScreen";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageSquare, Hash, MapPin, Calendar, Award, Shield, Users, Briefcase } from "lucide-react";
 import { db } from "@/lib/firebase";

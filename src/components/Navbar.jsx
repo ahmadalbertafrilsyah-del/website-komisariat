@@ -50,8 +50,6 @@ export default function Navbar() {
           <div className="flex justify-between items-center h-16 md:h-20">
             
             <div className="flex items-center gap-2 md:gap-3">
-              
-              {/* PERBAIKAN LOGIKA: Cukup cek apakah LOGO_URL ada isinya */}
               {LOGO_URL ? (
                 <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
                   <img 
@@ -76,7 +74,8 @@ export default function Navbar() {
               </div>
             </div>
 
-            <div className="hidden md:flex items-center space-x-6 text-sm">
+            {/* PERUBAHAN: hidden lg:flex agar tablet (md) menggunakan mode mobile menu */}
+            <div className="hidden lg:flex items-center space-x-5 xl:space-x-6 text-sm">
               <Link href="/" className={isActive("/")}>Beranda</Link>
               <Link href="/struktur" className={isActive("/struktur")}>Struktur</Link>
               <Link href="/anggota" className={isActive("/anggota")}>Anggota</Link>
@@ -88,24 +87,26 @@ export default function Navbar() {
                 href="https://siakad.pmii-uinmalang.or.id/" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="text-emerald-400 hover:text-emerald-300 transition font-bold flex items-center gap-1.5"
+                className="text-emerald-400 hover:text-emerald-300 transition font-bold flex items-center gap-1.5 whitespace-nowrap"
               >
                 Siakad PMII <ExternalLink size={14} />
               </a>
               
-              <Link href="/pendaftaran" className="bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 px-5 py-2 rounded-full font-bold transition shadow-md shadow-blue-500/20 ml-2">
+              <Link href="/pendaftaran" className="bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 px-5 py-2 rounded-full font-bold transition shadow-md shadow-blue-500/20 ml-2 whitespace-nowrap">
                 Pendaftaran
               </Link>
             </div>
 
-            <button className="md:hidden text-white p-1" onClick={() => setIsOpen(!isOpen)}>
-              {isOpen ? <X size={22} /> : <Menu size={22} />}
+            {/* PERUBAHAN: lg:hidden agar tombol hamburger tetap ada di mode tablet */}
+            <button className="lg:hidden text-white p-1" onClick={() => setIsOpen(!isOpen)}>
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
 
+        {/* PERUBAHAN: lg:hidden */}
         {isOpen && (
-          <div className="md:hidden bg-[#1f2937] p-4 flex flex-col space-y-4 text-xs sm:text-sm border-t border-slate-700 shadow-xl pb-6">
+          <div className="lg:hidden bg-[#1f2937] p-4 flex flex-col space-y-4 text-sm border-t border-slate-700 shadow-xl pb-6">
             <Link href="/" onClick={() => setIsOpen(false)} className={isActiveMobile("/")}>Beranda</Link>
             <Link href="/struktur" onClick={() => setIsOpen(false)} className={isActiveMobile("/struktur")}>Struktur Kepengurusan</Link>
             <Link href="/anggota" onClick={() => setIsOpen(false)} className={isActiveMobile("/anggota")}>Database Anggota</Link>
@@ -123,7 +124,7 @@ export default function Navbar() {
               Portal Siakad PMII <ExternalLink size={14} />
             </a>
             
-            <Link href="/pendaftaran" onClick={() => setIsOpen(false)} className="bg-blue-600 text-white text-center py-2.5 rounded-lg font-bold mt-2">
+            <Link href="/pendaftaran" onClick={() => setIsOpen(false)} className="bg-blue-600 text-white text-center py-3 rounded-lg font-bold mt-2">
               Pendaftaran Kader
             </Link>
           </div>
