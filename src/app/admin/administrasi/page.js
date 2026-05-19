@@ -1,18 +1,21 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { Save, FileText, Plus, Trash2, Folder, Info, Hash, Mail } from "lucide-react";
+import * as XLSX from "xlsx"; // Import library pembaca Excel
+import { Save, FileText, Plus, Trash2, Folder, Info, Hash, Mail, FileSpreadsheet, UploadCloud } from "lucide-react";
 
 export default function AdminAdministrasiEditor() {
   const [loading, setLoading] = useState(true);
   const [dokumenData, setDokumenData] = useState([]);
   
-  // State untuk Tambah Surat Baru
+  // State untuk Tambah Surat Baru Manual
   const [newNomorSurat, setNewNomorSurat] = useState("");
   const [newPerihal, setNewPerihal] = useState("");
   const [newDeskripsi, setNewDeskripsi] = useState("");
   const [newLink, setNewLink] = useState("");
+
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     async function loadDokumen() {
@@ -36,6 +39,7 @@ export default function AdminAdministrasiEditor() {
     loadDokumen();
   }, []);
 
+  // Fungsi Tambah Manual
   const handleAddDokumen = (e) => {
     e.preventDefault();
     if (!newPerihal.trim() || !newNomorSurat.trim()) return;
@@ -56,6 +60,45 @@ export default function AdminAdministrasiEditor() {
     setNewPerihal("");
     setNewDeskripsi("");
     setNewLink("");
+  };
+
+  // Fungsi Import Excel
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0]; 
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        let newData = [];
+
+        data.forEach((row) => {
+          newData.push({
+            id: Date.now() + Math.random(), 
+            nomorSurat: String(row["Nomor Surat"] || row["Nomor"] || "").trim(),
+            perihalSurat: String(row["Perihal Surat"] || row["Perihal"] || "").trim(),
+            deskripsiSurat: String(row["Deskripsi Surat"] || row["Deskripsi"] || "").trim(),
+            linkFile: String(row["Link File Surat"] || row["Link File"] || row["Link"] || "").trim()
+          });
+        });
+
+        // Filter baris kosong dan gabungkan dengan data yang sudah ada di tabel
+        const validData = newData.filter(item => item.nomorSurat !== "" || item.perihalSurat !== "");
+        setDokumenData(prevData => [...validData, ...prevData]);
+        alert(`Berhasil mengimpor ${validData.length} data surat! Jangan lupa klik tombol "Simpan Arsip Surat" di bawah.`);
+      } catch (error) {
+        alert("Gagal memproses file Excel. Pastikan format kolom benar.");
+        console.error(error);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = null; // Reset input file
   };
 
   const handleDelete = (id) => {
@@ -97,30 +140,53 @@ export default function AdminAdministrasiEditor() {
         </div>
       </div>
 
-      {/* Form Tambah Surat Baru */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm">
-        <h2 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><Plus size={16} className="text-blue-600" /> Input Surat / Arsip Baru</h2>
-        <form onSubmit={handleAddDokumen} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase">Nomor Surat</label>
-            <input type="text" required value={newNomorSurat} onChange={(e) => setNewNomorSurat(e.target.value)} placeholder="001/PR.../2026" className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" />
+      {/* Grid Menu Input (Manual & Excel) */}
+      <div className="grid md:grid-cols-3 gap-6">
+        
+        {/* Form Tambah Surat Manual */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm md:col-span-2 flex flex-col justify-between">
+          <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-1.5"><Plus size={16} className="text-blue-600" /> Input Surat Manual</h2>
+          <form onSubmit={handleAddDokumen} className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Nomor Surat</label>
+              <input type="text" required value={newNomorSurat} onChange={(e) => setNewNomorSurat(e.target.value)} placeholder="001/PR.../2026" className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Perihal Surat</label>
+              <input type="text" required value={newPerihal} onChange={(e) => setNewPerihal(e.target.value)} placeholder="Peminjaman Tempat" className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Deskripsi Singkat</label>
+              <input type="text" value={newDeskripsi} onChange={(e) => setNewDeskripsi(e.target.value)} placeholder="Keterangan..." className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Link File (G-Drive)</label>
+              <input type="text" value={newLink} onChange={(e) => setNewLink(e.target.value)} placeholder="https://..." className="w-full p-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" />
+            </div>
+            <button type="submit" className="sm:col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm flex items-center justify-center gap-1.5 transition shadow-sm mt-1">
+              Tambah ke Tabel
+            </button>
+          </form>
+        </div>
+
+        {/* Fitur Import Excel Baru */}
+        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl shadow-sm flex flex-col">
+          <h2 className="text-sm font-bold text-emerald-800 mb-2 flex items-center gap-1.5"><FileSpreadsheet size={16} className="text-emerald-600" /> Import via Excel</h2>
+          <p className="text-[10px] sm:text-xs text-emerald-600 mb-4 leading-relaxed flex-grow">
+            Format Kolom Baris Pertama:<br/>
+            <span className="font-mono font-bold bg-emerald-100 px-1 py-0.5 rounded">Nomor Surat</span> | <span className="font-mono font-bold bg-emerald-100 px-1 py-0.5 rounded">Perihal</span> | <span className="font-mono font-bold bg-emerald-100 px-1 py-0.5 rounded">Deskripsi</span> | <span className="font-mono font-bold bg-emerald-100 px-1 py-0.5 rounded">Link</span>
+          </p>
+          <div className="relative w-full overflow-hidden mt-auto">
+             <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition shadow-md shadow-emerald-500/20">
+               <UploadCloud size={18}/> Unggah Excel
+             </button>
+             <input 
+               type="file" accept=".xlsx, .xls" ref={fileInputRef} onChange={handleFileUpload}
+               className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+             />
           </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase">Perihal Surat</label>
-            <input type="text" required value={newPerihal} onChange={(e) => setNewPerihal(e.target.value)} placeholder="Peminjaman Tempat" className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase">Deskripsi Singkat</label>
-            <input type="text" value={newDeskripsi} onChange={(e) => setNewDeskripsi(e.target.value)} placeholder="Keterangan tambahan..." className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase">Link File Surat (G-Drive)</label>
-            <input type="text" value={newLink} onChange={(e) => setNewLink(e.target.value)} placeholder="https://..." className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" />
-          </div>
-          <button type="submit" className="md:col-span-2 lg:col-span-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-xl text-sm flex items-center justify-center gap-1.5 transition shadow-sm mt-2">
-            Simpan ke Sistem Arsip
-          </button>
-        </form>
+        </div>
+
       </div>
 
       {/* Daftar Tabel Surat Aktif */}
@@ -143,7 +209,6 @@ export default function AdminAdministrasiEditor() {
                   <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3 px-4 text-center font-mono font-bold text-slate-400">{index + 1}</td>
                     
-                    {/* Nomor Surat */}
                     <td className="py-2 px-4">
                       <div className="flex items-center gap-1.5">
                         <Hash size={14} className="text-slate-400 shrink-0"/>
@@ -151,17 +216,14 @@ export default function AdminAdministrasiEditor() {
                       </div>
                     </td>
                     
-                    {/* Perihal Surat */}
                     <td className="py-2 px-4">
                       <input type="text" value={item.perihalSurat || ""} onChange={(e) => handleInputChange(item.id, "perihalSurat", e.target.value)} className="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 px-2 py-1 outline-none font-bold text-slate-800 text-sm" />
                     </td>
                     
-                    {/* Deskripsi */}
                     <td className="py-2 px-4">
                       <input type="text" value={item.deskripsiSurat || ""} onChange={(e) => handleInputChange(item.id, "deskripsiSurat", e.target.value)} className="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 px-2 py-1 outline-none text-slate-500 text-xs" placeholder="Keterangan..." />
                     </td>
                     
-                    {/* Link Surat */}
                     <td className="py-2 px-4">
                       <input type="text" value={item.linkFile || ""} onChange={(e) => handleInputChange(item.id, "linkFile", e.target.value)} className="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 px-2 py-1 outline-none font-mono text-xs text-emerald-600" placeholder="https://..." />
                     </td>
