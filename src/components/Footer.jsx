@@ -44,7 +44,7 @@ export default function Footer() {
           
           {/* Kolom 2: Link Cepat */}
           <div>
-            <h3 className="text-xl font-bold text-yellow-400 mb-6">Link Cepat</h3>
+            <h3 className="text-xl font-bold text-yellow-400 mb-6">Menu Kategori</h3>
             <ul className="space-y-3 text-sm">
               <li><Link href="/" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Beranda</Link></li>
               <li><Link href="/struktur" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Struktur Kepengurusan</Link></li>

@@ -2,22 +2,21 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, ExternalLink } from "lucide-react"; // Tambahan ikon ExternalLink
+import { Menu, X, ExternalLink } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+
+const LOGO_URL = "https://i.ibb.co.com/nNhTXzYD/Asset-6-4x.png";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   
-  // State untuk menyimpan data logo dan nama dari Firebase
   const [globalConfig, setGlobalConfig] = useState({
     logoText: "PMII",
-    komisariatName: "Komisariat UIN Malang",
-    logoUrl: ""
+    komisariatName: "SUNAN AMPEL MALANG"
   });
 
-  // Tarik data dari Firebase
   useEffect(() => {
     async function fetchGlobalConfig() {
       try {
@@ -50,14 +49,15 @@ export default function Navbar() {
           
           <div className="flex justify-between items-center h-16 md:h-20">
             
-            {/* ================= AREA LOGO & NAMA KOMISARIAT ================= */}
             <div className="flex items-center gap-2 md:gap-3">
-              {globalConfig.logoUrl ? (
+              
+              {/* PERBAIKAN LOGIKA: Cukup cek apakah LOGO_URL ada isinya */}
+              {LOGO_URL ? (
                 <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
                   <img 
-                    src={globalConfig.logoUrl} 
+                    src={LOGO_URL} 
                     alt="Logo PMII" 
-                    className="w-full h-full object-contain" 
+                    className="w-full h-full object-contain drop-shadow-md" 
                   />
                 </div>
               ) : (
@@ -76,7 +76,6 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* ================= MENU DESKTOP ================= */}
             <div className="hidden md:flex items-center space-x-6 text-sm">
               <Link href="/" className={isActive("/")}>Beranda</Link>
               <Link href="/struktur" className={isActive("/struktur")}>Struktur</Link>
@@ -85,7 +84,6 @@ export default function Navbar() {
               <Link href="/berita" className={isActive("/berita")}>Berita</Link>
               <Link href="/administrasi" className={isActive("/administrasi")}>Administrasi</Link>
               
-              {/* Menu SIAKAD PMII (Eksternal Link) */}
               <a 
                 href="https://siakad.pmii-uinmalang.or.id/" 
                 target="_blank" 
@@ -100,14 +98,12 @@ export default function Navbar() {
               </Link>
             </div>
 
-            {/* Tombol Toggle Menu Mobile */}
             <button className="md:hidden text-white p-1" onClick={() => setIsOpen(!isOpen)}>
               {isOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
 
-        {/* ================= MENU MOBILE (HP) ================= */}
         {isOpen && (
           <div className="md:hidden bg-[#1f2937] p-4 flex flex-col space-y-4 text-xs sm:text-sm border-t border-slate-700 shadow-xl pb-6">
             <Link href="/" onClick={() => setIsOpen(false)} className={isActiveMobile("/")}>Beranda</Link>
@@ -117,7 +113,6 @@ export default function Navbar() {
             <Link href="/berita" onClick={() => setIsOpen(false)} className={isActiveMobile("/berita")}>Berita & Artikel</Link>
             <Link href="/administrasi" onClick={() => setIsOpen(false)} className={isActiveMobile("/administrasi")}>Data Administrasi</Link>
             
-            {/* Menu SIAKAD PMII Mobile */}
             <a 
               href="https://siakad.pmii-uinmalang.or.id/" 
               target="_blank" 
@@ -125,7 +120,7 @@ export default function Navbar() {
               onClick={() => setIsOpen(false)}
               className="text-emerald-400 hover:text-emerald-300 transition font-bold flex items-center gap-2 pt-2 border-t border-slate-700"
             >
-              Siakad PMII <ExternalLink size={14} />
+              Portal Siakad PMII <ExternalLink size={14} />
             </a>
             
             <Link href="/pendaftaran" onClick={() => setIsOpen(false)} className="bg-blue-600 text-white text-center py-2.5 rounded-lg font-bold mt-2">

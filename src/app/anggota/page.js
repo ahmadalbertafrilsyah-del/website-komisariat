@@ -1,154 +1,199 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Search, Database, UserX, ShieldCheck, FileSpreadsheet } from "lucide-react";
+import LoadingScreen from "@/components/LoadingScreen";
+import { Search, Filter, Users, MapPin, Calendar, Hash } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { motion } from "framer-motion";
 
-export default function DatabaseAnggota() {
+export default function AnggotaPage() {
+  const [loading, setLoading] = useState(true);
+  const [anggotaData, setAnggotaData] = useState([]);
+  
+  // State Filter & Search
   const [searchQuery, setSearchQuery] = useState("");
-  const [hasSearched, setHasSearched] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
+  const [filterRayon, setFilterRayon] = useState("Semua");
+  const [filterAngkatan, setFilterAngkatan] = useState("Semua");
+  const [visibleCount, setVisibleCount] = useState(12); // Menampilkan 12 data awal
 
-  // Data simulasi (Ditambahkan kolom NIA)
-  const allMembers = [
-    { nim: "230101", nia: "04.03.23.001", nama: "Ahmad Rosikhul Fahmi", fakultas: "Sains dan Teknologi", angkatan: "2023", status: "Aktif" },
-    { nim: "230102", nia: "04.03.23.002", nama: "Moh. Aditya Hadi Saputra", fakultas: "Sains dan Teknologi", angkatan: "2023", status: "Aktif" },
-    { nim: "220456", nia: "04.03.22.045", nama: "Siti Nurhaliza", fakultas: "Syariah", angkatan: "2022", status: "Aktif" },
-    { nim: "210789", nia: "04.03.21.089", nama: "Bima Arya", fakultas: "Ilmu Tarbiyah dan Keguruan", angkatan: "2021", status: "Alumni" },
-    { nim: "240112", nia: "04.03.24.012", nama: "Dinda Kirana", fakultas: "Humaniora", angkatan: "2024", status: "Kader Baru" },
-  ];
-
-  // Fungsi untuk menangani pencarian
-  const handleSearch = (e) => {
-    e.preventDefault(); // Mencegah halaman reload saat form di-submit
-    
-    if (!searchQuery.trim()) {
-      setHasSearched(false);
-      setSearchResults([]);
-      return;
+  // Tarik Data Real dari Firebase
+  useEffect(() => {
+    async function fetchAnggota() {
+      try {
+        const docRef = doc(db, "website_config", "database_anggota");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().listAnggota) {
+          setAnggotaData(docSnap.data().listAnggota);
+        }
+      } catch (error) {
+        console.error("Gagal menarik data anggota:", error);
+      } finally {
+        setLoading(false);
+      }
     }
+    fetchAnggota();
+  }, []);
 
-    const query = searchQuery.toLowerCase();
-    const results = allMembers.filter(member =>
-      member.nama.toLowerCase().includes(query) ||
-      member.nim.includes(query) ||
-      member.nia.includes(query)
-    );
+  // Mengekstrak Filter Unik Secara Otomatis
+  const uniqueRayon = ["Semua", ...new Set(anggotaData.map(item => item.rayon).filter(r => r !== ""))];
+  const uniqueAngkatan = ["Semua", ...new Set(anggotaData.map(item => item.angkatan).filter(a => a !== ""))].sort();
 
-    setSearchResults(results);
-    setHasSearched(true);
-  };
+  // Logika Filter Data
+  const filteredData = anggotaData.filter(item => {
+    const matchSearch = item.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        item.nim.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchRayon = filterRayon === "Semua" || item.rayon === filterRayon;
+    const matchAngkatan = filterAngkatan === "Semua" || item.angkatan === filterAngkatan;
+    
+    return matchSearch && matchRayon && matchAngkatan;
+  });
+
+  if (loading) return <LoadingScreen text="Memuat Database Kader" />;
 
   return (
-    <main className="min-h-screen bg-[#f8f9fa] font-sans flex flex-col">
+    <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 w-full overflow-x-hidden flex flex-col">
       <Navbar />
 
-      <div className="flex-grow">
-        {/* Header Section */}
-        <section className="pt-36 pb-10 px-4 max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center justify-center p-4 bg-blue-100/50 rounded-full mb-6 border border-blue-200">
-             <Database className="w-10 h-10 text-blue-600" />
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-[#1e293b] mb-4 tracking-tight">
-            Database <span className="text-[#facc15]">Kader</span>
+      {/* ================= 1. BANNER HERO ================= */}
+      <section className="pt-28 md:pt-36 pb-12 md:pb-16 px-5 bg-[#1e293b] text-center relative overflow-hidden">
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div className="relative z-10 max-w-3xl mx-auto">
+          <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-blue-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full mb-4 inline-block flex items-center justify-center gap-1.5 w-max mx-auto">
+            <Users size={14} />
+          </span>
+          <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-3 tracking-tight">
+            Database <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-emerald-400">Kader</span>
           </h1>
-          <p className="text-slate-500 text-lg">
-            Sistem Informasi Pendataan Anggota PMII Komisariat.
+          <p className="text-slate-300 text-xs md:text-sm font-light max-w-xl mx-auto leading-relaxed">
+            Pusat data terpadu seluruh anggota dan kader PMII Komisariat. Anda dapat mencari kader berdasarkan nama, rayon, maupun tahun angkatan.
           </p>
-        </section>
+        </div>
+      </section>
 
-        {/* Search Box Section */}
-        <section className="px-4 max-w-3xl mx-auto mb-12">
-          <form onSubmit={handleSearch} className="relative shadow-2xl shadow-slate-200/50 rounded-2xl overflow-hidden flex bg-white border border-slate-200 focus-within:ring-2 focus-within:ring-[#facc15] focus-within:border-[#facc15] transition-all">
-            <div className="flex items-center justify-center pl-6 bg-white">
-              <Search className="h-6 w-6 text-slate-400" />
-            </div>
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Masukkan NIM, NIA, atau Nama Kader..." 
-              className="w-full pl-4 pr-4 py-5 text-lg bg-transparent border-none focus:outline-none text-slate-800 placeholder-slate-400" 
-            />
-            <button 
-              type="submit"
-              className="bg-[#1e293b] hover:bg-slate-800 text-white font-bold px-8 transition-colors whitespace-nowrap"
-            >
-              Cari Data
-            </button>
-          </form>
-        </section>
-
-        {/* Results Section */}
-        <section className="px-4 max-w-6xl mx-auto mb-20">
+      {/* ================= 2. KONTROL FILTER & PENCARIAN ================= */}
+      <section className="py-8 px-5 max-w-7xl mx-auto w-full -mt-6 relative z-20">
+        <div className="bg-white p-4 md:p-5 rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row gap-3 md:gap-4 items-center justify-between">
           
-          {/* Kondisi 1: Belum Melakukan Pencarian */}
-          {!hasSearched && (
-            <div className="bg-white rounded-3xl border border-dashed border-slate-300 p-16 text-center">
-              <ShieldCheck className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-slate-400 mb-2">Portal Pengecekan Anggota</h3>
-              <p className="text-slate-400">Silakan masukkan NIM, NIA, atau Nama Kader pada kolom pencarian di atas untuk memverifikasi status keanggotaan.</p>
-            </div>
-          )}
+          {/* Kolom Pencarian */}
+          <div className="relative w-full md:flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(12); }}
+              placeholder="Cari nama atau NIM kader..."
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+            />
+            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+          </div>
 
-          {/* Kondisi 2: Telah Mencari, tapi Data Tidak Ditemukan */}
-          {hasSearched && searchResults.length === 0 && (
-            <div className="bg-white rounded-3xl border border-red-100 p-16 text-center shadow-lg">
-              <UserX className="w-16 h-16 text-red-300 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-slate-800 mb-2">Data Tidak Ditemukan</h3>
-              <p className="text-slate-500">Kader dengan pencarian <span className="font-bold text-slate-800">"{searchQuery}"</span> tidak terdaftar dalam database kami. Pastikan penulisan NIM/NIA/Nama sudah benar.</p>
-            </div>
-          )}
+          {/* Filter Rayon */}
+          <div className="relative w-full md:w-48 shrink-0">
+            <Filter className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+            <select
+              value={filterRayon}
+              onChange={(e) => { setFilterRayon(e.target.value); setVisibleCount(12); }}
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-medium text-slate-700 cursor-pointer"
+            >
+              {uniqueRayon.map((r, i) => <option key={i} value={r}>{r === "Semua" ? "Semua Rayon" : r}</option>)}
+            </select>
+          </div>
 
-          {/* Kondisi 3: Telah Mencari dan Data Ditemukan */}
-          {hasSearched && searchResults.length > 0 && (
-            <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="bg-slate-50 border-b border-slate-200 p-4 md:p-6 flex justify-between items-center">
-                <p className="font-semibold text-slate-700">
-                  Ditemukan <span className="text-blue-600">{searchResults.length}</span> data yang cocok
-                </p>
-                <button className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition">
-                  <FileSpreadsheet size={16} /> Export Hasil
+          {/* Filter Angkatan */}
+          <div className="relative w-full md:w-48 shrink-0">
+            <Filter className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+            <select
+              value={filterAngkatan}
+              onChange={(e) => { setFilterAngkatan(e.target.value); setVisibleCount(12); }}
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-medium text-slate-700 cursor-pointer"
+            >
+              {uniqueAngkatan.map((a, i) => <option key={i} value={a}>{a === "Semua" ? "Semua Angkatan" : a}</option>)}
+            </select>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ================= 3. AREA GRID KARTU ANGGOTA ================= */}
+      <section className="pb-20 px-5 max-w-7xl mx-auto w-full flex-grow">
+        
+        {/* Pesan Jika Kosong */}
+        {filteredData.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-12 text-center max-w-xl mx-auto mt-8">
+             <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+             <h3 className="font-bold text-slate-700 text-lg">Kader Tidak Ditemukan</h3>
+             <p className="text-sm text-slate-400 mt-1 leading-relaxed">Pastikan ejaan nama atau NIM sudah benar. Jika data masih kosong, admin mungkin belum mengunggah database.</p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 text-xs font-bold text-slate-400 flex items-center justify-between">
+              <span>Menampilkan <span className="text-blue-600">{Math.min(visibleCount, filteredData.length)}</span> dari <span className="text-blue-600">{filteredData.length}</span> Kader</span>
+            </div>
+
+            {/* Grid Tampilan Kartu (Responsif) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+              {filteredData.slice(0, visibleCount).map((kader, index) => (
+                <motion.div 
+                  key={kader.id || index}
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:border-blue-100 hover:-translate-y-1 transition-all duration-300 flex flex-col"
+                >
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-inner">
+                      {kader.nama.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800 leading-tight line-clamp-2 text-sm md:text-base">
+                        {kader.nama}
+                      </h3>
+                      <p className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wider w-max mt-1.5">
+                        {kader.angkatan || "Tahun -"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5 mt-auto border-t border-slate-50 pt-4">
+                    <div className="flex items-center gap-2 text-xs">
+                      <Hash size={14} className="text-slate-400 shrink-0" />
+                      <span className="text-slate-500 font-medium w-16 shrink-0">NIM</span>
+                      <span className="font-bold text-slate-700 font-mono">{kader.nim || "-"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <Hash size={14} className="text-slate-400 shrink-0" />
+                      <span className="text-slate-500 font-medium w-16 shrink-0">NIA</span>
+                      <span className="font-bold text-slate-700 font-mono">{kader.nia || "-"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <MapPin size={14} className="text-emerald-500 shrink-0" />
+                      <span className="text-slate-500 font-medium w-16 shrink-0">Rayon</span>
+                      <span className="font-bold text-slate-700">{kader.rayon || "-"}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Tombol Load More */}
+            {filteredData.length > visibleCount && (
+              <div className="flex justify-center mt-10">
+                <button 
+                  onClick={() => setVisibleCount(visibleCount + 12)}
+                  className="bg-white border-2 border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 font-bold py-3 px-8 rounded-xl transition shadow-sm"
+                >
+                  Tampilkan Lebih Banyak
                 </button>
               </div>
+            )}
+          </>
+        )}
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse whitespace-nowrap">
-                  <thead>
-                    <tr className="bg-[#1e293b] text-white">
-                      <th className="py-4 px-6 font-semibold text-sm">NIM</th>
-                      <th className="py-4 px-6 font-semibold text-sm text-yellow-400">NIA</th>
-                      <th className="py-4 px-6 font-semibold text-sm">Nama Kader</th>
-                      <th className="py-4 px-6 font-semibold text-sm">Fakultas / Rayon</th>
-                      <th className="py-4 px-6 font-semibold text-sm text-center">Angkatan</th>
-                      <th className="py-4 px-6 font-semibold text-sm text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-slate-700 text-sm divide-y divide-slate-100">
-                    {searchResults.map((member, index) => (
-                      <tr key={index} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-4 px-6 font-mono text-slate-500">{member.nim}</td>
-                        <td className="py-4 px-6 font-mono font-bold text-slate-700">{member.nia}</td>
-                        <td className="py-4 px-6 font-bold text-[#1e293b]">{member.nama}</td>
-                        <td className="py-4 px-6">{member.fakultas}</td>
-                        <td className="py-4 px-6 text-center">{member.angkatan}</td>
-                        <td className="py-4 px-6 text-center">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            member.status === 'Aktif' ? 'bg-green-100 text-green-700' : 
-                            member.status === 'Alumni' ? 'bg-slate-200 text-slate-700' : 'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {member.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </section>
-      </div>
+      </section>
 
       <Footer />
     </main>
