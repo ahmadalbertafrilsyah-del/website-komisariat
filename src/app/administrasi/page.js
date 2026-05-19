@@ -1,211 +1,157 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import LoadingScreen from "@/components/LoadingScreen";
+import { Search, Download, FolderArchive, Hash, Mail } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
-import { FileText, Calendar, Download, Send, Clock, CheckCircle2, FolderOpen, Search, ArrowRight } from "lucide-react";
 
 export default function AdministrasiPage() {
-  // State untuk mengatur tab mana yang sedang aktif
-  const [activeTab, setActiveTab] = useState("surat"); // 'surat' atau 'proker'
+  const [loading, setLoading] = useState(true);
+  const [dokumenData, setDokumenData] = useState([]);
+  
+  // State Search (Hanya Search karena Kategori sudah diganti Nomor Surat)
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ================= DATA DUMMY SURAT KELUAR =================
-  const dataSuratKeluar = [
-    { id: 1, noSurat: "015.PMII.Kom-UIN.IV.2026", tanggal: "12 April 2026", tujuan: "PC PMII Kota Malang", perihal: "Permohonan Pemateri", status: "Terkirim" },
-    { id: 2, noSurat: "016.PMII.Kom-UIN.IV.2026", tanggal: "14 April 2026", tujuan: "Dekanat Saintek", perihal: "Peminjaman Gedung", status: "Proses" },
-    { id: 3, noSurat: "017.PMII.Kom-UIN.IV.2026", tanggal: "18 April 2026", tujuan: "Rayon Se-Komisariat", perihal: "Undangan Rapat Koordinasi", status: "Terkirim" },
-    { id: 4, noSurat: "018.PMII.Kom-UIN.V.2026", tanggal: "02 Mei 2026", tujuan: "Alumni & Mabinkom", perihal: "Undangan Halal Bihalal", status: "Menunggu Acc" },
-  ];
+  useEffect(() => {
+    async function fetchDokumen() {
+      try {
+        const docRef = doc(db, "website_config", "database_administrasi");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().listDokumen) {
+          setDokumenData(docSnap.data().listDokumen);
+        }
+      } catch (error) {
+        console.error("Gagal menarik data dokumen:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDokumen();
+  }, []);
 
-  // ================= DATA DUMMY PROGRAM KERJA =================
-  const dataProker = [
-    { id: 1, nama: "Pelatihan Administrasi & Kesekretariatan", biro: "Sekretaris", waktu: "Mei 2026", status: "Belum Mulai" },
-    { id: 2, nama: "Kajian Rutin Keislaman (KARISMA)", biro: "Biro Keagamaan", waktu: "Minggu Ke-2 Tiap Bulan", status: "Berjalan" },
-    { id: 3, nama: "Sekolah Jurnalistik & Jaringan (SJJ)", biro: "Biro Kominfo", waktu: "Juni 2026", status: "Persiapan" },
-    { id: 4, nama: "PMII Mengabdi (Bakti Sosial Pedesaan)", biro: "Biro Pengabdian", waktu: "Agustus 2026", status: "Belum Mulai" },
-    { id: 5, nama: "Rapat Kerja Tahunan (Rakerkom)", biro: "BPH", waktu: "Maret 2026", status: "Selesai" },
-  ];
+  // Logika Pencarian (Mencari berdasarkan Perihal, Nomor Surat, atau Deskripsi)
+  const filteredData = dokumenData.filter(item => {
+    const q = searchQuery.toLowerCase();
+    const matchPerihal = (item.perihalSurat || "").toLowerCase().includes(q);
+    const matchNomor = (item.nomorSurat || "").toLowerCase().includes(q);
+    const matchDeskripsi = (item.deskripsiSurat || "").toLowerCase().includes(q);
+    return matchPerihal || matchNomor || matchDeskripsi;
+  });
 
-  // Fungsi Filter Pencarian
-  const filteredSurat = dataSuratKeluar.filter(item => 
-    item.perihal.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    item.tujuan.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  
-  const filteredProker = dataProker.filter(item => 
-    item.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    item.biro.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  if (loading) return <LoadingScreen text="Memuat Bank Data" />;
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800">
+    <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 w-full overflow-x-hidden flex flex-col">
       <Navbar />
 
       {/* ================= 1. BANNER HERO ================= */}
-      <section className="pt-28 md:pt-36 pb-12 md:pb-16 px-4 bg-[#1e293b] text-center relative overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <section className="pt-28 md:pt-36 pb-16 md:pb-24 px-5 bg-[#0f172a] text-center relative overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/20 rounded-full blur-[100px] pointer-events-none"></div>
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-purple-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+        <div className="absolute inset-0 z-0 opacity-10 mix-blend-overlay"><div className="w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div></div>
         
         <div className="relative z-10 max-w-3xl mx-auto">
-          <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-emerald-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full mb-4 inline-block flex items-center justify-center gap-1.5 w-max mx-auto">
-            <FolderOpen size={12} />
-          </span>
-          <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-3 tracking-tight">
-            Pusat <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-blue-400">Administrasi</span>
-          </h1>
-          <p className="text-slate-300 text-xs md:text-sm font-light max-w-xl mx-auto leading-relaxed">
-            Transparansi rekam jejak surat menyurat dan progres pelaksanaan program kerja PMII Komisariat.
-          </p>
+          <motion.span 
+            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+            className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-purple-400 bg-white/10 border border-white/20 px-4 py-1.5 rounded-full mb-5 inline-block flex items-center justify-center gap-2 w-max mx-auto backdrop-blur-sm"
+          >
+            <FolderArchive size={14} />
+          </motion.span>
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tight leading-tight"
+          >
+            Pusat <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">Administrasi</span>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-slate-300 text-sm md:text-lg font-light max-w-2xl mx-auto leading-relaxed"
+          >
+            Akses dan pantau arsip penomoran surat serta berkas-berkas persuratan PMII Komisariat secara transparan, rapi, dan sistematis.
+          </motion.p>
         </div>
       </section>
 
-      {/* ================= 2. KONTROL TAB & PENCARIAN ================= */}
-      <section className="py-8 px-4 max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-3 md:p-4 rounded-2xl shadow-sm border border-slate-100">
-          
-          {/* Tombol Switcher (Tab) */}
-          <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
-            <button 
-              onClick={() => setActiveTab("surat")}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all ${
-                activeTab === "surat" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              <FileText size={16} /> Arsip Surat
-            </button>
-            <button 
-              onClick={() => setActiveTab("proker")}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all ${
-                activeTab === "proker" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              <Calendar size={16} /> Program Kerja
-            </button>
-          </div>
-
-          {/* Kolom Pencarian */}
-          <div className="relative w-full md:w-80">
+      {/* ================= 2. KONTROL PENCARIAN ================= */}
+      <section className="py-8 px-5 max-w-5xl mx-auto w-full -mt-10 md:-mt-12 relative z-20">
+        <div className="bg-white p-4 md:p-5 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row gap-3 md:gap-4 items-center justify-between">
+          <div className="relative w-full">
             <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Cari ${activeTab === 'surat' ? 'tujuan/perihal' : 'nama program'}...`}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari berdasarkan Nomor Surat atau Perihal..."
+              className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
             />
-            <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
           </div>
-
         </div>
       </section>
 
-      {/* ================= 3. AREA TABEL DATA (RESPONSIF) ================= */}
-      <section className="pb-20 px-4 max-w-6xl mx-auto min-h-[50vh]">
-        <motion.div 
-          key={activeTab} // Kunci untuk mereset animasi saat tab berubah
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="bg-white rounded-3xl border border-slate-100 shadow-[0_10px_40px_rgba(0,0,0,0.03)] overflow-hidden"
-        >
-          
-          {/* =========== TABEL SURAT KELUAR =========== */}
-          {activeTab === "surat" && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse whitespace-nowrap">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-[10px] md:text-xs uppercase tracking-wider border-b border-slate-200">
-                    <th className="py-4 px-6 font-bold w-12 text-center">No</th>
-                    <th className="py-4 px-6 font-bold">Nomor & Tanggal Surat</th>
-                    <th className="py-4 px-6 font-bold">Tujuan</th>
-                    <th className="py-4 px-6 font-bold">Perihal</th>
-                    <th className="py-4 px-6 font-bold text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="text-slate-700 text-xs md:text-sm divide-y divide-slate-100">
-                  {filteredSurat.length > 0 ? filteredSurat.map((surat, index) => (
-                    <tr key={surat.id} className="hover:bg-blue-50/50 transition-colors">
-                      <td className="py-4 px-6 text-center font-mono font-bold text-slate-400">{index + 1}</td>
-                      <td className="py-4 px-6">
-                        <div className="font-bold text-blue-700">{surat.noSurat}</div>
-                        <div className="text-[10px] md:text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                          <Calendar size={12}/> {surat.tanggal}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6 font-semibold text-slate-800">{surat.tujuan}</td>
-                      <td className="py-4 px-6 text-slate-600">{surat.perihal}</td>
-                      <td className="py-4 px-6 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${
-                          surat.status === 'Terkirim' ? 'bg-emerald-100 text-emerald-700' : 
-                          surat.status === 'Proses' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          {surat.status === 'Terkirim' && <Send size={10} />}
-                          {surat.status === 'Proses' && <Clock size={10} />}
-                          {surat.status === 'Menunggu Acc' && <FileText size={10} />}
-                          {surat.status}
-                        </span>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr><td colSpan="5" className="py-10 text-center text-slate-400">Data surat tidak ditemukan.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* =========== TABEL PROGRAM KERJA =========== */}
-          {activeTab === "proker" && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse whitespace-nowrap">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-[10px] md:text-xs uppercase tracking-wider border-b border-slate-200">
-                    <th className="py-4 px-6 font-bold w-12 text-center">No</th>
-                    <th className="py-4 px-6 font-bold">Nama Program / Kegiatan</th>
-                    <th className="py-4 px-6 font-bold">Pelaksana (Biro)</th>
-                    <th className="py-4 px-6 font-bold">Target Waktu</th>
-                    <th className="py-4 px-6 font-bold text-center">Progres</th>
-                  </tr>
-                </thead>
-                <tbody className="text-slate-700 text-xs md:text-sm divide-y divide-slate-100">
-                  {filteredProker.length > 0 ? filteredProker.map((proker, index) => (
-                    <tr key={proker.id} className="hover:bg-emerald-50/50 transition-colors">
-                      <td className="py-4 px-6 text-center font-mono font-bold text-slate-400">{index + 1}</td>
-                      <td className="py-4 px-6 font-bold text-slate-900">{proker.nama}</td>
-                      <td className="py-4 px-6">
-                        <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md text-[10px] md:text-xs font-semibold">
-                          {proker.biro}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-slate-500 font-medium">{proker.waktu}</td>
-                      <td className="py-4 px-6 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${
-                          proker.status === 'Selesai' ? 'bg-emerald-100 text-emerald-700' : 
-                          proker.status === 'Berjalan' || proker.status === 'Persiapan' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          {proker.status === 'Selesai' && <CheckCircle2 size={12} />}
-                          {(proker.status === 'Berjalan' || proker.status === 'Persiapan') && <Clock size={12} />}
-                          {proker.status}
-                        </span>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr><td colSpan="5" className="py-10 text-center text-slate-400">Data program kerja tidak ditemukan.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-        </motion.div>
-
-        {/* Info Tambahan */}
-        <div className="mt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] md:text-xs text-slate-400">
-          <p>💡 Menampilkan data secara *real-time* berdasarkan arsip kesekretariatan.</p>
-          <a href="#" className="flex items-center gap-1 hover:text-blue-600 transition">
-            Unduh Laporan Format PDF <Download size={14} />
-          </a>
+      {/* ================= 3. GRID DAFTAR SURAT ================= */}
+      <section className="pb-24 px-5 max-w-5xl mx-auto w-full flex-grow">
+        
+        <div className="mb-6 flex items-center justify-between text-xs font-bold text-slate-400">
+          <p>Ditemukan <span className="text-blue-600">{filteredData.length}</span> Arsip Surat</p>
         </div>
+
+        {filteredData.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-12 text-center">
+             <Mail className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+             <h3 className="font-extrabold text-slate-800 text-xl mb-2">Surat Tidak Ditemukan</h3>
+             <p className="text-sm text-slate-500 max-w-md mx-auto">Coba gunakan nomor surat atau perihal yang berbeda pada kolom pencarian.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+            {filteredData.map((doc, index) => (
+              <motion.div 
+                key={doc.id || index}
+                initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: index * 0.05 }}
+                className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-xl hover:border-blue-200 hover:-translate-y-1 transition-all duration-300 flex flex-col h-full group"
+              >
+                {/* Header Kartu: Nomor Surat */}
+                <div className="flex items-start justify-between gap-4 mb-4 border-b border-slate-50 pb-4">
+                   <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center shrink-0 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                     <Mail size={22} />
+                   </div>
+                   <div className="flex flex-col items-end">
+                     <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                       Nomor Surat
+                     </span>
+                     <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg max-w-[150px] sm:max-w-[200px] truncate">
+                       {doc.nomorSurat || "-"}
+                     </span>
+                   </div>
+                </div>
+                
+                {/* Body Kartu: Perihal & Deskripsi */}
+                <h3 className="text-lg font-extrabold text-slate-800 mb-2 leading-snug line-clamp-2">
+                  {doc.perihalSurat || "Tanpa Perihal"}
+                </h3>
+                <p className="text-sm text-slate-500 mb-6 line-clamp-3 leading-relaxed flex-grow">
+                  {doc.deskripsiSurat || "Tidak ada deskripsi tambahan untuk surat ini."}
+                </p>
+
+                {/* Footer Kartu: Tombol Unduh */}
+                <div className="pt-4 mt-auto">
+                  {doc.linkFile ? (
+                    <a 
+                      href={doc.linkFile} target="_blank" rel="noopener noreferrer"
+                      className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold py-3.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-md"
+                    >
+                      <Download size={16} /> Lihat / Unduh File
+                    </a>
+                  ) : (
+                    <button disabled className="w-full bg-slate-100 text-slate-400 font-bold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                      File Belum Diunggah
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </section>
 
       <Footer />

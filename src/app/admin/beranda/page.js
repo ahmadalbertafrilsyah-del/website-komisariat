@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { Save, FileText, BarChart3, History, MessageSquare, Image as ImageIcon, Target } from "lucide-react";
+import { Save, FileText, BarChart3, History, MessageSquare, Image as ImageIcon, Target, AlertCircle } from "lucide-react";
 
 export default function AdminBerandaEditor() {
   const [loading, setLoading] = useState(true);
@@ -23,7 +23,6 @@ export default function AdminBerandaEditor() {
     sejarahTahun: "1960",
     sejarahImage: "", 
     
-    // ======== TAMBAHAN BARU: NILAI DASAR ========
     nilaiTitle: "Nilai Dasar",
     nilaiHighlight: "Pergerakan",
     nilaiSubtitle: "Arah pembentukan kader dan orientasi perjuangan organisasi.",
@@ -81,7 +80,7 @@ export default function AdminBerandaEditor() {
 
       <form onSubmit={handleSaveBeranda} className="space-y-6 max-w-4xl">
         
-        {/* ================= SEKSI 1: BANNER HERO UTAMA ================= */}
+        {/* ================= SEKSI 1: BANNER HERO UTAMA (DIPERBARUI) ================= */}
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
           <div className="bg-slate-50 p-4 border-b border-slate-200 flex items-center gap-2 font-bold text-slate-800">
              <FileText size={18} className="text-blue-600" /> 1. Area Banner Utama (Top Hero)
@@ -95,11 +94,30 @@ export default function AdminBerandaEditor() {
               <label className="text-xs font-bold text-slate-700 block mb-1">Sub-Judul Narasi Keterangan</label>
               <textarea required rows="3" value={berandaConfig.heroSubtitle} onChange={(e) => setBerandaConfig({...berandaConfig, heroSubtitle: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm leading-relaxed" />
             </div>
-            <div className="pt-2 border-t border-slate-100">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                <ImageIcon size={14} className="text-blue-500"/> URL Foto Banner (Sebelah Kanan)
-              </label>
-              <input type="text" value={berandaConfig.heroImage || ""} onChange={(e) => setBerandaConfig({...berandaConfig, heroImage: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Tempel link gambar (Imgur/Drive/dll). Kosongkan untuk pakai warna biru bawaan." />
+            
+            {/* PERUBAHAN: Modifikasi Area Input Gambar PNG Transparan */}
+            <div className="pt-4 border-t border-slate-100 mt-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                 <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                   <ImageIcon size={14} className="text-blue-500"/> URL Foto Banner (Sebelah Kanan)
+                 </label>
+                 <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded font-bold border border-emerald-100 uppercase tracking-wider w-max">
+                   PNG Transparan (Wajib)
+                 </span>
+              </div>
+              <input 
+                type="text" 
+                value={berandaConfig.heroImage || ""} 
+                onChange={(e) => setBerandaConfig({...berandaConfig, heroImage: e.target.value})} 
+                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono" 
+                placeholder="Tempel link gambar ImgBB (Pastikan berakhiran .png)..." 
+              />
+              <div className="mt-2.5 flex items-start gap-1.5 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
+                <p className="text-[10px] md:text-xs text-blue-700 leading-relaxed font-medium">
+                  <strong>Tips Desain Maksimal:</strong> Agar tampilan web terlihat mahal dan menyatu dengan *background* (tidak kaku membentuk kotak), pastikan Anda mengunggah foto kader/tokoh yang <strong>latar belakangnya sudah dihapus</strong> (Transparan / format PNG). Kosongkan kolom ini jika ingin menyembunyikan gambar.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -143,34 +161,28 @@ export default function AdminBerandaEditor() {
           </div>
           <div className="p-6 space-y-6">
             
-            {/* Header Nilai Dasar */}
             <div className="grid sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
               <div><label className="text-[11px] font-bold text-slate-500 block mb-1">Teks Putih (Kiri)</label><input type="text" required value={berandaConfig.nilaiTitle} onChange={(e) => setBerandaConfig({...berandaConfig, nilaiTitle: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm" placeholder="Nilai Dasar" /></div>
               <div><label className="text-[11px] font-bold text-yellow-600 block mb-1">Teks Kuning (Kanan)</label><input type="text" required value={berandaConfig.nilaiHighlight} onChange={(e) => setBerandaConfig({...berandaConfig, nilaiHighlight: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm" placeholder="Pergerakan" /></div>
               <div className="sm:col-span-2"><label className="text-[11px] font-bold text-slate-500 block mb-1">Sub-Judul Keterangan</label><input type="text" required value={berandaConfig.nilaiSubtitle} onChange={(e) => setBerandaConfig({...berandaConfig, nilaiSubtitle: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm" placeholder="Arah pembentukan kader..." /></div>
             </div>
 
-            {/* Poin-Poin Nilai Dasar */}
             <div className="grid sm:grid-cols-2 gap-6">
-              {/* Poin 1 */}
               <div className="space-y-2 border border-slate-100 p-4 rounded-xl">
                  <div className="text-xs font-bold text-blue-600 bg-blue-50 w-max px-2 py-1 rounded">Kotak Biru</div>
                  <input type="text" required value={berandaConfig.nilai1Title} onChange={(e) => setBerandaConfig({...berandaConfig, nilai1Title: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg text-sm font-bold" />
                  <textarea rows="2" required value={berandaConfig.nilai1Desc} onChange={(e) => setBerandaConfig({...berandaConfig, nilai1Desc: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg text-xs leading-relaxed" />
               </div>
-              {/* Poin 2 */}
               <div className="space-y-2 border border-slate-100 p-4 rounded-xl">
                  <div className="text-xs font-bold text-yellow-600 bg-yellow-50 w-max px-2 py-1 rounded">Kotak Kuning</div>
                  <input type="text" required value={berandaConfig.nilai2Title} onChange={(e) => setBerandaConfig({...berandaConfig, nilai2Title: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg text-sm font-bold" />
                  <textarea rows="2" required value={berandaConfig.nilai2Desc} onChange={(e) => setBerandaConfig({...berandaConfig, nilai2Desc: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg text-xs leading-relaxed" />
               </div>
-              {/* Poin 3 */}
               <div className="space-y-2 border border-slate-100 p-4 rounded-xl">
                  <div className="text-xs font-bold text-emerald-600 bg-emerald-50 w-max px-2 py-1 rounded">Kotak Hijau</div>
                  <input type="text" required value={berandaConfig.nilai3Title} onChange={(e) => setBerandaConfig({...berandaConfig, nilai3Title: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg text-sm font-bold" />
                  <textarea rows="2" required value={berandaConfig.nilai3Desc} onChange={(e) => setBerandaConfig({...berandaConfig, nilai3Desc: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg text-xs leading-relaxed" />
               </div>
-              {/* Poin 4 */}
               <div className="space-y-2 border border-slate-100 p-4 rounded-xl">
                  <div className="text-xs font-bold text-purple-600 bg-purple-50 w-max px-2 py-1 rounded">Kotak Ungu</div>
                  <input type="text" required value={berandaConfig.nilai4Title} onChange={(e) => setBerandaConfig({...berandaConfig, nilai4Title: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg text-sm font-bold" />

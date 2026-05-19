@@ -98,6 +98,9 @@ export default function AdminLayout({ children }) {
           <Link href="/admin/berita" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/berita")}>
             <Newspaper size={18} className={pathname === "/admin/berita" ? "text-blue-400" : ""} /> Berita & Artikel
           </Link>
+          <Link href="/admin/administrasi" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/administrasi")}>
+            <Newspaper size={18} className={pathname === "/admin/administrasi" ? "text-blue-400" : ""} /> Administrasi
+          </Link>
         </nav>
 
         {/* Area Bawah (Logout) */}
