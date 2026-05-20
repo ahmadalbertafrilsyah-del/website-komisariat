@@ -90,10 +90,10 @@ export default function AdminLayout({ children }) {
             <Users size={18} className={pathname === "/admin/struktur" ? "text-blue-400" : ""} /> Pengurus
           </Link>
           <Link href="/admin/anggota" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/anggota")}>
-            <Newspaper size={18} className={pathname === "/admin/anggota" ? "text-blue-400" : ""} /> Anggota
+            <Users size={18} className={pathname === "/admin/anggota" ? "text-blue-400" : ""} /> Anggota
           </Link>
           <Link href="/admin/rayon" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/rayon")}>
-            <Newspaper size={18} className={pathname === "/admin/rayon" ? "text-blue-400" : ""} /> Rayon
+            <Users size={18} className={pathname === "/admin/rayon" ? "text-blue-400" : ""} /> Rayon
           </Link>
           <Link href="/admin/berita" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/berita")}>
             <Newspaper size={18} className={pathname === "/admin/berita" ? "text-blue-400" : ""} /> Berita & Artikel
