@@ -115,7 +115,7 @@ export default function RayonPage() {
                     </div>
 
                     <div className="absolute bottom-4 left-5 right-5 z-20">
-                      <h3 className="text-2xl md:text-3xl font-extrabold text-white leading-tight group-hover:text-yellow-400 transition-colors">
+                      <h3 className="text-1xl md:text-1xl font-extrabold text-white leading-tight group-hover:text-yellow-400 transition-colors">
                         {rayon.nama}
                       </h3>
                     </div>
@@ -136,11 +136,11 @@ export default function RayonPage() {
                         </div>
                       </div>
                       
-                      {/* Tautan Fakultas & Lokasi */}
+                      {/* Tautan Fakultas & Lokasi PERBAIKAN: Menggunakan igUrl dan mapUrl */}
                       <div className="flex gap-2 pt-2 mt-2 border-t border-slate-200">
-                        {rayon.linkFakultas ? (
+                        {rayon.igUrl ? (
                           <a 
-                            href={rayon.linkFakultas} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} 
+                            href={rayon.igUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} 
                             className="flex-1 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-blue-600 text-[11px] font-bold py-2 px-2 rounded-xl transition-colors flex items-center justify-center gap-1.5"
                           >
                             <ExternalLink size={14}/> Web/IG
@@ -149,9 +149,9 @@ export default function RayonPage() {
                           <span className="flex-1 bg-slate-100 text-slate-400 text-[11px] font-bold py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed"><ExternalLink size={14}/> Web/IG</span>
                         )}
                         
-                        {rayon.linkMap ? (
+                        {rayon.mapUrl ? (
                           <a 
-                            href={rayon.linkMap} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} 
+                            href={rayon.mapUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} 
                             className="flex-1 bg-white border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-emerald-600 text-[11px] font-bold py-2 px-2 rounded-xl transition-colors flex items-center justify-center gap-1.5"
                           >
                             <Map size={14}/> Lokasi Map

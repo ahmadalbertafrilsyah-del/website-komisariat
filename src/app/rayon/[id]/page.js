@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import { MapPin, Users, BookOpen, ArrowLeft, Shield, ExternalLink, Hash, Compass, MessageCircle, Star, Target, FileText, Wallet } from "lucide-react";
+import { MapPin, Users, BookOpen, ArrowLeft, Shield, ExternalLink, Hash, Compass, MessageCircle, Star, Target, FileText, Wallet, Map } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
@@ -36,6 +36,8 @@ export default function DetailRayonPage() {
 
         if (foundRayon) {
           setRayonData(foundRayon);
+          
+          // Tarik data kader dari database_anggota
           const docAnggota = await getDoc(doc(db, "website_config", "database_anggota"));
           if (docAnggota.exists() && docAnggota.data().listAnggota) {
             const allAnggota = docAnggota.data().listAnggota;
@@ -87,7 +89,7 @@ export default function DetailRayonPage() {
       </div>
       {wa && (
         <a 
-          href={`https://wa.me/${wa.replace(/[^0-9]/g, "")}`} 
+          href={`https://wa.me/${wa.replace(/[^0-9]/g, "")}?text=Halo%20Sahabat/i%20${encodeURIComponent(nama)}`} 
           target="_blank" rel="noopener noreferrer"
           className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center shrink-0 transition-colors"
           title={`Chat ${jabatan}`}
@@ -103,10 +105,10 @@ export default function DetailRayonPage() {
       <Navbar />
 
       {/* ================= 1. BANNER HERO KHUSUS RAYON ================= */}
-      <section className="relative pt-24 pb-32 md:pt-32 md:pb-48 bg-[#0f172a]">
-        {rayonData?.foto ? (
-          <div className="absolute inset-0 z-0">
-            <img src={rayonData.foto} alt={rayonData.nama} className="w-full h-full object-cover opacity-30" />
+      <section className="relative pt-24 pb-32 md:pt-32 md:pb-48 bg-[#0f172a] overflow-hidden">
+        {rayonData?.logoUrl ? (
+          <div className="absolute inset-0 z-0 flex items-center justify-center opacity-10 blur-sm scale-150 pointer-events-none">
+            <img src={rayonData.logoUrl} alt={rayonData.nama} className="w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a]/80 to-transparent"></div>
           </div>
         ) : (
@@ -115,19 +117,26 @@ export default function DetailRayonPage() {
 
         <div className="relative z-10 max-w-7xl mx-auto px-5 w-full">
           
-          {/* Tombol Kembali (Sendirian di atas agar lebih leluasa) */}
-          <div className="mb-6 md:mb-10">
+          {/* Tombol Kembali */}
+          <div className="mb-6 md:mb-10 flex justify-between items-center">
             <button onClick={() => router.push('/rayon')} className="inline-flex items-center gap-1.5 text-slate-300 hover:text-white transition bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-bold w-max shrink-0">
               <ArrowLeft size={14} /> Kembali
             </button>
+            
+            {/* Logo Rayon (Jika ada) */}
+            {rayonData?.logoUrl && (
+               <div className="w-16 h-16 md:w-20 md:h-20 bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20 drop-shadow-xl">
+                 <img src={rayonData.logoUrl} alt="Logo Rayon" className="w-full h-full object-contain" />
+               </div>
+            )}
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <h1 className="text-3xl md:text-6xl font-extrabold text-white mb-3 tracking-tight leading-snug">
-              Rayon <span className="text-yellow-400">{rayonData?.nama}</span>
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white mb-3 tracking-tight leading-snug">
+              <span className="text-yellow-400">{rayonData?.nama}</span>
             </h1>
             
-            {/* Badge Fakultas dipindah ke bawah judul */}
+            {/* Badge Fakultas */}
             <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-blue-400 bg-blue-500/20 border border-blue-400/30 px-3 py-1.5 rounded-full mb-5 inline-flex items-center gap-1.5 w-max truncate backdrop-blur-sm">
               <BookOpen size={14} className="shrink-0" /> <span className="truncate">{rayonData?.fakultas || "Fakultas"}</span>
             </span>
@@ -151,31 +160,41 @@ export default function DetailRayonPage() {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Basecamp / Sekretariat</p>
-                <p className="font-semibold text-slate-700 text-sm md:text-base leading-snug">{rayonData?.sekretariat || "Belum ditambahkan"}</p>
+                {/* PERBAIKAN: Menggunakan rayonData.alamat dari Admin */}
+                <p className="font-semibold text-slate-700 text-sm md:text-base leading-snug">{rayonData?.alamat || "Belum ditambahkan"}</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-4 w-full lg:w-auto shrink-0">
-               <div className="bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 text-center flex-1 lg:flex-none">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto shrink-0">
+               <div className="bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 text-center w-full sm:w-auto flex flex-col justify-center min-h-[60px]">
                  <p className="text-[10px] font-bold text-slate-500 uppercase">Total Kader</p>
-                 <h2 className="text-2xl font-black text-blue-600">{anggotaRayon.length}</h2>
+                 <h2 className="text-2xl font-black text-blue-600 leading-none">{anggotaRayon.length}</h2>
                </div>
-               {rayonData?.linkSosmed && (
-                 <a href={rayonData.linkSosmed} target="_blank" rel="noopener noreferrer" className="bg-slate-900 hover:bg-blue-600 text-white font-bold h-[60px] px-6 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm shadow-md flex-1 lg:flex-none">
-                   Instagram <ExternalLink size={16} />
-                 </a>
-               )}
+               
+               {/* PERBAIKAN: Menggunakan igUrl dan mapUrl */}
+               <div className="flex gap-2 w-full sm:w-auto h-full min-h-[60px]">
+                 {rayonData?.igUrl && (
+                   <a href={rayonData.igUrl} target="_blank" rel="noopener noreferrer" className="bg-slate-900 hover:bg-blue-600 text-white font-bold px-5 rounded-2xl transition-colors flex items-center justify-center gap-2 text-xs shadow-md flex-1">
+                     Web/IG <ExternalLink size={14} />
+                   </a>
+                 )}
+                 {rayonData?.mapUrl && (
+                   <a href={rayonData.mapUrl} target="_blank" rel="noopener noreferrer" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 rounded-2xl transition-colors flex items-center justify-center gap-2 text-xs shadow-md flex-1">
+                     Lokasi <Map size={14} />
+                   </a>
+                 )}
+               </div>
             </div>
           </div>
 
           {/* Bottom Section: Pengurus Inti */}
           <div className="pt-6 md:pt-8">
             <h3 className="font-extrabold text-slate-800 text-lg mb-5 flex items-center gap-2">
-              <Star size={20} className="text-yellow-500" /> Pengurus
+              <Star size={20} className="text-yellow-500" /> Pengurus Inti Rayon
             </h3>
+            {/* PERBAIKAN: Sesuai struktur data 5 Serangkai dari Admin */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <PersonilCard jabatan="Ketua Rayon" nama={rayonData?.ketua} wa={rayonData?.waKetua} icon={<Shield size={20}/>} />
-              <PersonilCard jabatan="Wakil Ketua" nama={rayonData?.wakilKetua} wa={rayonData?.waWakil} icon={<Users size={20}/>} />
               <PersonilCard jabatan="Sekretaris" nama={rayonData?.sekretaris} wa={rayonData?.waSekret} icon={<FileText size={20}/>} />
               <PersonilCard jabatan="Bendahara" nama={rayonData?.bendahara} wa={rayonData?.waBendum} icon={<Wallet size={20}/>} />
               <PersonilCard jabatan="CO Kaderisasi" nama={rayonData?.coKaderisasi} wa={rayonData?.waKaderisasi} icon={<Target size={20}/>} />

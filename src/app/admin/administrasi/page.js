@@ -74,7 +74,7 @@ export default function AdminAdministrasiEditor() {
       alert("Berkas berhasil diunggah ke Cloudinary!");
     } catch (error) {
       console.error(error);
-      alert("Gagal mengunggah file. Pastikan API & Kredensial Cloudinary sudah benar.");
+      alert("Gagal mengunggah file. Pastikan API & Kredensial Cloudinary sudah benar, atau ukuran file melebihi batas.");
     } finally {
       setUploadingField(null);
       e.target.value = null;
@@ -139,14 +139,12 @@ export default function AdminAdministrasiEditor() {
     const fd = new FormData(e.target);
     if (!fd.get("nomorSurat") || !fd.get("perihalSurat")) return;
     
-    // Perbaikan: Tambah ke urutan paling bawah [...prev, newItem]
     const newItem = { id: Date.now(), nomorSurat: fd.get("nomorSurat"), perihalSurat: fd.get("perihalSurat"), deskripsiSurat: fd.get("deskripsiSurat"), linkFile: urls.suratFile };
     const updated = [...suratData, newItem]; 
     setSuratData(updated);
     e.target.reset();
     setUrls(prev => ({ ...prev, suratFile: "" }));
 
-    // Simpan Otomatis ke Database
     try {
       await setDoc(doc(db, "website_config", "database_administrasi"), { listDokumen: updated }, { merge: true });
     } catch (err) { console.error("Auto-save failed", err); }
@@ -304,7 +302,8 @@ export default function AdminAdministrasiEditor() {
                           {uploadingField === 'suratFile' ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><UploadCloud size={14} /> Pilih Berkas</>}
                           <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'suratFile')} disabled={uploadingField !== null} />
                         </label>
-                        <input type="text" readOnly value={urls.suratFile} className="w-full p-2.5 border rounded-xl text-xs bg-slate-50 text-slate-500 font-mono" placeholder="URL otomatis terisi setelah upload..." />
+                        {/* INPUT URL DIBUKA KUNCINYA */}
+                        <input type="text" value={urls.suratFile} onChange={(e) => setUrls({...urls, suratFile: e.target.value})} className="w-full p-2.5 border rounded-xl text-xs bg-white text-slate-600 focus:ring-2 focus:ring-blue-500 font-mono outline-none" placeholder="Upload file atau Paste Link GDrive..." />
                       </div>
                     </div>
 
@@ -364,11 +363,12 @@ export default function AdminAdministrasiEditor() {
                   <div className="col-span-2 sm:col-span-3">
                     <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-1"><UploadCloud size={12}/> File Pendukung (Proposal / LPJ)</label>
                     <div className="flex flex-col sm:flex-row items-center gap-2">
-                      <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition border shrink-0 ${uploadingField === 'prokerFile' ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 shadow-sm'}`}>
+                      <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold transition border shrink-0 ${uploadingField === 'prokerFile' ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 shadow-sm'}`}>
                         {uploadingField === 'prokerFile' ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><UploadCloud size={14} /> Pilih File</>}
                         <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'prokerFile')} disabled={uploadingField !== null} />
                       </label>
-                      <input type="text" readOnly value={urls.prokerFile} className="w-full p-2 border rounded-lg text-xs bg-slate-50 text-slate-500 font-mono" placeholder="URL otomatis terisi..." />
+                      {/* INPUT URL DIBUKA KUNCINYA */}
+                      <input type="text" value={urls.prokerFile} onChange={(e) => setUrls({...urls, prokerFile: e.target.value})} className="w-full p-2.5 border rounded-lg text-xs bg-white text-slate-600 focus:ring-2 focus:ring-emerald-500 font-mono outline-none" placeholder="Upload file atau Paste Link GDrive..." />
                     </div>
                   </div>
 
@@ -430,11 +430,11 @@ export default function AdminAdministrasiEditor() {
                       {uploadingField === 'hukumThumb' ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'hukumThumb')} disabled={uploadingField !== null} />
                     </label>
-                    <input type="text" readOnly value={urls.hukumThumb} className="w-full p-2.5 border rounded-xl text-xs bg-slate-50 text-slate-500 font-mono" placeholder="URL otomatis..." />
+                    <input type="text" value={urls.hukumThumb} onChange={(e) => setUrls({...urls, hukumThumb: e.target.value})} className="w-full p-2.5 border rounded-xl text-xs bg-white focus:ring-2 focus:ring-purple-500 text-slate-600 font-mono outline-none" placeholder="URL otomatis atau paste GDrive..." />
                   </div>
                 </div>
 
-                {/* UPLOAD PDF CLOUDINARY */}
+                {/* UPLOAD PDF CLOUDINARY - DENGAN NOTIFIKASI MAX 2MB */}
                 <div className="md:col-span-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-1"><FileText size={12}/> File Dokumen SK / Ketetapan (PDF)</label>
                   <div className="flex flex-col sm:flex-row items-center gap-2">
@@ -442,8 +442,9 @@ export default function AdminAdministrasiEditor() {
                       {uploadingField === 'hukumFile' ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><UploadCloud size={14} /> Pilih File PDF</>}
                       <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'hukumFile')} disabled={uploadingField !== null} />
                     </label>
-                    <input type="text" readOnly value={urls.hukumFile} className="w-full p-2.5 border rounded-xl text-xs bg-slate-50 text-slate-500 font-mono" placeholder="URL File otomatis terisi..." />
+                    <input type="text" value={urls.hukumFile} onChange={(e) => setUrls({...urls, hukumFile: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-600 focus:ring-2 focus:ring-purple-500 font-mono outline-none transition-all" placeholder="Upload PDF atau Paste Link Google Drive..." />
                   </div>
+                  <p className="text-[10px] text-slate-500 mt-1.5 italic">💡 Maks 2MB. Jika file terlalu besar, Anda bisa langsung menyalin (paste) link Google Drive pada kolom di atas.</p>
                 </div>
 
                 <button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl text-sm w-full md:col-span-3 transition shadow-md">Simpan Produk Hukum Baru</button>
@@ -491,11 +492,11 @@ export default function AdminAdministrasiEditor() {
                       {uploadingField === 'lpjThumb' ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'lpjThumb')} disabled={uploadingField !== null} />
                     </label>
-                    <input type="text" readOnly value={urls.lpjThumb} className="w-full p-2.5 border rounded-xl text-xs bg-slate-50 text-slate-500 font-mono" placeholder="URL otomatis..." />
+                    <input type="text" value={urls.lpjThumb} onChange={(e) => setUrls({...urls, lpjThumb: e.target.value})} className="w-full p-2.5 border rounded-xl text-xs bg-white focus:ring-2 focus:ring-amber-500 text-slate-600 font-mono outline-none" placeholder="URL otomatis atau paste GDrive..." />
                   </div>
                 </div>
 
-                {/* UPLOAD PDF CLOUDINARY */}
+                {/* UPLOAD PDF CLOUDINARY - DENGAN NOTIFIKASI MAX 2MB */}
                 <div className="md:col-span-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-1"><FileText size={12}/> File Dokumen Laporan (PDF)</label>
                   <div className="flex flex-col sm:flex-row items-center gap-2">
@@ -503,8 +504,9 @@ export default function AdminAdministrasiEditor() {
                       {uploadingField === 'lpjFile' ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><UploadCloud size={14} /> Pilih File PDF</>}
                       <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'lpjFile')} disabled={uploadingField !== null} />
                     </label>
-                    <input type="text" readOnly value={urls.lpjFile} className="w-full p-2.5 border rounded-xl text-xs bg-slate-50 text-slate-500 font-mono" placeholder="URL File otomatis terisi..." />
+                    <input type="text" value={urls.lpjFile} onChange={(e) => setUrls({...urls, lpjFile: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-600 focus:ring-2 focus:ring-amber-500 font-mono outline-none transition-all" placeholder="Upload PDF atau Paste Link Google Drive..." />
                   </div>
+                  <p className="text-[10px] text-slate-500 mt-1.5 italic">💡 Maks 2MB. Jika file terlalu besar, Anda bisa langsung menyalin (paste) link Google Drive pada kolom di atas.</p>
                 </div>
 
                 <button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl text-sm w-full md:col-span-3 transition shadow-md">Simpan Laporan Baru</button>
