@@ -110,7 +110,7 @@ export default function StrukturPage() {
                         />
                       ) : (
                         <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 text-2xl font-bold uppercase shadow-sm">
-                          {item.nama.charAt(0)}
+                          {item.nama ? item.nama.charAt(0) : "?"}
                         </div>
                       )}
                       <div className="absolute inset-0 bg-slate-900/5 group-hover:bg-transparent transition-colors duration-300"></div>
@@ -122,10 +122,10 @@ export default function StrukturPage() {
                     {/* Info Jabatan */}
                     <div className="p-4 text-center border-t-4 border-[#facc15] flex-grow flex flex-col justify-center bg-white z-10">
                       <h4 className="font-extrabold text-slate-900 text-xs md:text-sm leading-tight mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                        {item.nama}
+                        {item.nama || "Nama Kosong"}
                       </h4>
                       <p className="text-[9px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        {item.jabatan}
+                        {item.jabatan || "Anggota"}
                       </p>
                     </div>
                   </motion.div>
@@ -165,12 +165,12 @@ export default function StrukturPage() {
                     {selectedPengurus.foto ? (
                       <img src={selectedPengurus.foto} alt={selectedPengurus.nama} className="w-full h-full object-cover" />
                     ) : (
-                      selectedPengurus.nama.charAt(0)
+                      selectedPengurus.nama ? selectedPengurus.nama.charAt(0) : "?"
                     )}
                   </div>
-                  <h3 className="text-base md:text-lg font-extrabold text-slate-900 leading-tight px-1">{selectedPengurus.nama}</h3>
+                  <h3 className="text-base md:text-lg font-extrabold text-slate-900 leading-tight px-1">{selectedPengurus.nama || "Nama Kosong"}</h3>
                   <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1 rounded-full mt-2">
-                    {selectedPengurus.jabatan}
+                    {selectedPengurus.jabatan || "Anggota"}
                   </span>
                 </div>
 
@@ -196,7 +196,7 @@ export default function StrukturPage() {
                     <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0"><Calendar size={14} className="text-amber-600" /></div>
                     <div>
                       <p className="text-[9px] font-bold text-slate-400 uppercase">Angkatan Mapaba/PKD</p>
-                      <p className="font-bold text-slate-700 mt-0.5">Tahun {selectedPengurus.angkatan || "-"}</p>
+                      <p className="font-bold text-slate-700 mt-0.5">{selectedPengurus.angkatan ? `Tahun ${selectedPengurus.angkatan}` : "-"}</p>
                     </div>
                   </div>
                 </div>

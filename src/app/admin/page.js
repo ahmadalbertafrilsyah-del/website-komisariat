@@ -14,7 +14,7 @@ export default function AdminDashboardUtama() {
     logoUrl: "", // Tautan gambar logo
     tentangPmii: "PMII Komisariat adalah organisasi mahasiswa Islam yang berkomitmen untuk membangun intelektual muslim yang berkarakter dan berakhlak mulia berdasarkan nilai-nilai Ahlussunnah Wal Jama'ah.",
     jamSeninJumat: "08:00 - 16:00 WIB",
-    jamSabtu: "09:00 - 14:00 WIB",
+    jamSabtuMinggu: "09:00 - 14:00 WIB",
     lokasi: "Jl. Gajayana No. 50\nKota Malang, Jawa Timur",
     footerText: "© 2026 PMII Komisariat. Powered by Divisi Kominfo."
   });
@@ -151,11 +151,11 @@ export default function AdminDashboardUtama() {
                   />
                 </div>
                 <div className="space-y-2">
-                   <p className="text-xs font-semibold text-slate-500">Sabtu</p>
+                   <p className="text-xs font-semibold text-slate-500">Sabtu - Minggu</p>
                    <input 
                     type="text" required
-                    value={globalConfig.jamSabtu}
-                    onChange={(e) => setGlobalConfig({...globalConfig, jamSabtu: e.target.value})}
+                    value={globalConfig.jamSabtuMinggu}
+                    onChange={(e) => setGlobalConfig({...globalConfig, jamSabtuMinggu: e.target.value})}
                     className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>

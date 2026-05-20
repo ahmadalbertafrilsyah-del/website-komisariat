@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Landmark, Target, Handshake, Calendar, ArrowRight, ShieldCheck, Sparkles, Newspaper } from "lucide-react";
+import { Landmark, Target, Handshake, Calendar, ArrowRight, ShieldCheck, Sparkles, Newspaper, User, Image as ImageIcon } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -138,7 +138,7 @@ export default function Home() {
     <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 overflow-hidden w-full">
       <Navbar />
 
-      {/* ================= HERO SECTION (REVISI RESPONSIVE) ================= */}
+      {/* ================= HERO SECTION ================= */}
       <section className="relative pt-24 pb-20 md:pt-32 md:pb-24 flex items-center bg-[#0f172a] overflow-hidden w-full">
         {/* Dekorasi Background */}
         <div className="absolute top-[-10%] left-[-10%] w-[80%] md:w-[50%] h-[50%] bg-blue-600/30 rounded-full blur-[100px] pointer-events-none"></div>
@@ -151,7 +151,8 @@ export default function Home() {
               <Sparkles size={14} className="text-yellow-400" /> Tumbuh, Bergerak, Berdampak
             </motion.div>
             
-            <motion.h1 variants={fadeUp} className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-[1.1] tracking-tight">
+            {/* PERBAIKAN: whitespace-pre-line agar enter \n dari Admin bekerja */}
+            <motion.h1 variants={fadeUp} className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-[1.1] tracking-tight whitespace-pre-line">
               {config?.heroTitle || "Kaderisasi \nTanpa Batas."}
             </motion.h1>
 
@@ -159,7 +160,6 @@ export default function Home() {
               {config?.heroSubtitle || "Wadah pergerakan mahasiswa Islam di UIN Maulana Malik Ibrahim Malang."}
             </motion.p>
 
-            {/* TOMBOL: flex-row (berjejer) di semua ukuran layar */}
             <motion.div variants={fadeUp} className="flex flex-row justify-center lg:justify-start gap-3 w-full sm:w-max">
               <Link href="/pendaftaran" className="bg-yellow-400 hover:bg-yellow-300 text-slate-900 font-bold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2 text-xs md:text-sm shadow-lg">
                 Gabung PMII <ArrowRight size={14} />
@@ -170,7 +170,7 @@ export default function Home() {
             </motion.div>
           </motion.div>
 
-          {/* KOLOM GAMBAR (REVISI: Muncul di semua layar, ukuran menyesuaikan) */}
+          {/* KOLOM GAMBAR (Menerima URL Cloudinary PNG Transparan) */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }} 
             animate={{ opacity: 1, scale: 1 }} 
@@ -181,13 +181,12 @@ export default function Home() {
                 <img 
                     src={config.heroImage} 
                     alt="Ketua PMII" 
-                    // max-h-full memastikan gambar tidak keluar dari kotak
-                    // w-auto dan h-full menjaga proporsi
-                    className="h-full w-auto object-contain drop-shadow-2xl z-10" 
+                    className="h-full w-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-10" 
                 />
             ) : (
-                <div className="w-full h-full bg-white/5 rounded-3xl flex items-center justify-center text-white/30 border border-white/10">
-                    [Foto Kader PNG]
+                <div className="w-full h-full bg-white/5 rounded-3xl flex flex-col items-center justify-center text-white/30 border border-white/10 backdrop-blur-sm">
+                    <User size={64} className="mb-3 opacity-50" />
+                    <span className="text-xs font-bold uppercase tracking-widest">Foto PNG Kosong</span>
                 </div>
             )}
           </motion.div>
@@ -226,13 +225,19 @@ export default function Home() {
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative order-2 lg:order-1">
             <div className="absolute inset-0 bg-blue-600 rounded-2xl transform -translate-x-3 translate-y-3 md:-translate-x-4 md:translate-y-4"></div>
-            <div className="relative h-56 sm:h-64 md:h-80 lg:h-[450px] bg-slate-200 rounded-2xl overflow-hidden shadow-xl flex items-center justify-center">
+            
+            {/* AREA FOTO SEJARAH DARI CLOUDINARY */}
+            <div className="relative h-56 sm:h-64 md:h-80 lg:h-[450px] bg-slate-200 rounded-2xl overflow-hidden shadow-xl flex items-center justify-center border border-slate-100">
                {config?.sejarahImage ? (
                   <img src={config.sejarahImage} alt="Sejarah PMII" className="w-full h-full object-cover" />
                ) : (
-                  <span className="text-xs md:text-base text-slate-500 font-medium z-10">Gambar Sejarah</span>
+                  <div className="flex flex-col items-center justify-center text-slate-400">
+                     <ImageIcon size={48} className="mb-3 opacity-50" />
+                     <span className="text-xs md:text-sm font-bold uppercase tracking-widest text-slate-500">Gambar Kosong</span>
+                  </div>
                )}
             </div>
+            
             <div className="absolute -bottom-3 -right-3 md:-bottom-6 md:-right-6 bg-white p-4 md:p-6 rounded-xl shadow-xl border border-slate-50">
                <p className="text-2xl md:text-4xl font-extrabold text-blue-600 mb-0">{config?.sejarahTahun || "1960"}</p>
                <p className="text-[10px] md:text-sm text-slate-600 font-semibold">Tahun Berdiri</p>
@@ -254,8 +259,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ================= 4. NILAI DASAR PERGERAKAN (EKSKLUSIF MINIMALIS) ================= */}
-      {/* Warna latar belakang dirancang gelap (slate-900) dengan tipografi bersih */}
+      {/* ================= 4. NILAI DASAR PERGERAKAN ================= */}
       <section className="bg-slate-900 py-20 md:py-28 px-5 text-white relative overflow-hidden mt-12 md:mt-20 w-full">
         <div className="max-w-7xl mx-auto relative z-10">
           
@@ -278,7 +282,6 @@ export default function Home() {
               <motion.div 
                 key={idx} 
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5 } } }} 
-                // Pendekatan Card Gelap Elegan
                 className="bg-slate-800/50 border border-slate-700/50 rounded-[1.5rem] p-8 md:p-10 hover:bg-slate-800 transition-colors group flex flex-col items-start"
               >
                 <div className={`w-14 h-14 bg-${item.color}-500/10 border border-${item.color}-500/20 rounded-full flex items-center justify-center mb-6 text-${item.color}-400 group-hover:bg-${item.color}-500/20 transition-colors`}>
@@ -330,7 +333,7 @@ export default function Home() {
                     <p className="text-slate-500 text-sm md:text-xs line-clamp-2 mb-4 leading-relaxed grow">
                       {berita.excerpt || "Baca selengkapnya untuk mengetahui detail informasi ini..."}
                     </p>
-                    <Link href={`/berita`} className="inline-flex items-center gap-1 text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors mt-auto pt-4 border-t border-slate-50">
+                    <Link href={`/berita/${berita.id}`} className="inline-flex items-center gap-1 text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors mt-auto pt-4 border-t border-slate-50">
                       Baca Selengkapnya <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </div>
@@ -354,7 +357,7 @@ export default function Home() {
           <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-blue-400 rounded-full blur-[40px] opacity-30"></div>
           
           <div className="relative z-10 max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 md:mb-6 leading-tight">
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 md:mb-6 leading-tight whitespace-pre-line">
               {config?.ctaTitle || "Mari Melangkah Bersama PMII."}
             </h2>
             <p className="text-blue-100 mb-8 md:mb-10 text-sm md:text-lg leading-relaxed">

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Search, Calendar, ChevronRight, BookOpen, Sparkles, ExternalLink } from "lucide-react";
+import { Search, Calendar, ChevronRight, BookOpen, Sparkles, ExternalLink, Image as ImageIcon } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore";
 
@@ -45,7 +45,7 @@ export default function Berita() {
           return {
             id: doc.id,
             title: data.title || "Tanpa Judul",
-            category: data.kategori || "Umum",
+            category: data.kategori || "Berita Utama",
             date: formattedDate,
             excerpt: data.excerpt || "Tidak ada deskripsi singkat...",
             imageUrl: data.imageUrl || "" 
@@ -70,7 +70,29 @@ export default function Berita() {
     return matchesCategory && matchesSearch;
   });
 
-  const categories = ["Semua", "Kegiatan", "Opini", "Sosial", "Pelatihan", "Organisasi"];
+  // DISINKRONKAN DENGAN ADMIN BERITA
+  const categories = ["Semua", "Berita Utama", "Opini Kader", "Kajian & Artikel", "Pengumuman"];
+
+  // Fungsi Warna Kategori Cerdas
+  const getCategoryColor = (cat, isFeatured = false) => {
+    if (isFeatured) {
+      // Khusus layout featured di atas gambar gelap, pakai warna cerah
+      switch (cat) {
+        case "Opini Kader": return "bg-emerald-400 text-emerald-950";
+        case "Kajian & Artikel": return "bg-purple-400 text-purple-950";
+        case "Pengumuman": return "bg-amber-400 text-amber-950";
+        default: return "bg-yellow-400 text-slate-900"; // Berita Utama
+      }
+    } else {
+      // Layout standard (putih)
+      switch (cat) {
+        case "Opini Kader": return "bg-emerald-100 text-emerald-700";
+        case "Kajian & Artikel": return "bg-purple-100 text-purple-700";
+        case "Pengumuman": return "bg-amber-100 text-amber-700";
+        default: return "bg-blue-100 text-blue-700"; // Berita Utama
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -190,10 +212,13 @@ export default function Berita() {
                           {item.imageUrl ? (
                              <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                           ) : (
-                             <div className="absolute inset-0 flex items-center justify-center text-slate-600 font-medium z-10">Tanpa Gambar</div>
+                             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 font-medium z-10 bg-slate-900">
+                                <ImageIcon size={32} className="mb-2 opacity-50"/>
+                                <span className="text-xs">Tanpa Gambar</span>
+                             </div>
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-[#1e293b] via-transparent to-transparent z-20 md:bg-gradient-to-r"></div>
-                          <span className="absolute top-6 left-6 bg-yellow-400 text-slate-900 shadow-lg text-xs font-bold px-4 py-2 rounded-full z-30 uppercase tracking-wider flex items-center gap-1">
+                          <span className={`absolute top-6 left-6 shadow-lg text-xs font-bold px-4 py-2 rounded-full z-30 uppercase tracking-wider flex items-center gap-1.5 ${getCategoryColor(item.category, true)}`}>
                             <Sparkles size={14}/> {item.category}
                           </span>
                         </div>
@@ -221,9 +246,12 @@ export default function Berita() {
                           {item.imageUrl ? (
                              <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                           ) : (
-                             <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm font-medium z-10">Tanpa Gambar</div>
+                             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-sm font-medium z-10 bg-slate-100">
+                                <ImageIcon size={24} className="mb-2 opacity-30"/>
+                                <span className="text-xs italic">Tanpa Gambar</span>
+                             </div>
                           )}
-                          <span className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-slate-900 shadow-sm text-xs font-bold px-3 py-1.5 rounded-full z-20 uppercase tracking-wider">
+                          <span className={`absolute top-4 left-4 shadow-sm text-[10px] font-bold px-3 py-1.5 rounded-md z-20 uppercase tracking-wider ${getCategoryColor(item.category, false)}`}>
                             {item.category}
                           </span>
                         </div>
@@ -249,15 +277,18 @@ export default function Berita() {
                            {item.imageUrl ? (
                               <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                            ) : (
-                              <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm font-medium z-10">Tanpa Gambar</div>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-sm font-medium z-10 bg-slate-100">
+                                <ImageIcon size={24} className="mb-2 opacity-30"/>
+                                <span className="text-xs italic">Tanpa Gambar</span>
+                              </div>
                            )}
-                           <span className="absolute top-4 left-4 md:hidden bg-white/90 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full z-20 uppercase">
+                           <span className={`absolute top-4 left-4 md:hidden text-[10px] font-bold px-3 py-1.5 rounded-md z-20 uppercase tracking-wider ${getCategoryColor(item.category, false)}`}>
                              {item.category}
                            </span>
                         </div>
                         <div className="md:w-2/3 lg:w-3/4 p-6 md:p-8 flex flex-col justify-center flex-grow relative">
                           <div className="hidden md:flex items-center gap-3 mb-3">
-                            <span className="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                            <span className={`text-[10px] font-bold px-3 py-1 rounded-md uppercase tracking-wider ${getCategoryColor(item.category, false)}`}>
                               {item.category}
                             </span>
                             <span className="text-sm text-slate-400 font-medium flex items-center gap-1.5"><Calendar size={14} /> {item.date}</span>

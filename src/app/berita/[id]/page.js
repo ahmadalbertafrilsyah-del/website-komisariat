@@ -1,233 +1,287 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import { MapPin, Users, BookOpen, ArrowLeft, Shield, Hash, Compass, MessageCircle, Star, Target, FileText, Wallet, Building2 } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { motion } from "framer-motion";
+import { ArrowLeft, Calendar, User, Clock, Share2, Tag, AlertCircle, Newspaper, ImageIcon, Sparkles } from "lucide-react";
 
-export default function DetailRayonPage() {
+// IMPORT FIREBASE
+import { db } from "@/lib/firebase";
+import { doc, getDoc, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+
+export default function DetailBerita() {
   const params = useParams();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   
-  const [rayonData, setRayonData] = useState(null);
-  const [anggotaRayon, setAnggotaRayon] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [article, setArticle] = useState(null);
+  const [relatedNews, setRelatedNews] = useState([]);
 
   useEffect(() => {
-    async function fetchDetailRayon() {
+    async function fetchBeritaDetail() {
       try {
         if (!params.id) return;
-        const urlId = decodeURIComponent(params.id).toLowerCase().replace(/-/g, " ");
 
-        const docRayon = await getDoc(doc(db, "website_config", "database_rayon"));
-        let foundRayon = null;
-        
-        if (docRayon.exists() && docRayon.data().listRayon) {
-          const allRayon = docRayon.data().listRayon;
-          // Pencarian yang toleran terhadap spasi / karakter khusus
-          foundRayon = allRayon.find(r => 
-            r.nama.toLowerCase() === urlId || 
-            r.nama.toLowerCase().replace(/[^a-z0-9]/g, "") === urlId.replace(/[^a-z0-9]/g, "")
-          );
-        }
+        // 1. Tarik Data Artikel Berdasarkan ID di URL
+        const docRef = doc(db, "berita", params.id);
+        const docSnap = await getDoc(docRef);
 
-        if (foundRayon) {
-          setRayonData(foundRayon);
-          // Tarik data kader dari database anggota pusat
-          const docAnggota = await getDoc(doc(db, "website_config", "database_anggota"));
-          if (docAnggota.exists() && docAnggota.data().listAnggota) {
-            const allAnggota = docAnggota.data().listAnggota;
-            const filtered = allAnggota.filter(
-              (a) => a.rayon && a.rayon.toLowerCase() === foundRayon.nama.toLowerCase()
-            );
-            setAnggotaRayon(filtered);
-          }
+        if (docSnap.exists()) {
+          setArticle({ id: docSnap.id, ...docSnap.data() });
         } else {
-          setRayonData("NOT_FOUND");
+          setArticle(null); 
         }
+
+        // 2. Tarik Data Artikel Terkait (3 Artikel Terbaru selain artikel ini)
+        const q = query(collection(db, "berita"), orderBy("createdAt", "desc"), limit(4));
+        const relatedSnap = await getDocs(q);
+        const relatedData = [];
+        relatedSnap.forEach((docItem) => {
+          if (docItem.id !== params.id) { 
+            relatedData.push({ id: docItem.id, ...docItem.data() });
+          }
+        });
+        setRelatedNews(relatedData.slice(0, 2)); 
+
       } catch (error) {
-        console.error("Gagal memuat detail rayon:", error);
+        console.error("Gagal memuat detail berita:", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchDetailRayon();
+    fetchBeritaDetail();
   }, [params.id]);
 
-  if (loading) return <LoadingScreen text="Mencari Profil Rayon" />;
+  // Fungsi Copy Link untuk Tombol Share
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    alert("Tautan artikel berhasil disalin ke clipboard!");
+  };
 
-  if (rayonData === "NOT_FOUND") {
+  if (loading) return <LoadingScreen text="Memuat Artikel..." />;
+
+  // Jika Artikel Tidak Ditemukan
+  if (!article) {
     return (
-      <main className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-5">
+      <main className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-5">
         <Navbar />
         <div className="text-center mt-20">
-          <Compass className="w-20 h-20 text-slate-300 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Rayon Tidak Ditemukan</h1>
-          <button onClick={() => router.push('/rayon')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-bold transition flex items-center gap-2 mx-auto mt-4 shadow-md">
-            <ArrowLeft size={18} /> Kembali ke Daftar Rayon
+          <AlertCircle className="w-20 h-20 text-slate-300 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Artikel Tidak Ditemukan</h1>
+          <p className="text-slate-500 mb-6">Mungkin artikel ini telah dihapus atau tautannya salah.</p>
+          <button onClick={() => router.push('/berita')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-bold transition flex items-center gap-2 mx-auto">
+            <ArrowLeft size={18} /> Kembali ke Indeks Berita
           </button>
         </div>
       </main>
     );
   }
 
-  // Komponen Helper untuk Kotak Pengurus Inti
-  const PersonilCard = ({ jabatan, nama, wa, icon }) => (
-    <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center justify-between gap-3 hover:border-blue-200 transition-colors shadow-sm hover:shadow-md">
-      <div className="flex items-center gap-3 overflow-hidden">
-        <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center shrink-0 text-blue-600">
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{jabatan}</p>
-          <p className="font-bold text-slate-800 text-sm truncate">{nama || "Belum diisi"}</p>
-        </div>
-      </div>
-      {wa && (
-        <a 
-          href={`https://wa.me/${wa.replace(/[^0-9]/g, "")}`} 
-          target="_blank" rel="noopener noreferrer"
-          className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center shrink-0 transition-colors shadow-sm"
-          title={`Chat ${jabatan}`}
-        >
-          <MessageCircle size={16} />
-        </a>
-      )}
-    </div>
-  );
+  // Format Tanggal Firebase ke Teks Indonesia
+  const publishDate = article.createdAt?.toDate 
+    ? article.createdAt.toDate().toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' }) 
+    : "Tanggal tidak diketahui";
+
+  // Perkiraan Waktu Baca (Asumsi 200 kata per menit)
+  const wordCount = article.content ? article.content.replace(/<[^>]*>?/gm, '').split(/\s+/).length : 0;
+  const readTime = Math.ceil(wordCount / 200) || 1;
+
+  // Warna Kategori (Sesuai dengan Admin)
+  const getCategoryColor = (cat) => {
+    switch (cat) {
+      case "Opini Kader": return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      case "Kajian & Artikel": return "bg-purple-100 text-purple-700 border-purple-200";
+      case "Pengumuman": return "bg-amber-100 text-amber-700 border-amber-200";
+      default: return "bg-blue-100 text-blue-700 border-blue-200"; // Berita Utama
+    }
+  };
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 w-full overflow-x-hidden flex flex-col">
+    <main className="min-h-screen bg-white font-sans text-slate-900 w-full overflow-x-hidden">
       <Navbar />
 
-      {/* ================= 1. BANNER HERO KHUSUS RAYON ================= */}
-      <section className="relative pt-24 pb-32 md:pt-32 md:pb-48 bg-[#0f172a] overflow-hidden">
-        {/* Dekorasi Background */}
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/20 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-yellow-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="absolute inset-0 z-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+      {/* Kontainer Utama Artikel */}
+      <div className="pt-32 pb-24 px-5 max-w-4xl mx-auto">
+        
+        {/* Breadcrumb & Navigation */}
+        <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
+            <Link href="/berita" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors">
+              <ArrowLeft size={16} /> Kembali ke Berita
+            </Link>
+            <div className="flex gap-4 text-slate-400">
+                <button onClick={handleShare} className="hover:text-blue-600 transition flex items-center gap-1.5 text-sm font-semibold bg-slate-50 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-200" title="Bagikan Artikel">
+                  <Share2 size={16} /> <span className="hidden sm:inline">Salin Tautan</span>
+                </button>
+            </div>
+        </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-5 w-full">
+        {/* Hero Section: Judul & Meta */}
+        <header className="mb-10 text-center md:text-left">
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-5 border ${getCategoryColor(article.kategori)}`}>
+            <Sparkles size={12} /> {article.kategori || "Berita"}
+          </div>
+          <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 leading-[1.25] mb-6 tracking-tight">
+            {article.title}
+          </h1>
           
-          {/* Tombol Kembali */}
-          <div className="mb-8 md:mb-10 flex justify-between items-center">
-            <button onClick={() => router.push('/rayon')} className="inline-flex items-center gap-1.5 text-slate-300 hover:text-white transition bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-bold w-max shrink-0 shadow-lg">
-              <ArrowLeft size={14} /> Kembali
-            </button>
+          <div className="flex flex-wrap justify-center md:justify-start items-center gap-4 md:gap-6 text-xs md:text-sm text-slate-500 font-medium bg-slate-50 p-4 rounded-2xl border border-slate-100 w-max mx-auto md:mx-0">
+             <div className="flex items-center gap-1.5"><User size={16} className="text-blue-600"/> <span className="font-bold text-slate-700">Tim Redaksi</span></div>
+             <div className="hidden sm:block w-1 h-1 bg-slate-300 rounded-full"></div>
+             <div className="flex items-center gap-1.5"><Calendar size={16} className="text-blue-600"/> {publishDate}</div>
+             <div className="hidden sm:block w-1 h-1 bg-slate-300 rounded-full"></div>
+             <div className="flex items-center gap-1.5"><Clock size={16} className="text-blue-600"/> {readTime} Menit Baca</div>
           </div>
+        </header>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8 text-center md:text-left">
-            
-            {/* LOGO RAYON (Diambil dari Cloudinary) */}
-            <div className="w-28 h-28 md:w-36 md:h-36 rounded-3xl bg-white/5 border border-white/20 shadow-2xl backdrop-blur-sm flex items-center justify-center shrink-0 overflow-hidden">
-               {rayonData?.logoUrl ? (
-                 <img src={rayonData.logoUrl} alt={`Logo ${rayonData.nama}`} className="w-full h-full object-contain p-2 drop-shadow-lg" />
-               ) : (
-                 <Compass size={48} className="text-white/30" />
-               )}
-            </div>
-
-            {/* KETERANGAN RAYON */}
-            <div>
-              <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white mb-3 tracking-tight leading-snug">
-                Rayon <span className="text-yellow-400">{rayonData?.nama}</span>
-              </h1>
-              
-              <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-blue-400 bg-blue-500/20 border border-blue-400/30 px-3 py-1.5 rounded-full mb-5 inline-flex items-center justify-center md:justify-start gap-1.5 w-max truncate backdrop-blur-sm">
-                <BookOpen size={14} className="shrink-0" /> <span className="truncate">Basis: {rayonData?.fakultas || "Fakultas"}</span>
-              </span>
-
-              <p className="text-slate-300 text-sm md:text-base lg:text-lg max-w-2xl leading-relaxed italic md:border-l-4 md:border-yellow-400 md:pl-4 bg-white/5 py-2 px-4 md:pr-4 rounded-xl md:rounded-l-none md:rounded-r-lg backdrop-blur-sm mt-2 shadow-sm">
-                "{rayonData?.deskripsi || "Berproses bersama mengawal pergerakan di tingkat fakultas dengan nilai-nilai Ahlussunnah Wal Jama'ah."}"
-              </p>
-            </div>
-
-          </motion.div>
+        {/* Featured Image (Cover Artikel Cloudinary) */}
+        <div className="w-full h-64 md:h-[450px] bg-slate-100 rounded-3xl mb-12 overflow-hidden shadow-lg border border-slate-200 flex items-center justify-center relative group">
+           {article.imageUrl ? (
+             <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+           ) : (
+             <div className="flex flex-col items-center text-slate-400 bg-slate-50 w-full h-full justify-center">
+               <Newspaper size={48} className="mb-2 opacity-30" />
+               <span className="font-medium italic text-sm opacity-50">Tanpa Gambar Sampul</span>
+             </div>
+           )}
         </div>
-      </section>
 
-      {/* ================= 2. PENGURUS INTI RAYON ================= */}
-      <section className="px-5 max-w-7xl mx-auto w-full -mt-16 md:-mt-20 relative z-20 mb-12">
-        <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-xl border border-slate-100">
+        {/* ================= AREA KONTEN RICH TEXT (REACT QUILL ENGINE) ================= */}
+        <article className="html-content-container max-w-none text-slate-700 leading-loose text-[17px] md:text-lg">
+          <div dangerouslySetInnerHTML={{ __html: article.content }} />
+        </article>
+
+        {/* ================= CUSTOM CSS UNTUK RENDER RICH TEXT HTML ================= */}
+        <style jsx global>{`
+          .html-content-container {
+            font-family: inherit;
+          }
           
-          {/* Top Section: Fakta Cepat */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center pb-6 md:pb-8 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                <Building2 size={24} className="text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Lembaga Kultural</p>
-                <p className="font-bold text-slate-800 text-sm md:text-base leading-snug">PMII Tingkat Fakultas</p>
-              </div>
+          /* Paragraf & Teks Dasar */
+          .html-content-container p {
+            margin-bottom: 1.5em;
+            color: #334155; /* slate-700 */
+          }
+          
+          /* Heading (H1, H2, H3) */
+          .html-content-container h1, 
+          .html-content-container h2, 
+          .html-content-container h3 {
+            font-weight: 800;
+            color: #0f172a; /* slate-900 */
+            margin-top: 2em;
+            margin-bottom: 0.75em;
+            line-height: 1.3;
+            letter-spacing: -0.025em;
+          }
+          .html-content-container h1 { font-size: 2.25rem; }
+          .html-content-container h2 { font-size: 1.875rem; }
+          .html-content-container h3 { font-size: 1.5rem; }
+          
+          /* List (Bullet & Number) */
+          .html-content-container ul, 
+          .html-content-container ol {
+            margin-bottom: 1.5em;
+            padding-left: 1.5em;
+          }
+          .html-content-container ul { list-style-type: disc; }
+          .html-content-container ol { list-style-type: decimal; }
+          .html-content-container li { margin-bottom: 0.5em; padding-left: 0.5em; }
+          
+          /* Tautan (Link) */
+          .html-content-container a {
+            color: #2563eb; /* blue-600 */
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            font-weight: 600;
+            transition: color 0.2s ease;
+          }
+          .html-content-container a:hover { color: #1d4ed8; }
+          
+          /* Kutipan (Blockquote) */
+          .html-content-container blockquote {
+            margin: 2.5em 0;
+            padding: 1.5em 2em;
+            background-color: #f8fafc; /* slate-50 */
+            border-left: 4px solid #2563eb; /* blue-600 */
+            border-radius: 0 1rem 1rem 0;
+            font-style: italic;
+            font-weight: 500;
+            color: #1e293b; /* slate-800 */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+          }
+          
+          /* Gambar di dalam artikel */
+          .html-content-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 1rem;
+            margin: 2em auto;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: block;
+          }
+          
+          /* Video Embed (YouTube, dll) */
+          .html-content-container iframe,
+          .html-content-container .ql-video {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 1rem;
+            margin: 2em 0;
+            border: none;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+          }
+          
+          /* KELAS ALIGNMENT KHUSUS DARI REACT QUILL */
+          .html-content-container .ql-align-center { text-align: center; }
+          .html-content-container .ql-align-right { text-align: right; }
+          .html-content-container .ql-align-justify { text-align: justify; }
+          
+          /* KELAS INDENTASI KHUSUS DARI REACT QUILL */
+          .html-content-container .ql-indent-1 { padding-left: 3em; }
+          .html-content-container .ql-indent-2 { padding-left: 6em; }
+          .html-content-container .ql-indent-3 { padding-left: 9em; }
+        `}</style>
+        {/* =========================================================================== */}
+
+        {/* Separator */}
+        <hr className="my-16 border-slate-100 border-2 rounded-full" />
+
+        {/* ================= RELATED ARTICLES SECTION ================= */}
+        <section>
+          <h3 className="text-2xl font-extrabold text-slate-900 mb-8 flex items-center gap-2">
+            <Tag size={24} className="text-blue-600" /> Bacaan Terkait
+          </h3>
+          
+          {relatedNews.length > 0 ? (
+            <div className="grid md:grid-cols-2 gap-6">
+              {relatedNews.map((news) => (
+                <Link href={`/berita/${news.id}`} key={news.id} className="group flex flex-col p-5 border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-xl transition-all duration-300 bg-white">
+                    <div className="relative w-full h-48 rounded-xl overflow-hidden mb-4 bg-slate-100 shrink-0">
+                      {news.imageUrl ? (
+                        <img src={news.imageUrl} alt={news.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 text-xs italic bg-slate-50">
+                           <ImageIcon size={24} className="mb-2 opacity-50"/> Tanpa Gambar
+                        </div>
+                      )}
+                      <span className={`absolute top-3 left-3 px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider shadow-sm ${getCategoryColor(news.kategori)}`}>
+                        {news.kategori || "Berita"}
+                      </span>
+                    </div>
+                    <h4 className="font-extrabold text-slate-900 text-lg leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">{news.title}</h4>
+                </Link>
+              ))}
             </div>
-            
-            <div className="bg-slate-50 px-8 py-3 rounded-2xl border border-slate-100 text-center w-full sm:w-auto">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Total Kader / Anggota</p>
-              <h2 className="text-2xl font-black text-blue-600 leading-none mt-1">{anggotaRayon.length}</h2>
+          ) : (
+            <div className="bg-slate-50 p-8 rounded-2xl text-center border border-slate-100">
+               <p className="text-slate-500 font-medium">Belum ada bacaan terkait lainnya.</p>
             </div>
-          </div>
+          )}
+        </section>
 
-          {/* Bottom Section: Formasi Pengurus (Disinkronkan dengan Admin) */}
-          <div className="pt-6 md:pt-8">
-            <h3 className="font-extrabold text-slate-800 text-lg mb-5 flex items-center gap-2">
-              <Star size={20} className="text-yellow-500" /> Jajaran Pengurus Inti
-            </h3>
-            
-            {/* Grid 5 Kolom Proporsional */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <PersonilCard jabatan="Ketua Rayon" nama={rayonData?.ketua} wa={rayonData?.waKetua} icon={<Shield size={20}/>} />
-              <PersonilCard jabatan="Sekretaris" nama={rayonData?.sekretaris} wa={rayonData?.waSekret} icon={<FileText size={20}/>} />
-              <PersonilCard jabatan="Bendahara" nama={rayonData?.bendahara} wa={rayonData?.waBendum} icon={<Wallet size={20}/>} />
-              <PersonilCard jabatan="CO Kaderisasi" nama={rayonData?.coKaderisasi} wa={rayonData?.waKaderisasi} icon={<Target size={20}/>} />
-              <PersonilCard jabatan="CO Gerakan" nama={rayonData?.coGerakan} wa={rayonData?.waGerakan} icon={<Compass size={20}/>} />
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ================= 3. DAFTAR KADER ================= */}
-      <section className="px-5 pb-20 max-w-7xl mx-auto w-full flex-grow">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Users size={24} className="text-blue-600" />
-            <h2 className="text-2xl font-bold text-slate-800">Direktori Kader</h2>
-          </div>
-        </div>
-
-        {anggotaRayon.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-12 text-center max-w-xl mx-auto">
-             <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-             <h3 className="font-bold text-slate-700 text-lg">Belum Ada Kader Terdata</h3>
-             <p className="text-sm text-slate-400 mt-1 leading-relaxed">Admin belum memasukkan nama-nama kader untuk rayon ini ke dalam sistem database pusat.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-            {anggotaRayon.map((kader, index) => (
-              <motion.div key={kader.id || index} initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3 }} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-blue-100 transition-all duration-300 flex flex-col">
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-inner">
-                    {kader.nama.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800 leading-tight line-clamp-2 text-sm">{kader.nama}</h3>
-                    <p className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wider w-max mt-1.5">{kader.angkatan || "Tahun -"}</p>
-                  </div>
-                </div>
-                <div className="space-y-2 mt-auto border-t border-slate-50 pt-3">
-                  <div className="flex items-center gap-2 text-xs"><Hash size={14} className="text-slate-400 shrink-0" /><span className="text-slate-500 font-medium w-8 shrink-0">NIM</span><span className="font-bold text-slate-700 font-mono">{kader.nim || "-"}</span></div>
-                  <div className="flex items-center gap-2 text-xs"><Hash size={14} className="text-slate-400 shrink-0" /><span className="text-slate-500 font-medium w-8 shrink-0">NIA</span><span className="font-bold text-slate-700 font-mono">{kader.nia || "-"}</span></div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </section>
+      </div>
       <Footer />
     </main>
   );

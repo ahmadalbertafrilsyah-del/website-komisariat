@@ -1,20 +1,20 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // TAMBAHAN: Import useRouter
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import { MapPin, Users, BookOpen, ExternalLink, Shield, ArrowRight, Compass } from "lucide-react";
+import { MapPin, Users, BookOpen, ExternalLink, Shield, ArrowRight, Compass, Map } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 
 export default function RayonPage() {
-  const router = useRouter(); // TAMBAHAN: Inisialisasi router
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [rayonData, setRayonData] = useState([]);
 
-  // Tarik Data Real dari Firebase
+  // Tarik Data Real dari Firebase (Tersinkronisasi dengan database_rayon)
   useEffect(() => {
     async function fetchRayon() {
       try {
@@ -49,7 +49,7 @@ export default function RayonPage() {
             initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
             className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-yellow-400 bg-white/10 border border-white/20 px-4 py-1.5 rounded-full mb-5 inline-block flex items-center justify-center gap-2 w-max mx-auto backdrop-blur-sm"
           >
-            <Compass size={14} />
+            <Compass size={14} /> Peta Komisariat
           </motion.span>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
@@ -78,37 +78,43 @@ export default function RayonPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {rayonData.map((rayon, index) => {
-              // Membuat format URL (Slug) dari nama rayon (misal: "Rayon Kawah" -> "rayon-kawah")
               const rayonSlug = encodeURIComponent(rayon.nama.toLowerCase().replace(/\s+/g, '-'));
 
               return (
                 <motion.div 
                   key={index}
-                  // TAMBAHAN: Fungsi klik untuk masuk ke detail rayon
                   onClick={() => router.push(`/rayon/${rayonSlug}`)}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  // TAMBAHAN: cursor-pointer agar kursor berubah menjadi tangan
                   className="bg-white rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-2 transition-all duration-300 group flex flex-col h-full cursor-pointer"
                 >
-                  {/* Bagian Atas: Gambar/Logo Profil Rayon */}
-                  <div className="relative h-48 md:h-56 w-full bg-slate-800 overflow-hidden shrink-0">
-                    {rayon.foto ? (
-                      <img src={rayon.foto} alt={rayon.nama} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
+                  {/* TAMPILAN HEADER BARU: Khusus untuk Logo PNG Transparan */}
+                  <div className="relative h-48 md:h-56 w-full bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden shrink-0 flex items-center justify-center">
+                    {/* Background Logo Watermark */}
+                    {rayon.logoUrl ? (
+                      <>
+                        <div className="absolute inset-0 flex items-center justify-center p-8 opacity-30 group-hover:opacity-50 transition-opacity duration-700 blur-[2px]">
+                           <img src={rayon.logoUrl} alt={rayon.nama} className="w-full h-full object-contain" />
+                        </div>
+                        <div className="relative z-10 w-24 h-24 md:w-28 md:h-28 flex items-center justify-center drop-shadow-2xl group-hover:scale-110 transition-transform duration-500">
+                           <img src={rayon.logoUrl} alt={rayon.nama} className="w-full h-full object-contain" />
+                        </div>
+                      </>
                     ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-800 flex items-center justify-center">
-                         <MapPin size={48} className="text-white/20" />
+                      <div className="flex items-center justify-center opacity-20">
+                         <Compass size={80} className="text-white" />
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
                     
-                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-slate-900 text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 uppercase tracking-wider">
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
+                    
+                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-slate-900 text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 uppercase tracking-wider z-20">
                       <BookOpen size={12} className="text-blue-600" /> {rayon.fakultas || "Fakultas"}
                     </div>
 
-                    <div className="absolute bottom-4 left-5 right-5">
+                    <div className="absolute bottom-4 left-5 right-5 z-20">
                       <h3 className="text-2xl md:text-3xl font-extrabold text-white leading-tight group-hover:text-yellow-400 transition-colors">
                         {rayon.nama}
                       </h3>
@@ -122,43 +128,45 @@ export default function RayonPage() {
                     </p>
 
                     <div className="space-y-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                      <div className="flex items-start gap-3">
-                        <Shield size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                      <div className="flex items-center gap-3">
+                        <Shield size={18} className="text-blue-600 shrink-0" />
                         <div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ketua Rayon</p>
                           <p className="font-bold text-slate-700 text-sm">{rayon.ketua || "Belum ditentukan"}</p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3">
-                        <MapPin size={16} className="text-emerald-500 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Basecamp / Sekretariat</p>
-                          <p className="font-semibold text-slate-700 text-xs leading-snug line-clamp-2">{rayon.sekretariat || "Belum ditambahkan"}</p>
-                        </div>
+                      
+                      {/* Tautan Fakultas & Lokasi */}
+                      <div className="flex gap-2 pt-2 mt-2 border-t border-slate-200">
+                        {rayon.linkFakultas ? (
+                          <a 
+                            href={rayon.linkFakultas} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} 
+                            className="flex-1 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-blue-600 text-[11px] font-bold py-2 px-2 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <ExternalLink size={14}/> Web/IG
+                          </a>
+                        ) : (
+                          <span className="flex-1 bg-slate-100 text-slate-400 text-[11px] font-bold py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed"><ExternalLink size={14}/> Web/IG</span>
+                        )}
+                        
+                        {rayon.linkMap ? (
+                          <a 
+                            href={rayon.linkMap} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} 
+                            className="flex-1 bg-white border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-emerald-600 text-[11px] font-bold py-2 px-2 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <Map size={14}/> Lokasi Map
+                          </a>
+                        ) : (
+                          <span className="flex-1 bg-slate-100 text-slate-400 text-[11px] font-bold py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed"><Map size={14}/> Lokasi Map</span>
+                        )}
                       </div>
                     </div>
 
-                    {/* Tombol Aksi (Sosmed) */}
+                    {/* Tombol Aksi Detail */}
                     <div className="pt-2">
-                      {rayon.linkSosmed ? (
-                        <a 
-                          href={rayon.linkSosmed} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          // TAMBAHAN: Mencegah klik tombol sosial media agar tidak ikut pindah ke halaman detail rayon
-                          onClick={(e) => e.stopPropagation()} 
-                          className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-md"
-                        >
-                          Kunjungi Media Sosial <ExternalLink size={16} />
-                        </a>
-                      ) : (
-                        <button 
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-full bg-slate-100 text-slate-400 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 cursor-not-allowed"
-                        >
-                          Media Sosial Belum Ada
-                        </button>
-                      )}
+                      <div className="w-full bg-slate-900 group-hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-md">
+                        Lihat Profil Lengkap <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                      </div>
                     </div>
 
                   </div>

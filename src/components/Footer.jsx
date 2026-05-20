@@ -9,7 +9,7 @@ export default function Footer() {
   const [config, setConfig] = useState({
     tentangPmii: "PMII Komisariat adalah organisasi mahasiswa Islam yang berkomitmen untuk membangun intelektual muslim yang berkarakter dan berakhlak mulia berdasarkan nilai-nilai Ahlussunnah Wal Jama'ah.",
     jamSeninJumat: "08:00 - 16:00 WIB",
-    jamSabtu: "09:00 - 14:00 WIB",
+    jamSabtuMinggu: "09:00 - 14:00 WIB",
     lokasi: "Jl. Gajayana No. 50\nKota Malang, Jawa Timur",
     footerText: "© 2026 PMII Komisariat. Powered by Divisi Kominfo."
   });
@@ -70,8 +70,8 @@ export default function Footer() {
               <div className="flex items-start gap-3">
                 <Clock size={18} className="text-yellow-400 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold text-slate-200">Sabtu</p>
-                  <p>{config.jamSabtu}</p>
+                  <p className="font-bold text-slate-200">Sabtu - Minggu</p>
+                  <p>{config.jamSabtuMinggu}</p>
                 </div>
               </div>
             </div>
