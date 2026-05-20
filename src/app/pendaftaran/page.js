@@ -4,8 +4,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, getDoc, addDoc, serverTimestamp, query, where } from "firebase/firestore";
-import { Send, User, BookOpen, MapPin, Phone, CheckCircle, Share2, ArrowLeft, Calendar, Users, UploadCloud, Loader2, Info, FileText } from "lucide-react";
+import { collection, getDocs, addDoc, serverTimestamp, query, where } from "firebase/firestore";
+import { Send, Phone, CheckCircle, Share2, ArrowLeft, Calendar, UploadCloud, Loader2, Info, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 
 // Komponen Pembungkus untuk menangani SearchParams (Wajib di Next.js)
@@ -29,16 +29,13 @@ function PendaftaranContent() {
   const [loading, setLoading] = useState(true);
   const [activeForms, setActiveForms] = useState([]);
   
-  // State untuk form yang sedang dibuka
+  // State form & Submission
   const [selectedForm, setSelectedForm] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState({});
 
-  // State Input Data
-  const [baseData, setBaseData] = useState({
-    nama: "", nim: "", fakultas: "", jurusan: "", semester: "", wa: "", jenisKelamin: "", rayonAsal: "", berkasUrl: ""
-  });
+  // State Input Data (HANYA MENYIMPAN JAWABAN KUSTOM ADMIN)
   const [customAnswers, setCustomAnswers] = useState({});
 
   useEffect(() => {
@@ -47,12 +44,11 @@ function PendaftaranContent() {
 
   async function fetchForms() {
     try {
-      // Ambil semua formulir yang berstatus Buka
       const q = query(collection(db, "formulir_kaderisasi"), where("status", "==", "Buka"));
       const snap = await getDocs(q);
       const forms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Filter Auto-Close berdasarkan Deadline
+      // Filter Form berdasarkan Deadline (Auto-Close)
       const validForms = forms.filter(f => {
         if (!f.deadline) return true;
         return new Date(f.deadline) > new Date();
@@ -60,11 +56,11 @@ function PendaftaranContent() {
 
       setActiveForms(validForms);
 
-      // Jika ada parameter ID form di URL, langsung buka form tersebut
+      // Otomatis buka form jika ada link spesifik yang dibagikan
       if (formIdParam) {
         const found = validForms.find(f => f.id === formIdParam);
         if (found) setSelectedForm(found);
-        else alert("Formulir tidak ditemukan atau sudah ditutup.");
+        else alert("Formulir tidak ditemukan atau pendaftaran sudah ditutup.");
       }
     } catch (error) {
       console.error("Gagal memuat formulir:", error);
@@ -76,23 +72,22 @@ function PendaftaranContent() {
   const handleShare = (id) => {
     const link = `${window.location.origin}/pendaftaran?form=${id}`;
     navigator.clipboard.writeText(link);
-    alert("Link pendaftaran berhasil disalin! Silakan bagikan.");
+    alert("Link pendaftaran berhasil disalin! Silakan bagikan via WhatsApp.");
   };
 
   const handleOpenForm = (form) => {
     router.push(`/pendaftaran?form=${form.id}`);
     setSelectedForm(form);
     setIsSuccess(false);
-    setBaseData({ nama: "", nim: "", fakultas: "", jurusan: "", semester: "", wa: "", jenisKelamin: "", rayonAsal: "", berkasUrl: "" });
     setCustomAnswers({});
   };
 
-  // ================= FUNGSI CLOUDINARY UPLOAD (Untuk Berkas & Custom Field) =================
-  const handleFileUpload = async (e, fieldKey, isCustom = false) => {
+  // ================= FUNGSI CLOUDINARY UPLOAD (Khusus Pengunjung) =================
+  const handleFileUpload = async (e, questionText, questionId) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    setUploadingFiles(prev => ({ ...prev, [fieldKey]: true }));
+    setUploadingFiles(prev => ({ ...prev, [questionId]: true }));
     const formUpload = new FormData();
     formUpload.append("file", file);
 
@@ -101,40 +96,37 @@ function PendaftaranContent() {
       if (!res.ok) throw new Error("Upload gagal");
       const data = await res.json();
       
-      if (isCustom) {
-        setCustomAnswers(prev => ({ ...prev, [fieldKey]: data.url }));
-      } else {
-        setBaseData(prev => ({ ...prev, [fieldKey]: data.url }));
-      }
+      // Simpan URL file ke dalam jawaban dengan key "Teks Pertanyaan"
+      setCustomAnswers(prev => ({ ...prev, [questionText]: data.url }));
     } catch (error) {
       alert("Gagal mengunggah file. Silakan coba lagi.");
     } finally {
-      setUploadingFiles(prev => ({ ...prev, [fieldKey]: false }));
+      setUploadingFiles(prev => ({ ...prev, [questionId]: false }));
     }
   };
 
-  // ================= FUNGSI SUBMIT DATA =================
+  // ================= FUNGSI SUBMIT DATA PENDAFTAR =================
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Cek apakah ada file custom wajib yang belum terupload
+    // Validasi Manual: Pastikan pertanyaan tipe 'file' yang wajib sudah terupload
     if (selectedForm.customQuestions) {
       const requiredFiles = selectedForm.customQuestions.filter(q => q.type === 'file' && q.required);
       for (let q of requiredFiles) {
-        if (!customAnswers[q.question]) return alert(`Harap unggah file untuk: ${q.question}`);
+        if (!customAnswers[q.question]) return alert(`Harap unggah file untuk pertanyaan: ${q.question}`);
       }
     }
 
     setIsSubmitting(true);
     
+    // Semua data 100% dinamis berada di dalam objek 'answers'
     const payload = {
       formId: selectedForm.id,
       formJudul: selectedForm.judul,
       formKategori: selectedForm.kategori || "Umum",
       statusLulus: "Pending",
       createdAt: serverTimestamp(),
-      ...baseData,
-      answers: customAnswers // Semua jawaban custom dimasukkan ke object 'answers'
+      answers: customAnswers 
     };
 
     try {
@@ -161,7 +153,7 @@ function PendaftaranContent() {
     <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800">
       <Navbar />
 
-      {/* ================= HEADER UMUM ================= */}
+      {/* ================= HEADER UMUM (Tampil jika belum pilih form) ================= */}
       {!selectedForm && (
         <section className="pt-32 pb-16 px-5 bg-[#0f172a] text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none"></div>
@@ -256,99 +248,27 @@ function PendaftaranContent() {
                    )}
                 </div>
 
-                {/* AREA INPUT DATA */}
+                {/* AREA INPUT DATA (100% KUSTOM DARI ADMIN) */}
                 <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
                   
-                  {/* DATA WAJIB SISTEM */}
-                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-5">
-                    <h3 className="font-bold text-slate-800 border-b border-slate-200 pb-2 text-sm flex items-center gap-2"><User size={16} className="text-blue-600"/> Data Identitas (Wajib)</h3>
-                    
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase">Nama Lengkap Sesuai KTP/KTM</label>
-                      <input type="text" required value={baseData.nama} onChange={e => setBaseData({...baseData, nama: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Masukkan nama lengkap..." />
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-5">
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase">NIM</label>
-                        <input type="number" required value={baseData.nim} onChange={e => setBaseData({...baseData, nim: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none" placeholder="23010..." />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase">Semester Saat Ini</label>
-                        <input type="number" required value={baseData.semester} onChange={e => setBaseData({...baseData, semester: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: 3" />
-                      </div>
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-5">
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase">Fakultas</label>
-                        <input type="text" required value={baseData.fakultas} onChange={e => setBaseData({...baseData, fakultas: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Sains & Teknologi" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase">Jurusan / Program Studi</label>
-                        <input type="text" required value={baseData.jurusan} onChange={e => setBaseData({...baseData, jurusan: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Teknik Informatika" />
-                      </div>
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-5">
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase">No. WhatsApp Aktif</label>
-                        <input type="tel" required value={baseData.wa} onChange={e => setBaseData({...baseData, wa: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0812..." />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase">Jenis Kelamin</label>
-                        <select required value={baseData.jenisKelamin} onChange={e => setBaseData({...baseData, jenisKelamin: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
-                          <option value="">Pilih...</option>
-                          <option value="Laki-laki">Laki-laki</option>
-                          <option value="Perempuan">Perempuan</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Fitur Bawaan Boleh Diaktifkan Admin */}
-                    {selectedForm.reqRayon && (
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase">Asal Rayon PMII (Opsional bagi Mapaba)</label>
-                        <input type="text" value={baseData.rayonAsal} onChange={e => setBaseData({...baseData, rayonAsal: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Misal: Rayon Pencerahan Galileo" />
-                      </div>
-                    )}
-
-                    {selectedForm.reqBerkas && (
-                      <div className="space-y-1.5 bg-blue-50 p-4 rounded-xl border border-blue-100">
-                         <label className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1.5"><UploadCloud size={14}/> Upload Berkas Persyaratan Utama (PDF/Gambar)</label>
-                         <div className="flex flex-col sm:flex-row items-center gap-2 mt-2">
-                            <label className={`cursor-pointer px-4 py-2.5 rounded-xl text-xs font-bold transition border w-full sm:w-auto text-center shrink-0 ${uploadingFiles['berkasUtama'] ? 'bg-slate-200 text-slate-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                              {uploadingFiles['berkasUtama'] ? <Loader2 size={14} className="animate-spin inline mr-1" /> : <UploadCloud size={14} className="inline mr-1" />}
-                              {uploadingFiles['berkasUtama'] ? "Mengunggah..." : "Pilih File"}
-                              <input type="file" required className="hidden" onChange={(e) => handleFileUpload(e, 'berkasUrl', false)} disabled={uploadingFiles['berkasUtama']} />
-                            </label>
-                            <input type="text" readOnly value={baseData.berkasUrl} required className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white text-emerald-600 font-mono outline-none" placeholder="File wajib diunggah..." />
-                         </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* DATA KUSTOM DARI FORM BUILDER ADMIN */}
-                  {selectedForm.customQuestions?.length > 0 && (
-                    <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-6 mt-6">
-                      <h3 className="font-bold text-slate-800 border-b border-slate-200 pb-2 text-sm flex items-center gap-2"><FileText size={16} className="text-amber-500"/> Pertanyaan Tambahan</h3>
-                      
+                  {selectedForm.customQuestions?.length > 0 ? (
+                    <div className="space-y-6">
                       {selectedForm.customQuestions.map((q) => (
                         <div key={q.id} className="space-y-2">
-                          <label className="text-[12px] font-bold text-slate-700 leading-snug flex items-start gap-1">
+                          <label className="text-sm font-bold text-slate-800 leading-snug flex items-start gap-1">
                             {q.question} {q.required && <span className="text-red-500">*</span>}
                           </label>
 
                           {q.type === 'text' && (
-                            <input type="text" required={q.required} value={customAnswers[q.question] || ""} onChange={e => setCustomAnswers({...customAnswers, [q.question]: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Jawaban singkat..." />
+                            <input type="text" required={q.required} value={customAnswers[q.question] || ""} onChange={e => setCustomAnswers({...customAnswers, [q.question]: e.target.value})} className="w-full p-3.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Ketik jawaban Anda..." />
                           )}
 
                           {q.type === 'textarea' && (
-                            <textarea rows="3" required={q.required} value={customAnswers[q.question] || ""} onChange={e => setCustomAnswers({...customAnswers, [q.question]: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="Tuliskan jawaban Anda di sini..." />
+                            <textarea rows="3" required={q.required} value={customAnswers[q.question] || ""} onChange={e => setCustomAnswers({...customAnswers, [q.question]: e.target.value})} className="w-full p-3.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all" placeholder="Tuliskan jawaban lengkap di sini..." />
                           )}
 
                           {q.type === 'select' && (
-                            <select required={q.required} value={customAnswers[q.question] || ""} onChange={e => setCustomAnswers({...customAnswers, [q.question]: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                            <select required={q.required} value={customAnswers[q.question] || ""} onChange={e => setCustomAnswers({...customAnswers, [q.question]: e.target.value})} className="w-full p-3.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer transition-all">
                               <option value="">Pilih salah satu...</option>
                               {q.options?.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
                             </select>
@@ -357,7 +277,7 @@ function PendaftaranContent() {
                           {q.type === 'radio' && (
                             <div className="space-y-2 mt-2">
                               {q.options?.map((opt, i) => (
-                                <label key={i} className="flex items-center gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition bg-white">
+                                <label key={i} className="flex items-center gap-3 p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all bg-white">
                                   <input type="radio" name={q.id} required={q.required} value={opt} checked={customAnswers[q.question] === opt} onChange={e => setCustomAnswers({...customAnswers, [q.question]: e.target.value})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
                                   <span className="text-sm font-medium text-slate-700">{opt}</span>
                                 </label>
@@ -366,27 +286,31 @@ function PendaftaranContent() {
                           )}
 
                           {q.type === 'file' && (
-                            <div className="flex flex-col sm:flex-row items-center gap-2 mt-1">
-                               <label className={`cursor-pointer px-4 py-2.5 rounded-xl text-xs font-bold transition border w-full sm:w-auto text-center shrink-0 ${uploadingFiles[q.id] ? 'bg-slate-200 text-slate-500 border-slate-300' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'}`}>
-                                 {uploadingFiles[q.id] ? <Loader2 size={14} className="animate-spin inline mr-1" /> : <UploadCloud size={14} className="inline mr-1" />}
-                                 {uploadingFiles[q.id] ? "Mengunggah..." : "Pilih File"}
+                            <div className="flex flex-col sm:flex-row items-center gap-3 mt-1 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                               <label className={`cursor-pointer px-5 py-3 rounded-xl text-xs font-bold transition-all border w-full sm:w-auto text-center shrink-0 ${uploadingFiles[q.id] ? 'bg-slate-200 text-slate-500 border-slate-300' : 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700 shadow-sm'}`}>
+                                 {uploadingFiles[q.id] ? <Loader2 size={16} className="animate-spin inline mr-2" /> : <UploadCloud size={16} className="inline mr-2" />}
+                                 {uploadingFiles[q.id] ? "Mengunggah File..." : "Pilih File Gambar/PDF"}
                                  {/* File input tidak menggunakan browser 'required', kita validasi manual saat submit */}
-                                 <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, q.question, true)} disabled={uploadingFiles[q.id]} />
+                                 <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, q.question, q.id)} disabled={uploadingFiles[q.id]} />
                                </label>
-                               <input type="text" readOnly value={customAnswers[q.question] || ""} className="w-full p-2.5 border border-slate-200 rounded-xl text-[10px] bg-slate-100 text-slate-500 font-mono outline-none" placeholder={q.required ? "Wajib diunggah..." : "Kosong..."} />
+                               <input type="text" readOnly value={customAnswers[q.question] || ""} className="w-full p-3 border border-slate-200 rounded-xl text-xs bg-white text-emerald-600 font-mono outline-none" placeholder={q.required ? "File wajib diunggah..." : "Belum ada file dipilih..."} />
                             </div>
                           )}
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <div className="text-center p-8 bg-slate-50 rounded-2xl border border-slate-100">
+                       <p className="text-slate-500">Belum ada pertanyaan yang dibuat untuk formulir ini.</p>
+                    </div>
                   )}
 
                   {/* Tombol Kirim */}
-                  <div className="pt-6 border-t border-slate-100">
-                    <button type="submit" disabled={isSubmitting} className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold py-4 rounded-xl transition-colors flex justify-center items-center gap-2 disabled:opacity-70 shadow-xl shadow-slate-900/10">
-                      {isSubmitting ? <><Loader2 size={20} className="animate-spin" /> Mengirim Data...</> : <>Kirim Formulir Pendaftaran <Send size={20} /></>}
+                  <div className="pt-8 mt-8 border-t border-slate-100">
+                    <button type="submit" disabled={isSubmitting || !selectedForm.customQuestions || selectedForm.customQuestions.length === 0} className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold py-4 rounded-xl transition-all duration-300 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-slate-900/10">
+                      {isSubmitting ? <><Loader2 size={20} className="animate-spin" /> Sedang Mengirim Data...</> : <>Kirim Formulir Pendaftaran <Send size={20} /></>}
                     </button>
-                    <p className="text-center text-[10px] text-slate-400 mt-4">Sistem Terintegrasi Database PMII Komisariat UIN Malang</p>
+                    <p className="text-center text-[10px] font-semibold text-slate-400 mt-4 uppercase tracking-widest">Sistem Terintegrasi Database PMII</p>
                   </div>
                 </form>
              </div>
