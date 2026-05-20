@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "cloudinary": "^2.10.0",
     "firebase": "^12.13.0",
     "framer-motion": "^12.39.0",
     "lucide-react": "^1.16.0",
@@ -16,6 +17,7 @@
     "next-cloudinary": "^6.17.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-quill-new": "^3.8.3",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

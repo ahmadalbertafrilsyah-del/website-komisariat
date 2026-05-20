@@ -2,10 +2,13 @@
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { Save, FileText, BarChart3, History, MessageSquare, Image as ImageIcon, Target, AlertCircle } from "lucide-react";
+import { Save, FileText, BarChart3, History, MessageSquare, Image as ImageIcon, Target, AlertCircle, UploadCloud, Loader2 } from "lucide-react";
 
 export default function AdminBerandaEditor() {
   const [loading, setLoading] = useState(true);
+  
+  // State untuk melacak proses upload (menyimpan nama field yang sedang diupload)
+  const [uploadingField, setUploadingField] = useState(null);
   
   const [berandaConfig, setBerandaConfig] = useState({
     heroTitle: "Kaderisasi \nTanpa Batas.",
@@ -56,6 +59,46 @@ export default function AdminBerandaEditor() {
     loadBerandaSettings();
   }, []);
 
+  // ================= FUNGSI UPLOAD GAMBAR KE CLOUDINARY =================
+  const handleImageUpload = async (e, fieldName) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Harap pilih file berupa gambar!");
+      return;
+    }
+
+    // Khusus Banner Hero, berikan peringatan kecil jika bukan PNG
+    if (fieldName === 'heroImage' && file.type !== "image/png") {
+      alert("Catatan: Anda tidak memilih format PNG. Sangat disarankan memakai gambar PNG Transparan agar tampilan web maksimal!");
+    }
+
+    setUploadingField(fieldName);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Gagal mengunggah gambar ke server");
+
+      const data = await res.json();
+      // Update state sesuai dengan field yang diupload (heroImage atau sejarahImage)
+      setBerandaConfig(prev => ({ ...prev, [fieldName]: data.url }));
+      alert("Gambar berhasil diunggah!");
+    } catch (error) {
+      console.error("Error Upload:", error);
+      alert("Terjadi kesalahan saat mengunggah gambar. Pastikan API dan Env Cloudinary sudah benar.");
+    } finally {
+      setUploadingField(null);
+      e.target.value = null; // Reset input file
+    }
+  };
+
   const handleSaveBeranda = async (e) => {
     e.preventDefault();
     try {
@@ -80,7 +123,7 @@ export default function AdminBerandaEditor() {
 
       <form onSubmit={handleSaveBeranda} className="space-y-6 max-w-4xl">
         
-        {/* ================= SEKSI 1: BANNER HERO UTAMA (DIPERBARUI) ================= */}
+        {/* ================= SEKSI 1: BANNER HERO UTAMA ================= */}
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
           <div className="bg-slate-50 p-4 border-b border-slate-200 flex items-center gap-2 font-bold text-slate-800">
              <FileText size={18} className="text-blue-600" /> 1. Area Banner Utama (Top Hero)
@@ -95,27 +138,39 @@ export default function AdminBerandaEditor() {
               <textarea required rows="3" value={berandaConfig.heroSubtitle} onChange={(e) => setBerandaConfig({...berandaConfig, heroSubtitle: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm leading-relaxed" />
             </div>
             
-            {/* PERUBAHAN: Modifikasi Area Input Gambar PNG Transparan */}
+            {/* FITUR BARU: Upload Foto Banner PNG ke Cloudinary */}
             <div className="pt-4 border-t border-slate-100 mt-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                   <ImageIcon size={14} className="text-blue-500"/> URL Foto Banner (Sebelah Kanan)
+                   <ImageIcon size={14} className="text-blue-500"/> Foto Banner (Sebelah Kanan)
                  </label>
                  <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded font-bold border border-emerald-100 uppercase tracking-wider w-max">
                    PNG Transparan (Wajib)
                  </span>
               </div>
-              <input 
-                type="text" 
-                value={berandaConfig.heroImage || ""} 
-                onChange={(e) => setBerandaConfig({...berandaConfig, heroImage: e.target.value})} 
-                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono" 
-                placeholder="Tempel link gambar ImgBB (Pastikan berakhiran .png)..." 
-              />
+              
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border shrink-0 ${uploadingField === 'heroImage' ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-sm'}`}>
+                  {uploadingField === 'heroImage' ? <><Loader2 size={14} className="animate-spin" /> Mengunggah...</> : <><UploadCloud size={14} /> Pilih Foto PNG</>}
+                  <input 
+                    type="file" accept="image/png" className="hidden" 
+                    onChange={(e) => handleImageUpload(e, 'heroImage')} 
+                    disabled={uploadingField === 'heroImage'} 
+                  />
+                </label>
+                <input 
+                  type="text" value={berandaConfig.heroImage || ""} 
+                  onChange={(e) => setBerandaConfig({...berandaConfig, heroImage: e.target.value})} 
+                  className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono bg-slate-50 text-slate-600" 
+                  placeholder="URL otomatis terisi setelah upload..." 
+                  readOnly={uploadingField === 'heroImage'}
+                />
+              </div>
+
               <div className="mt-2.5 flex items-start gap-1.5 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
                 <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
                 <p className="text-[10px] md:text-xs text-blue-700 leading-relaxed font-medium">
-                  <strong>Tips Desain Maksimal:</strong> Agar tampilan web terlihat mahal dan menyatu dengan *background* (tidak kaku membentuk kotak), pastikan Anda mengunggah foto kader/tokoh yang <strong>latar belakangnya sudah dihapus</strong> (Transparan / format PNG). Kosongkan kolom ini jika ingin menyembunyikan gambar.
+                  <strong>Tips Desain Maksimal:</strong> Agar tampilan web terlihat mahal dan menyatu dengan *background*, pastikan Anda mengunggah foto kader/tokoh yang <strong>latar belakangnya sudah dihapus</strong> (format .PNG).
                 </p>
               </div>
             </div>
@@ -147,10 +202,29 @@ export default function AdminBerandaEditor() {
             </div>
             <div><label className="text-xs font-bold text-slate-700 block mb-1">Isi Paragraf Penjelasan</label><textarea required rows="3" value={berandaConfig.sejarahDesc} onChange={(e) => setBerandaConfig({...berandaConfig, sejarahDesc: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm text-slate-600" /></div>
             <div><label className="text-xs font-bold text-slate-700 block mb-1">Kutipan / Quote Tri Motto</label><textarea required rows="2" value={berandaConfig.sejarahQuote} onChange={(e) => setBerandaConfig({...berandaConfig, sejarahQuote: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm italic" /></div>
-            <div className="pt-2 border-t border-slate-100">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mb-1"><ImageIcon size={14} className="text-blue-500"/> URL Foto Dokumentasi Sejarah</label>
-              <input type="text" value={berandaConfig.sejarahImage || ""} onChange={(e) => setBerandaConfig({...berandaConfig, sejarahImage: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Tempel link gambar. Kosongkan untuk pakai abu-abu bawaan." />
+            
+            {/* FITUR BARU: Upload Foto Sejarah Cloudinary */}
+            <div className="pt-4 border-t border-slate-100">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mb-2"><ImageIcon size={14} className="text-blue-500"/> Foto Dokumentasi Sejarah</label>
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border shrink-0 ${uploadingField === 'sejarahImage' ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-sm'}`}>
+                  {uploadingField === 'sejarahImage' ? <><Loader2 size={14} className="animate-spin" /> Mengunggah...</> : <><UploadCloud size={14} /> Pilih Foto Sejarah</>}
+                  <input 
+                    type="file" accept="image/*" className="hidden" 
+                    onChange={(e) => handleImageUpload(e, 'sejarahImage')} 
+                    disabled={uploadingField === 'sejarahImage'} 
+                  />
+                </label>
+                <input 
+                  type="text" value={berandaConfig.sejarahImage || ""} 
+                  onChange={(e) => setBerandaConfig({...berandaConfig, sejarahImage: e.target.value})} 
+                  className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono bg-slate-50 text-slate-600" 
+                  placeholder="URL otomatis terisi setelah upload. Kosongkan untuk pakai abu-abu bawaan." 
+                  readOnly={uploadingField === 'sejarahImage'}
+                />
+              </div>
             </div>
+
           </div>
         </div>
 
@@ -212,7 +286,7 @@ export default function AdminBerandaEditor() {
 
         {/* Button Save */}
         <div className="flex justify-end">
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition flex items-center justify-center gap-2 shadow-md">
+          <button disabled={uploadingField !== null} type="submit" className="bg-blue-600 disabled:bg-blue-400 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition flex items-center justify-center gap-2 shadow-md">
             Perbarui Teks & Gambar Beranda <Save size={18} />
           </button>
         </div>

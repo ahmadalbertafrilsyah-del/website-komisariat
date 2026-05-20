@@ -2,13 +2,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import * as XLSX from "xlsx"; // Import library Excel
-import { Save, Users, Plus, Trash2, Briefcase, Image as ImageIcon, FileSpreadsheet, UploadCloud, Info } from "lucide-react";
+import * as XLSX from "xlsx"; 
+import { Save, Users, Plus, Trash2, Briefcase, Image as ImageIcon, FileSpreadsheet, UploadCloud, Info, Loader2 } from "lucide-react";
 
 export default function AdminStrukturEditor() {
   const [loading, setLoading] = useState(true);
   const [strukturData, setStrukturData] = useState([]);
   const [newKategori, setNewKategori] = useState("");
+  
+  // State untuk melacak ID (Index Divisi & Index Anggota) yang sedang proses upload
+  const [uploadingId, setUploadingId] = useState(null); 
   
   const fileInputRef = useRef(null);
 
@@ -75,6 +78,40 @@ export default function AdminStrukturEditor() {
     setStrukturData(updated);
   };
 
+  // ================= FUNGSI UPLOAD GAMBAR KE CLOUDINARY =================
+  const handleImageUpload = async (e, indexKategori, indexAnggota) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Harap pilih file berupa gambar (JPG/PNG)!");
+      e.target.value = null;
+      return;
+    }
+
+    // Set status uploading spesifik untuk pengurus ini
+    setUploadingId(`${indexKategori}-${indexAnggota}`);
+    
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Gagal upload");
+      
+      const data = await res.json();
+      // Langsung masukkan URL yang didapat ke dalam input foto pengurus tersebut
+      handleInputChange(indexKategori, indexAnggota, "foto", data.url);
+      
+    } catch (error) {
+      console.error(error);
+      alert("Gagal mengunggah foto. Pastikan API & Kredensial Cloudinary sudah benar.");
+    } finally {
+      setUploadingId(null);
+      e.target.value = null;
+    }
+  };
+
   // ================= FUNGSI IMPORT EXCEL OTOMATIS =================
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -85,14 +122,13 @@ export default function AdminStrukturEditor() {
       try {
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: "binary" });
-        const wsname = wb.SheetNames[0]; // Ambil Sheet pertama
+        const wsname = wb.SheetNames[0]; 
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
 
         let currentStruktur = [...strukturData];
 
         data.forEach((row) => {
-          // Membaca Kolom (Toleransi nama kolom mirip)
           const biroName = row["Biro"] || row["Kategori"] || row["Biro/LSO"] || "Tanpa Kategori";
           const nama = row["Nama Lengkap"] || row["Nama"] || "-";
           const jabatan = row["Jabatan"] || "Anggota";
@@ -103,18 +139,15 @@ export default function AdminStrukturEditor() {
           const whatsapp = row["WhatsApp"] || row["WA"] || "";
           const foto = row["URL Foto"] || row["Foto"] || "";
 
-          // Cari apakah Biro sudah ada di list saat ini
           let biroIndex = currentStruktur.findIndex(
             (b) => b.kategori.toLowerCase().trim() === biroName.toLowerCase().trim()
           );
           
-          // Jika Bironya belum ada, buat Biro baru
           if (biroIndex === -1) {
             currentStruktur.push({ kategori: biroName, anggota: [] });
             biroIndex = currentStruktur.length - 1;
           }
 
-          // Masukkan anggota ke dalam Biro tersebut
           currentStruktur[biroIndex].anggota.push({
             nama: String(nama),
             jabatan: String(jabatan),
@@ -135,10 +168,9 @@ export default function AdminStrukturEditor() {
       }
     };
     reader.readAsBinaryString(file);
-    e.target.value = null; // Reset input agar bisa upload file yang sama lagi
+    e.target.value = null; 
   };
 
-  // Submit Simpan Global
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -188,7 +220,7 @@ export default function AdminStrukturEditor() {
           </form>
         </div>
 
-        {/* Form 2: IMPORT EXCEL (Fitur Baru) */}
+        {/* Form 2: IMPORT EXCEL */}
         <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl shadow-sm h-full flex flex-col">
           <div className="flex items-center gap-2 mb-2">
              <FileSpreadsheet size={18} className="text-emerald-600"/>
@@ -208,7 +240,6 @@ export default function AdminStrukturEditor() {
              <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-xl text-sm flex items-center justify-center gap-2 transition shadow-md shadow-emerald-500/20">
                <UploadCloud size={18}/> Unggah File Excel (.xlsx / .xls)
              </button>
-             {/* Input file disembunyikan dan ditimpa di atas tombol agar bisa diklik */}
              <input 
                type="file" 
                accept=".xlsx, .xls"
@@ -268,7 +299,7 @@ export default function AdminStrukturEditor() {
                 <p className="text-center text-xs text-slate-400 py-4 italic">Biro ini belum memiliki personil.</p>
               ) : (
                 <div className="space-y-4 divide-y divide-slate-100 min-w-[700px]">
-                  {/* Table Header (Hanya visualisasi agar rapi) */}
+                  {/* Table Header */}
                   <div className="grid grid-cols-12 gap-3 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 pr-8">
                      <div className="col-span-3">Nama Lengkap</div>
                      <div className="col-span-2">Jabatan</div>
@@ -280,38 +311,40 @@ export default function AdminStrukturEditor() {
                   {divisi.anggota.map((member, memIdx) => (
                     <div key={memIdx} className="grid grid-cols-12 gap-3 pt-4 relative group">
                       
-                      {/* Nama */}
                       <div className="col-span-3">
                         <input type="text" placeholder="Nama..." required value={member.nama} onChange={(e) => handleInputChange(divIdx, memIdx, "nama", e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold focus:ring-1 focus:ring-blue-500 outline-none" />
                       </div>
                       
-                      {/* Jabatan */}
                       <div className="col-span-2">
                         <input type="text" placeholder="Jabatan..." required value={member.jabatan} onChange={(e) => handleInputChange(divIdx, memIdx, "jabatan", e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 outline-none" />
                       </div>
 
-                      {/* NIM & NIA */}
                       <div className="col-span-2 space-y-1.5">
                         <input type="text" placeholder="NIM..." value={member.nim} onChange={(e) => handleInputChange(divIdx, memIdx, "nim", e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-[10px] focus:ring-1 focus:ring-blue-500 outline-none font-mono" />
                         <input type="text" placeholder="NIA..." value={member.nia} onChange={(e) => handleInputChange(divIdx, memIdx, "nia", e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-[10px] focus:ring-1 focus:ring-blue-500 outline-none font-mono" />
                       </div>
 
-                      {/* Rayon & Angkatan */}
                       <div className="col-span-2 space-y-1.5">
                         <input type="text" placeholder="Rayon..." value={member.rayon} onChange={(e) => handleInputChange(divIdx, memIdx, "rayon", e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-[10px] focus:ring-1 focus:ring-blue-500 outline-none" />
                         <input type="text" placeholder="Angkatan..." value={member.angkatan} onChange={(e) => handleInputChange(divIdx, memIdx, "angkatan", e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-[10px] focus:ring-1 focus:ring-blue-500 outline-none" />
                       </div>
 
-                      {/* WA & Foto */}
+                      {/* FITUR BARU: Tombol Upload Foto Berjejer dengan Input */}
                       <div className="col-span-3 space-y-1.5">
                         <input type="text" placeholder="No WhatsApp (628...)" value={member.whatsapp} onChange={(e) => handleInputChange(divIdx, memIdx, "whatsapp", e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-[10px] focus:ring-1 focus:ring-blue-500 outline-none font-mono" />
-                        <div className="flex items-center gap-1">
-                           <ImageIcon size={12} className="text-slate-400 shrink-0"/>
-                           <input type="text" placeholder="URL Foto..." value={member.foto} onChange={(e) => handleInputChange(divIdx, memIdx, "foto", e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-[10px] focus:ring-1 focus:ring-blue-500 outline-none" />
+                        
+                        <div className="flex items-center gap-1.5">
+                           <label 
+                             className={`cursor-pointer flex items-center justify-center p-1.5 rounded-md border transition-colors shrink-0 ${uploadingId === `${divIdx}-${memIdx}` ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200'}`} 
+                             title="Upload Foto Pengurus ke Cloudinary"
+                           >
+                              {uploadingId === `${divIdx}-${memIdx}` ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                              <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, divIdx, memIdx)} disabled={uploadingId !== null} />
+                           </label>
+                           <input type="text" placeholder="URL Foto akan terisi otomatis..." value={member.foto} onChange={(e) => handleInputChange(divIdx, memIdx, "foto", e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-[10px] focus:ring-1 focus:ring-blue-500 outline-none" />
                         </div>
                       </div>
                       
-                      {/* Delete Button (Muncul Saat Hover di Desktop) */}
                       <button type="button" onClick={() => handleDelAnggota(divIdx, memIdx)} className="absolute right-0 top-1/2 -translate-y-1/2 text-slate-300 hover:text-red-500 p-2 rounded transition md:opacity-0 group-hover:opacity-100 bg-white" title="Hapus Personil">
                         <Trash2 size={16}/>
                       </button>
@@ -329,9 +362,9 @@ export default function AdminStrukturEditor() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-blue-50 p-4 rounded-xl border border-blue-200 sticky bottom-4 z-40 shadow-lg shadow-blue-500/10">
              <div className="flex items-start gap-2 text-xs text-blue-800">
                <Info size={16} className="shrink-0 mt-0.5 text-blue-600" />
-               <p>Data hasil Import Excel hanya terlihat di layar Anda. Tekan <strong>Simpan Seluruh Struktur</strong> agar tayang ke publik.</p>
+               <p>Klik tombol awan (<UploadCloud size={12} className="inline"/>) di kolom foto untuk mengunggah gambar otomatis. Tekan <strong>Simpan Seluruh Struktur</strong> agar data tayang ke publik.</p>
              </div>
-             <button type="submit" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition flex items-center justify-center gap-2 shadow-md text-sm whitespace-nowrap shrink-0">
+             <button type="submit" disabled={uploadingId !== null} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-3 px-8 rounded-xl transition flex items-center justify-center gap-2 shadow-md text-sm whitespace-nowrap shrink-0">
                 <Save size={18} /> Simpan Seluruh Struktur
               </button>
           </div>
