@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { Save, MapPin, Plus, Trash2, Image as ImageIcon, ExternalLink, Shield, BookOpen, Info, Compass, ChevronDown, ChevronUp, UploadCloud, Loader2 } from "lucide-react";
+import { Save, MapPin, Plus, Trash2, Image as ImageIcon, ExternalLink, Shield, BookOpen, Info, Compass, ChevronDown, ChevronUp, UploadCloud, Loader2, Home, AtSign } from "lucide-react";
 
 export default function AdminRayonEditor() {
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,6 @@ export default function AdminRayonEditor() {
   useEffect(() => {
     async function loadRayon() {
       try {
-        // PERBAIKAN: Menggunakan "database_rayon" sesuai database asli Anda
         const docRef = doc(db, "website_config", "database_rayon");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists() && docSnap.data().listRayon) {
@@ -50,7 +49,10 @@ export default function AdminRayonEditor() {
       nama: newRayonName.trim(), 
       fakultas: newRayonFakultas.trim(), 
       deskripsi: "", 
-      logoUrl: "", // Field Logo Baru
+      logoUrl: "", 
+      alamat: "",     // Data Baru: Alamat Basecamp
+      mapUrl: "",     // Data Baru: Link Google Maps
+      igUrl: "",      // Data Baru: Link Instagram/Web
       ketua: "", waKetua: "", 
       sekretaris: "", waSekret: "", 
       bendahara: "", waBendum: "", 
@@ -88,21 +90,20 @@ export default function AdminRayonEditor() {
       if (!res.ok) throw new Error("Upload gagal");
       
       const data = await res.json();
-      handleInputChange(idx, "logoUrl", data.url); // Langsung isi ke kolom rayon
+      handleInputChange(idx, "logoUrl", data.url); 
       alert("Logo Rayon berhasil diunggah!");
     } catch (error) {
       console.error(error);
       alert("Gagal mengunggah gambar. Pastikan API Cloudinary sudah benar.");
     } finally {
       setUploadingIdx(null);
-      e.target.value = null; // Reset input file
+      e.target.value = null; 
     }
   };
 
   const handleSaveGlobal = async (e) => {
     e.preventDefault();
     try {
-      // PERBAIKAN: Menyimpan kembali ke "database_rayon"
       const docRef = doc(db, "website_config", "database_rayon");
       await setDoc(docRef, { listRayon: rayonData });
       alert("Seluruh data Rayon & Pengurus Inti berhasil disimpan ke Database!");
@@ -120,7 +121,7 @@ export default function AdminRayonEditor() {
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Compass size={24} className="text-blue-600" /> Profil Rayon Se-Komisariat
           </h1>
-          <p className="text-xs md:text-sm text-slate-500 mt-1">Kelola data narasi, logo, dan jajaran pengurus inti masing-masing rayon.</p>
+          <p className="text-xs md:text-sm text-slate-500 mt-1">Kelola data narasi, logo, lokasi, dan jajaran pengurus inti masing-masing rayon.</p>
         </div>
       </div>
 
@@ -129,11 +130,11 @@ export default function AdminRayonEditor() {
         <form onSubmit={handleAddRayon} className="flex flex-col sm:flex-row items-end gap-3">
           <div className="flex-grow w-full space-y-1">
             <label className="text-[10px] font-bold text-slate-400 uppercase">Nama Rayon</label>
-            <input type="text" required value={newRayonName} onChange={(e) => setNewRayonName(e.target.value)} placeholder="Misal: Rayon Pencerahan Galileo" className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            <input type="text" required value={newRayonName} onChange={(e) => setNewRayonName(e.target.value)} placeholder="Misal: Rayon Kawah Chondrodimuko" className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
           <div className="flex-grow w-full space-y-1">
             <label className="text-[10px] font-bold text-slate-400 uppercase">Fakultas / Basis</label>
-            <input type="text" required value={newRayonFakultas} onChange={(e) => setNewRayonFakultas(e.target.value)} placeholder="Misal: Fakultas Sains dan Teknologi" className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            <input type="text" required value={newRayonFakultas} onChange={(e) => setNewRayonFakultas(e.target.value)} placeholder="Misal: Fakultas Ilmu Tarbiyah dan Keguruan" className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
           <button type="submit" className="w-full sm:w-auto bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2.5 px-6 rounded-xl text-sm flex items-center justify-center gap-1.5 transition whitespace-nowrap">
             <Plus size={16}/> Buat Rayon
@@ -163,7 +164,7 @@ export default function AdminRayonEditor() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">Deskripsi Singkat Rayon</label>
-                    <textarea rows="2" value={rayon.deskripsi} onChange={(e) => handleInputChange(idx, "deskripsi", e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl text-xs text-slate-600 outline-none focus:ring-1 focus:ring-blue-500" placeholder="Jelaskan fokus atau sejarah singkat rayon ini..."/>
+                    <textarea rows="2" value={rayon.deskripsi} onChange={(e) => handleInputChange(idx, "deskripsi", e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl text-xs text-slate-600 outline-none focus:ring-1 focus:ring-blue-500" placeholder="Jelaskan fokus atau semboyan rayon ini..."/>
                   </div>
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1 flex items-center gap-1"><UploadCloud size={14}/> Logo Rayon (PNG)</label>
@@ -177,8 +178,24 @@ export default function AdminRayonEditor() {
                   </div>
                 </div>
 
+                {/* INFO BASECAMP DAN SOSIAL MEDIA BARU */}
+                <div className="grid md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1 flex items-center gap-1"><Home size={12}/> Alamat Basecamp</label>
+                    <textarea rows="1" value={rayon.alamat || ""} onChange={(e) => handleInputChange(idx, "alamat", e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs text-slate-600 outline-none focus:ring-1 focus:ring-blue-500 resize-none" placeholder="Jl. Joyo Tamansari..."/>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1 flex items-center gap-1"><MapPin size={12}/> Link Google Maps</label>
+                    <input type="url" value={rayon.mapUrl || ""} onChange={(e) => handleInputChange(idx, "mapUrl", e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 outline-none focus:ring-1 focus:ring-blue-500" placeholder="https://maps.app.goo.gl/..."/>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1 flex items-center gap-1"><AtSign size={12}/> Link Instagram (IG)</label>
+                    <input type="url" value={rayon.igUrl || ""} onChange={(e) => handleInputChange(idx, "igUrl", e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 outline-none focus:ring-1 focus:ring-blue-500" placeholder="https://instagram.com/..."/>
+                  </div>
+                </div>
+
                 {/* Accordion Pengurus Inti */}
-                <div className="border border-slate-100 rounded-xl overflow-hidden">
+                <div className="border border-slate-100 rounded-xl overflow-hidden mt-4">
                   <button type="button" onClick={() => setOpenAccordion(openAccordion === idx ? null : idx)} className="w-full bg-slate-50 hover:bg-slate-100 p-3 flex items-center justify-between text-xs font-bold text-slate-700 transition">
                     <span className="flex items-center gap-2"><UsersIcon size={14}/> Form Pengurus Inti Rayon</span>
                     {openAccordion === idx ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
