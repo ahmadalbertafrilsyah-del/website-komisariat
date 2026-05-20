@@ -26,7 +26,6 @@ export default function AdminAdministrasiEditor() {
     lpjFile: ""
   });
 
-  // Refs untuk Input File Excel
   const fileInputSuratRef = useRef(null);
   const fileInputProkerRef = useRef(null);
 
@@ -57,7 +56,6 @@ export default function AdminAdministrasiEditor() {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validasi file khusus Thumbnail
     if (fieldKey.includes("Thumb") && !file.type.startsWith("image/")) {
       alert("Harap pilih file berupa gambar (JPG/PNG) untuk Cover/Thumbnail!");
       e.target.value = null;
@@ -72,8 +70,6 @@ export default function AdminAdministrasiEditor() {
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Upload gagal");
       const data = await res.json();
-      
-      // Update URL State
       setUrls(prev => ({ ...prev, [fieldKey]: data.url }));
       alert("Berkas berhasil diunggah ke Cloudinary!");
     } catch (error) {
@@ -85,15 +81,35 @@ export default function AdminAdministrasiEditor() {
     }
   };
 
-  // ================= 2. FUNGSI HANDLER UMUM =================
-  const handleDelete = (type, id) => {
-    if (!confirm("Hapus berkas ini dari sistem arsip?")) return;
-    if (type === "surat") setSuratData(suratData.filter(item => item.id !== id));
-    if (type === "proker") setProkerData(prokerData.filter(item => item.id !== id));
-    if (type === "hukum") setHukumData(hukumData.filter(item => item.id !== id));
-    if (type === "lpj") setLpjData(lpjData.filter(item => item.id !== id));
+  // ================= 2. FUNGSI HAPUS (AUTO-SAVE) =================
+  const handleDelete = async (type, id) => {
+    if (!confirm("Hapus berkas ini dari sistem arsip secara permanen?")) return;
+    
+    const docRef = doc(db, "website_config", "database_administrasi");
+    try {
+      if (type === "surat") {
+        const updated = suratData.filter(item => item.id !== id);
+        setSuratData(updated);
+        await setDoc(docRef, { listDokumen: updated }, { merge: true });
+      } else if (type === "proker") {
+        const updated = prokerData.filter(item => item.id !== id);
+        setProkerData(updated);
+        await setDoc(docRef, { listProker: updated }, { merge: true });
+      } else if (type === "hukum") {
+        const updated = hukumData.filter(item => item.id !== id);
+        setHukumData(updated);
+        await setDoc(docRef, { listProdukHukum: updated }, { merge: true });
+      } else if (type === "lpj") {
+        const updated = lpjData.filter(item => item.id !== id);
+        setLpjData(updated);
+        await setDoc(docRef, { listLpj: updated }, { merge: true });
+      }
+    } catch (error) {
+      alert("Gagal menghapus data: " + error.message);
+    }
   };
 
+  // ================= 3. FUNGSI UPDATE INLINE TEXT =================
   const handleUpdate = (type, id, field, value) => {
     if (type === "surat") setSuratData(suratData.map(item => item.id === id ? { ...item, [field]: value } : item));
     if (type === "proker") setProkerData(prokerData.map(item => item.id === id ? { ...item, [field]: value } : item));
@@ -101,67 +117,94 @@ export default function AdminAdministrasiEditor() {
     if (type === "lpj") setLpjData(lpjData.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
+  // ================= 4. FUNGSI SIMPAN GLOBAL (Untuk Perubahan Inline Tabel) =================
   const handleSaveAll = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     try {
-      const docRef = doc(db, "website_config", "database_administrasi");
-      await setDoc(docRef, {
+      await setDoc(doc(db, "website_config", "database_administrasi"), {
         listDokumen: suratData,
         listProker: prokerData,
         listProdukHukum: hukumData,
         listLpj: lpjData
       });
-      alert("Seluruh Database Administrasi & Arsip berhasil diperbarui!");
+      alert("Seluruh Perubahan di Tabel Berhasil Disimpan secara Permanen!");
     } catch (error) {
       alert("Gagal menyimpan: " + error.message);
     }
   };
 
-  // ================= 3. FUNGSI TAMBAH MANUAL =================
-  const handleAddSurat = (e) => {
+  // ================= 5. FUNGSI TAMBAH (AUTO-SAVE) =================
+  const handleAddSurat = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
     if (!fd.get("nomorSurat") || !fd.get("perihalSurat")) return;
-    setSuratData([{ id: Date.now(), nomorSurat: fd.get("nomorSurat"), perihalSurat: fd.get("perihalSurat"), deskripsiSurat: fd.get("deskripsiSurat"), linkFile: urls.suratFile }, ...suratData]);
+    
+    // Perbaikan: Tambah ke urutan paling bawah [...prev, newItem]
+    const newItem = { id: Date.now(), nomorSurat: fd.get("nomorSurat"), perihalSurat: fd.get("perihalSurat"), deskripsiSurat: fd.get("deskripsiSurat"), linkFile: urls.suratFile };
+    const updated = [...suratData, newItem]; 
+    setSuratData(updated);
     e.target.reset();
     setUrls(prev => ({ ...prev, suratFile: "" }));
+
+    // Simpan Otomatis ke Database
+    try {
+      await setDoc(doc(db, "website_config", "database_administrasi"), { listDokumen: updated }, { merge: true });
+    } catch (err) { console.error("Auto-save failed", err); }
   };
 
-  const handleAddProker = (e) => {
+  const handleAddProker = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    setProkerData([{
+    const newItem = {
       id: Date.now(),
       pelaksanaProker: fd.get("pelaksana"), namaProker: fd.get("namaProker"), tujuan: fd.get("tujuan"),
       indikator: fd.get("indikator"), sasaran: fd.get("sasaran"), waktuPelaksanaan: fd.get("waktu"),
       penanggungJawab: fd.get("pj"), estimasiDana: fd.get("dana"), linkFile: urls.prokerFile
-    }, ...prokerData]);
+    };
+    const updated = [...prokerData, newItem];
+    setProkerData(updated);
     e.target.reset();
     setUrls(prev => ({ ...prev, prokerFile: "" }));
+
+    try {
+      await setDoc(doc(db, "website_config", "database_administrasi"), { listProker: updated }, { merge: true });
+    } catch (err) { console.error("Auto-save failed", err); }
   };
 
-  const handleAddHukum = (e) => {
+  const handleAddHukum = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    setHukumData([{ id: Date.now(), nomorSK: fd.get("nomorSK"), tentangHukum: fd.get("tentang"), deskripsiHukum: fd.get("deskripsi"), linkFile: urls.hukumFile, thumbnailUrl: urls.hukumThumb }, ...hukumData]);
+    const newItem = { id: Date.now(), nomorSK: fd.get("nomorSK"), tentangHukum: fd.get("tentang"), deskripsiHukum: fd.get("deskripsi"), linkFile: urls.hukumFile, thumbnailUrl: urls.hukumThumb };
+    const updated = [...hukumData, newItem];
+    setHukumData(updated);
     e.target.reset();
     setUrls(prev => ({ ...prev, hukumFile: "", hukumThumb: "" }));
+
+    try {
+      await setDoc(doc(db, "website_config", "database_administrasi"), { listProdukHukum: updated }, { merge: true });
+    } catch (err) { console.error("Auto-save failed", err); }
   };
 
-  const handleAddLpj = (e) => {
+  const handleAddLpj = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    setLpjData([{ id: Date.now(), namaLaporan: fd.get("namaLaporan"), periode: fd.get("periode"), deskripsiLaporan: fd.get("deskripsi"), linkFile: urls.lpjFile, thumbnailUrl: urls.lpjThumb }, ...lpjData]);
+    const newItem = { id: Date.now(), namaLaporan: fd.get("namaLaporan"), periode: fd.get("periode"), deskripsiLaporan: fd.get("deskripsi"), linkFile: urls.lpjFile, thumbnailUrl: urls.lpjThumb };
+    const updated = [...lpjData, newItem];
+    setLpjData(updated);
     e.target.reset();
     setUrls(prev => ({ ...prev, lpjFile: "", lpjThumb: "" }));
+
+    try {
+      await setDoc(doc(db, "website_config", "database_administrasi"), { listLpj: updated }, { merge: true });
+    } catch (err) { console.error("Auto-save failed", err); }
   };
 
-  // ================= 4. FUNGSI IMPORT EXCEL =================
+  // ================= 6. FUNGSI IMPORT EXCEL (AUTO-SAVE) =================
   const handleExcelSurat = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const data = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, { type: "binary" }).Sheets[XLSX.read(evt.target.result, { type: "binary" }).SheetNames[0]]);
         const validData = data.map(row => ({
@@ -171,7 +214,12 @@ export default function AdminAdministrasiEditor() {
           deskripsiSurat: String(row["Deskripsi Surat"] || row["Deskripsi"] || ""),
           linkFile: String(row["Link File"] || row["Link"] || "")
         })).filter(i => i.nomorSurat || i.perihalSurat);
-        setSuratData(prev => [...validData, ...prev]);
+        
+        setSuratData(prev => {
+          const updated = [...prev, ...validData];
+          setDoc(doc(db, "website_config", "database_administrasi"), { listDokumen: updated }, { merge: true });
+          return updated;
+        });
         alert(`Berhasil mengimpor ${validData.length} data Surat!`);
       } catch (error) { alert("Format kolom excel salah."); }
     };
@@ -183,7 +231,7 @@ export default function AdminAdministrasiEditor() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const data = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, { type: "binary" }).Sheets[XLSX.read(evt.target.result, { type: "binary" }).SheetNames[0]]);
         const validData = data.map(row => ({
@@ -198,7 +246,12 @@ export default function AdminAdministrasiEditor() {
           estimasiDana: String(row["Estimasi Dana"] || row["Dana"] || ""),
           linkFile: String(row["Link File"] || "")
         })).filter(i => i.namaProker);
-        setProkerData(prev => [...validData, ...prev]);
+        
+        setProkerData(prev => {
+           const updated = [...prev, ...validData];
+           setDoc(doc(db, "website_config", "database_administrasi"), { listProker: updated }, { merge: true });
+           return updated;
+        });
         alert(`Berhasil mengimpor ${validData.length} data Proker!`);
       } catch (error) { alert("Format kolom excel salah."); }
     };
@@ -229,7 +282,7 @@ export default function AdminAdministrasiEditor() {
         <button onClick={() => setActiveTab("lpj")} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === "lpj" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"}`}><FileCheck size={16} /> Laporan</button>
       </div>
 
-      <form onSubmit={handleSaveAll} className="space-y-6">
+      <div className="space-y-6">
 
         {/* ======================= TAB 1: PERSURATAN ======================= */}
         {activeTab === "persuratan" && (
@@ -237,7 +290,7 @@ export default function AdminAdministrasiEditor() {
             <div className="grid md:grid-cols-3 gap-6">
               <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm md:col-span-2">
                 <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-1.5"><Plus size={16} className="text-blue-600" /> Input Surat Manual</h2>
-                <div as="form" className="grid grid-cols-1 sm:grid-cols-2 gap-3" onKeyDown={e => e.key === 'Enter' && e.preventDefault()}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <form onSubmit={handleAddSurat} className="contents">
                     <div><label className="text-[10px] font-bold text-slate-400 uppercase">Nomor Surat</label><input type="text" name="nomorSurat" required className="w-full p-2 border rounded-xl text-sm font-mono" /></div>
                     <div><label className="text-[10px] font-bold text-slate-400 uppercase">Perihal Surat</label><input type="text" name="perihalSurat" required className="w-full p-2 border rounded-xl text-sm" /></div>
@@ -487,12 +540,13 @@ export default function AdminAdministrasiEditor() {
              <Info size={16} className="shrink-0 text-blue-600" />
              <p>Pastikan Anda mengklik tombol "Simpan Sistem Arsip" di sebelah kanan setiap kali selesai menambah/mengedit data dari kategori manapun.</p>
            </div>
-           <button type="submit" disabled={uploadingField !== null} className="w-full sm:w-auto bg-blue-600 disabled:bg-blue-400 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition flex items-center justify-center gap-2 shadow-md text-sm shrink-0">
+           
+           <button type="button" onClick={handleSaveAll} disabled={uploadingField !== null} className="w-full sm:w-auto bg-blue-600 disabled:bg-blue-400 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition flex items-center justify-center gap-2 shadow-md text-sm shrink-0">
               Simpan Sistem Arsip <Save size={16} />
             </button>
         </div>
 
-      </form>
+      </div>
     </div>
   );
 }
