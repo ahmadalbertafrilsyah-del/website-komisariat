@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import { Search, Trophy, Award, BookOpen, ExternalLink, Calendar, Medal } from "lucide-react";
+import { Search, Trophy, Award, BookOpen, ExternalLink, Calendar, Medal, Share2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,6 +13,7 @@ export default function ApresiasiPage() {
   const [kaderData, setKaderData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeKader, setActiveKader] = useState(null); // Modal detail prestasi
+  const [activeTab, setActiveTab] = useState("akademik"); // Tab navigasi
 
   useEffect(() => {
     async function fetchApresiasi() {
@@ -23,6 +24,18 @@ export default function ApresiasiPage() {
           // Hanya tampilkan yang punya prestasi
           const dataValid = docSnap.data().listApresiasi.filter(k => k.prestasi && k.prestasi.length > 0);
           setKaderData(dataValid);
+
+          // Cek URL untuk fitur Share Link otomatis membuka modal
+          if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const sharedKaderName = params.get('kader');
+            if (sharedKaderName) {
+              const foundKader = dataValid.find(k => k.namaLengkap === sharedKaderName);
+              if (foundKader) {
+                setActiveKader(foundKader);
+              }
+            }
+          }
         }
       } catch (error) {
         console.error("Gagal menarik data apresiasi:", error);
@@ -33,10 +46,41 @@ export default function ApresiasiPage() {
     fetchApresiasi();
   }, []);
 
-  const filteredData = kaderData.filter(item => 
-    (item.namaLengkap || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-    item.prestasi.some(p => (p.judul || "").toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Memfilter, mencari, dan mengurutkan data
+  const processedData = kaderData
+    .map(kader => {
+      // Filter prestasi berdasarkan tab yang aktif (akademik / non-akademik)
+      const filteredPrestasi = kader.prestasi.filter(p => (p.tipe || "").toLowerCase() === activeTab);
+      return { ...kader, filteredPrestasi };
+    })
+    // 1. Singkirkan kader yang tidak punya prestasi di tab aktif
+    .filter(kader => kader.filteredPrestasi.length > 0)
+    // 2. Terapkan fitur pencarian
+    .filter(item => 
+      (item.namaLengkap || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+      item.filteredPrestasi.some(p => (p.judul || "").toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    // 3. Urutkan dari prestasi terbanyak di tab ini
+    .sort((a, b) => b.filteredPrestasi.length - a.filteredPrestasi.length);
+
+  const handleShare = async (kader) => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?kader=${encodeURIComponent(kader.namaLengkap)}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Prestasi ${kader.namaLengkap} - PMII`,
+          text: `Lihat prestasi dari sahabat/i ${kader.namaLengkap} di Hall of Fame PMII!`,
+          url: shareUrl,
+        });
+      } catch (error) {
+        console.log("Dibatalkan atau gagal membagikan", error);
+      }
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      alert("Link berhasil disalin ke clipboard!");
+    }
+  };
 
   if (loading) return <LoadingScreen text="Memuat Galeri Prestasi" />;
 
@@ -62,7 +106,7 @@ export default function ApresiasiPage() {
       </section>
 
       <section className="px-5 max-w-7xl mx-auto w-full -mt-10 md:-mt-12 relative z-20">
-        <div className="bg-white p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center relative">
+        <div className="bg-white p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center relative mb-8">
           <input
             type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari nama kader atau judul perlombaan / jurnal..."
@@ -70,17 +114,36 @@ export default function ApresiasiPage() {
           />
           <Search className="absolute left-7 h-5 w-5 text-slate-400" />
         </div>
+
+        {/* Tab Navigasi Kategori */}
+        <div className="flex justify-center gap-3 sm:gap-4 mb-8">
+          <button 
+            onClick={() => setActiveTab("akademik")} 
+            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 shadow-sm flex items-center gap-2 ${activeTab === "akademik" ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+          >
+            <BookOpen size={16}/> Akademik
+          </button>
+          <button 
+            onClick={() => setActiveTab("non-akademik")} 
+            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 shadow-sm flex items-center gap-2 ${activeTab === "non-akademik" ? "bg-amber-500 text-white shadow-amber-200" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+          >
+            <Award size={16}/> Non-Akademik
+          </button>
+        </div>
       </section>
 
-      <section className="py-16 px-5 max-w-7xl mx-auto w-full flex-grow">
-        {filteredData.length === 0 ? (
-           <div className="text-center text-slate-400 py-10"><Trophy size={48} className="mx-auto mb-4 opacity-50"/>Belum ada rekam prestasi ditemukan.</div>
+      <section className="py-8 px-5 max-w-7xl mx-auto w-full flex-grow">
+        {processedData.length === 0 ? (
+           <div className="text-center text-slate-400 py-10">
+             <Trophy size={48} className="mx-auto mb-4 opacity-50"/>
+             <p>Belum ada rekam prestasi {activeTab} ditemukan.</p>
+           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredData.map((kader, idx) => {
-              // Ambil Highlight Prestasi Pertama sebagai teaser
-              const highlight = kader.prestasi[0];
-              const isAkademik = highlight.tipe === "akademik";
+            {processedData.map((kader, idx) => {
+              // Highlight Prestasi Pertama berdasarkan urutan tab yang aktif
+              const highlight = kader.filteredPrestasi[0];
+              const isAkademik = activeTab === "akademik";
 
               return (
                 <motion.div key={idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 flex flex-col group">
@@ -99,8 +162,11 @@ export default function ApresiasiPage() {
                    <div className="p-5 bg-white flex flex-col flex-grow border-t border-slate-100 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">{isAkademik ? <BookOpen size={100}/> : <Award size={100}/>}</div>
                       
-                      <div className="mb-2">
-                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md ${isAkademik ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>Highlight {isAkademik ? 'Jurnal' : 'Lomba'}</span>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md ${isAkademik ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                          Highlight {isAkademik ? 'Jurnal' : 'Lomba'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">{kader.filteredPrestasi.length} Prestasi</span>
                       </div>
                       
                       <h4 className="font-extrabold text-slate-800 text-base leading-snug mb-1 line-clamp-2 relative z-10">{highlight.judul}</h4>
@@ -113,7 +179,7 @@ export default function ApresiasiPage() {
                    </div>
                    
                    <button onClick={() => setActiveKader(kader)} className="w-full bg-slate-50 hover:bg-amber-500 text-slate-600 hover:text-white font-bold py-3.5 text-xs transition-colors flex items-center justify-center gap-1.5 border-t border-slate-100">
-                     Lihat Semua {kader.prestasi.length} Prestasi <ExternalLink size={14}/>
+                     Lihat Detail Prestasi <ExternalLink size={14}/>
                    </button>
                 </motion.div>
               )
@@ -129,14 +195,31 @@ export default function ApresiasiPage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveKader(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
               
-              <div className="bg-slate-900 text-white p-6 flex items-center gap-4 shrink-0">
-                 {activeKader.fotoKader ? <img src={activeKader.fotoKader} className="w-16 h-16 rounded-full object-cover border-2 border-slate-700"/> : <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center"><Trophy size={24}/></div>}
-                 <div><h2 className="text-xl font-bold">{activeKader.namaLengkap}</h2><p className="text-amber-400 text-xs font-bold tracking-widest uppercase mt-0.5">{activeKader.asalRayon}</p></div>
-                 <button onClick={() => setActiveKader(null)} className="ml-auto bg-slate-800 hover:bg-red-500 text-white p-2 rounded-xl transition"><span className="sr-only">Tutup</span>✕</button>
+              <div className="bg-slate-900 text-white p-6 flex flex-col sm:flex-row sm:items-center gap-4 shrink-0 relative">
+                 <div className="flex items-center gap-4">
+                   {activeKader.fotoKader ? <img src={activeKader.fotoKader} className="w-16 h-16 rounded-full object-cover border-2 border-slate-700"/> : <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center"><Trophy size={24}/></div>}
+                   <div>
+                     <h2 className="text-xl font-bold">{activeKader.namaLengkap}</h2>
+                     <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mt-0.5">{activeKader.asalRayon}</p>
+                   </div>
+                 </div>
+                 
+                 <div className="flex items-center gap-2 sm:ml-auto mt-4 sm:mt-0">
+                    <button onClick={() => handleShare(activeKader)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition">
+                      <Share2 size={16} /> Bagikan
+                    </button>
+                    <button onClick={() => setActiveKader(null)} className="bg-slate-800 hover:bg-red-500 text-white p-2 rounded-xl transition">
+                      <span className="sr-only">Tutup</span>✕
+                    </button>
+                 </div>
               </div>
 
               <div className="p-6 overflow-y-auto bg-slate-50 flex-1 space-y-6">
+                 <h4 className="font-bold text-slate-700 flex items-center gap-2 border-b border-slate-200 pb-2">
+                   Total Catatan Prestasi: {activeKader.prestasi.length}
+                 </h4>
                  <div className="space-y-4">
+                   {/* Tampilkan SEMUA prestasi orang ini di dalam modal */}
                    {activeKader.prestasi.map((p, idx) => {
                      const isAkad = p.tipe === 'akademik';
                      return (
@@ -149,7 +232,9 @@ export default function ApresiasiPage() {
                             </div>
                           )}
                           <div className="flex-1">
-                             <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md mb-2 inline-block ${isAkad ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{isAkad ? 'Publikasi Jurnal' : 'Kejuaraan'}</span>
+                             <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md mb-2 inline-block ${isAkad ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                               {isAkad ? 'Publikasi Jurnal' : 'Kejuaraan'}
+                             </span>
                              <h3 className="font-bold text-slate-800 text-lg leading-tight mb-1">{p.judul}</h3>
                              <p className="font-bold text-blue-600 mb-3">{p.pencapaian}</p>
                              <div className="flex flex-wrap gap-2 text-xs font-bold text-slate-500">
