@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, doc, getDocs, addDoc, setDoc, deleteDoc, query, orderBy, serverTimestamp, writeBatch } from "firebase/firestore";
 import * as XLSX from "xlsx";
-import { ClipboardList, Users, Plus, Trash2, Edit, Save, Download, Settings, UploadCloud, Loader2, Image as ImageIcon, XCircle, Copy, Eye, X, Share2 } from "lucide-react";
+// PERBAIKAN 1: Menambahkan ExternalLink pada baris import di bawah ini
+import { ClipboardList, Users, Plus, Trash2, Edit, Save, Download, Settings, UploadCloud, Loader2, Image as ImageIcon, XCircle, Copy, Eye, X, Share2, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AdminPendaftaran() {
@@ -82,7 +83,6 @@ export default function AdminPendaftaran() {
 
   // ================= BUILDER PERTANYAAN CUSTOM =================
   const addCustomQuestion = (type) => {
-    // PERBAIKAN: Gunakan ID string acak yang 100% unik agar tidak error duplicate key
     const uniqueId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
     setFormData(prev => ({
       ...prev,
@@ -560,9 +560,8 @@ export default function AdminPendaftaran() {
                   <th className="py-3 px-4 w-12 text-center">
                     <input type="checkbox" onChange={handleSelectAll} checked={filteredPendaftar.length > 0 && selectedPendaftar.length === filteredPendaftar.length} className="rounded" />
                   </th>
-                  {/* PERBAIKAN: Layout Kolom Tabel Sesuai Permintaan */}
-                  <th className="py-3 px-4 w-48">Nama Pendaftar</th>
-                  <th className="py-3 px-4 w-32">Tanggal</th>
+                  <th className="py-3 px-4 w-48 text-center">Nama Pendaftar</th>
+                  <th className="py-3 px-4 w-32 text-center">Tanggal</th>
                   <th className="py-3 px-4 w-32 text-center">Berkas / Isian</th>
                   <th className="py-3 px-4 w-28 text-center">Status</th>
                   <th className="py-3 px-4 w-16 text-center">Aksi</th>
@@ -575,10 +574,27 @@ export default function AdminPendaftaran() {
                   filteredPendaftar.map((pendaftar) => {
                     const date = pendaftar.createdAt?.toDate ? pendaftar.createdAt.toDate().toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'}) : "-";
                     
-                    // PERBAIKAN: Sistem Pintar Mencari Nama dari Inputan Kustom
+                    // PERBAIKAN 2: Sistem Pencari Nama yang Lebih Akurat & Pintar
                     const ansKeys = pendaftar.answers ? Object.keys(pendaftar.answers) : [];
-                    const namaKey = ansKeys.find(k => k.toLowerCase().includes("nama"));
-                    const identifier = namaKey ? pendaftar.answers[namaKey] : (ansKeys.length > 0 ? pendaftar.answers[ansKeys[0]] : (pendaftar.nama || "Tanpa Nama"));
+                    
+                    // Prioritas 1: Cari yang mengandung kata "nama lengkap"
+                    let namaKey = ansKeys.find(k => k.toLowerCase().includes("nama lengkap"));
+                    
+                    // Prioritas 2: Cari yang ada kata "nama" TAPI BUKAN nama "orang tua" atau "panggilan"
+                    if (!namaKey) {
+                        namaKey = ansKeys.find(k => {
+                           const l = k.toLowerCase();
+                           return l.includes("nama") && !l.includes("orang tua") && !l.includes("panggilan");
+                        });
+                    }
+                    
+                    // Prioritas 3: Pokoknya ambil yang ada unsur kata "nama"
+                    if (!namaKey) {
+                        namaKey = ansKeys.find(k => k.toLowerCase().includes("nama"));
+                    }
+
+                    // Hasil Akhir
+                    const identifier = namaKey ? pendaftar.answers[namaKey] : (pendaftar.nama || (ansKeys.length > 0 ? pendaftar.answers[ansKeys[0]] : "Tanpa Nama"));
                     
                     return (
                       <tr key={`pendaftar-${pendaftar.id}`} className={`transition-colors ${selectedPendaftar.includes(pendaftar.id) ? 'bg-emerald-50' : 'hover:bg-slate-50'}`}>
@@ -589,11 +605,11 @@ export default function AdminPendaftaran() {
                           <p className="font-bold text-blue-600 text-sm truncate w-48">{identifier}</p>
                           <p className="text-[10px] text-slate-400 truncate w-48 mt-0.5">{pendaftar.formJudul || "-"}</p>
                         </td>
-                        <td className="py-3 px-4 text-xs font-medium text-slate-500">{date}</td>
+                        <td className="py-3 px-4 text-xs font-medium text-slate-500 text-center">{date}</td>
                         
                         <td className="py-3 px-4 text-center">
                            <button onClick={() => setViewDetailModal(pendaftar)} className="inline-flex items-center justify-center gap-1 bg-slate-100 hover:bg-blue-100 text-blue-700 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors border border-slate-200 hover:border-blue-200">
-                             <Eye size={12}/> Lihat Data Lengkap
+                             <Eye size={12}/> Data Lengkap
                            </button>
                         </td>
 
@@ -640,7 +656,6 @@ export default function AdminPendaftaran() {
               </div>
               
               <div className="p-5 overflow-y-auto space-y-4">
-                 {/* PERBAIKAN: Menggunakan Key Unik saat me-render jawaban di modal */}
                  {viewDetailModal.answers ? (
                    Object.entries(viewDetailModal.answers).map(([pertanyaan, jawaban], idx) => {
                      const uniqueKey = `ans-${idx}-${pertanyaan.replace(/\s+/g, '-')}`;
