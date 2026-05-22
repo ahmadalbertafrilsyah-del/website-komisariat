@@ -48,22 +48,16 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="flex justify-between items-center h-16 md:h-20">
-            
             <div className="flex items-center gap-2 md:gap-3">
               {LOGO_URL ? (
                 <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
-                  <img 
-                    src={LOGO_URL} 
-                    alt="Logo PMII" 
-                    className="w-full h-full object-contain drop-shadow-md" 
-                  />
+                  <img src={LOGO_URL} alt="Logo PMII" className="w-full h-full object-contain drop-shadow-md" />
                 </div>
               ) : (
                 <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-500 rounded flex items-center justify-center shadow-inner">
                   <span className="text-yellow-300 font-bold text-[10px] md:text-xs">{globalConfig.logoText}</span>
                 </div>
               )}
-              
               <div>
                 <h1 className="font-bold text-sm md:text-xl leading-none">
                   PMII <span className="text-[#facc15]">{globalConfig.komisariatName.replace("Komisariat ", "")}</span>
@@ -74,53 +68,39 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* PERUBAHAN: hidden lg:flex agar tablet (md) menggunakan mode mobile menu */}
-            <div className="hidden lg:flex items-center space-x-5 xl:space-x-6 text-sm">
+            <div className="hidden xl:flex items-center space-x-5 text-sm">
               <Link href="/" className={isActive("/")}>Beranda</Link>
               <Link href="/struktur" className={isActive("/struktur")}>Struktur</Link>
               <Link href="/anggota" className={isActive("/anggota")}>Anggota</Link>
               <Link href="/rayon" className={isActive("/rayon")}>Rayon</Link>
+              <Link href="/alumni" className={isActive("/alumni")}>Alumni</Link>
+              <Link href="/apresiasi" className={isActive("/apresiasi")}>Apresiasi</Link>
               <Link href="/berita" className={isActive("/berita")}>Berita</Link>
               <Link href="/administrasi" className={isActive("/administrasi")}>Administrasi</Link>
-              
-              <a 
-                href="https://siakad.pmii-uinmalang.or.id/" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-emerald-400 hover:text-emerald-300 transition font-bold flex items-center gap-1.5 whitespace-nowrap"
-              >
-                Siakad PMII <ExternalLink size={14} />
-              </a>
               
               <Link href="/pendaftaran" className="bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 px-5 py-2 rounded-full font-bold transition shadow-md shadow-blue-500/20 ml-2 whitespace-nowrap">
                 Pendaftaran
               </Link>
             </div>
 
-            {/* PERUBAHAN: lg:hidden agar tombol hamburger tetap ada di mode tablet */}
-            <button className="lg:hidden text-white p-1" onClick={() => setIsOpen(!isOpen)}>
+            <button className="xl:hidden text-white p-1" onClick={() => setIsOpen(!isOpen)}>
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
 
-        {/* PERUBAHAN: lg:hidden */}
         {isOpen && (
-          <div className="lg:hidden bg-[#1f2937] p-4 flex flex-col space-y-4 text-sm border-t border-slate-700 shadow-xl pb-6">
+          <div className="xl:hidden bg-[#1f2937] p-4 flex flex-col space-y-4 text-sm border-t border-slate-700 shadow-xl pb-6 h-screen overflow-y-auto">
             <Link href="/" onClick={() => setIsOpen(false)} className={isActiveMobile("/")}>Beranda</Link>
             <Link href="/struktur" onClick={() => setIsOpen(false)} className={isActiveMobile("/struktur")}>Struktur Kepengurusan</Link>
             <Link href="/anggota" onClick={() => setIsOpen(false)} className={isActiveMobile("/anggota")}>Database Anggota</Link>
             <Link href="/rayon" onClick={() => setIsOpen(false)} className={isActiveMobile("/rayon")}>Daftar Rayon</Link>
+            <Link href="/alumni" onClick={() => setIsOpen(false)} className={isActiveMobile("/alumni")}>Jejaring Alumni</Link>
+            <Link href="/apresiasi" onClick={() => setIsOpen(false)} className={isActiveMobile("/apresiasi")}>Apresiasi Kader</Link>
             <Link href="/berita" onClick={() => setIsOpen(false)} className={isActiveMobile("/berita")}>Berita & Artikel</Link>
             <Link href="/administrasi" onClick={() => setIsOpen(false)} className={isActiveMobile("/administrasi")}>Data Administrasi</Link>
             
-            <a 
-              href="https://siakad.pmii-uinmalang.or.id/" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              onClick={() => setIsOpen(false)}
-              className="text-emerald-400 hover:text-emerald-300 transition font-bold flex items-center gap-2 pt-2 border-t border-slate-700"
-            >
+            <a href="https://siakad.pmii-uinmalang.or.id/" target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)} className="text-emerald-400 hover:text-emerald-300 transition font-bold flex items-center gap-2 pt-2 border-t border-slate-700">
               Portal Siakad PMII <ExternalLink size={14} />
             </a>
             
