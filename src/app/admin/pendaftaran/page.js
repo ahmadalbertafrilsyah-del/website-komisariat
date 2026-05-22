@@ -1,9 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, doc, getDocs, addDoc, updateDoc, setDoc, deleteDoc, query, orderBy, serverTimestamp, writeBatch } from "firebase/firestore";
+import { collection, doc, getDocs, addDoc, setDoc, deleteDoc, query, orderBy, serverTimestamp, writeBatch } from "firebase/firestore";
 import * as XLSX from "xlsx";
-import { ClipboardList, Users, Plus, Trash2, Edit, Save, Download, Settings, Power, PowerOff, UploadCloud, Loader2, Image as ImageIcon, XCircle, Copy, BarChart3, CheckSquare, Eye, X, Share2 } from "lucide-react";
+import { ClipboardList, Users, Plus, Trash2, Edit, Save, Download, Settings, UploadCloud, Loader2, Image as ImageIcon, XCircle, Copy, Eye, X, Share2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AdminPendaftaran() {
@@ -19,7 +19,7 @@ export default function AdminPendaftaran() {
   const [editFormId, setEditFormId] = useState(null);
   const [uploadingThumb, setUploadingThumb] = useState(false);
   
-  // State Form Dinamis ala Google Form
+  // State Form Dinamis
   const [formData, setFormData] = useState({
     judul: "",
     kategori: "", 
@@ -27,11 +27,9 @@ export default function AdminPendaftaran() {
     status: "Buka",
     linkGrupWA: "",
     thumbnailUrl: "", 
-    
     kuota: "",
     deadline: "", 
     pesanSukses: "Terima kasih, pendaftaran Anda berhasil direkam!",
-
     customQuestions: [] 
   });
 
@@ -84,11 +82,13 @@ export default function AdminPendaftaran() {
 
   // ================= BUILDER PERTANYAAN CUSTOM =================
   const addCustomQuestion = (type) => {
+    // PERBAIKAN: Gunakan ID string acak yang 100% unik agar tidak error duplicate key
+    const uniqueId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
     setFormData(prev => ({
       ...prev,
       customQuestions: [
         ...prev.customQuestions, 
-        { id: Date.now() + Math.random(), type, question: "", options: type === 'select' || type === 'radio' ? ["Opsi 1"] : [], required: true }
+        { id: uniqueId, type, question: "", options: type === 'select' || type === 'radio' ? ["Opsi 1"] : [], required: true }
       ]
     }));
   };
@@ -148,13 +148,11 @@ export default function AdminPendaftaran() {
     const invalidQ = formData.customQuestions.find(q => !q.question.trim());
     if (invalidQ) return alert("Ada pertanyaan kustom yang belum diisi teks pertanyaannya!");
 
-    // PERBAIKAN: Membuat Link Slug berdasar Judul Formulir (URL Friendly)
     const formSlug = formData.judul.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     const finalData = { ...formData, slug: formSlug };
 
     try {
       if (isEditingForm && editFormId) {
-        // Menggunakan setDoc merge: true agar stabil dan tidak error
         await setDoc(doc(db, "formulir_kaderisasi", editFormId), { ...finalData, updatedAt: serverTimestamp() }, { merge: true });
         alert("Formulir berhasil diperbarui!");
       } else {
@@ -210,7 +208,6 @@ export default function AdminPendaftaran() {
   const toggleFormStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "Buka" ? "Tutup" : "Buka";
     try {
-      // PERBAIKAN: Menggunakan setDoc {merge: true} agar kebal dari error
       await setDoc(doc(db, "formulir_kaderisasi", id), { status: newStatus }, { merge: true });
       fetchData();
     } catch (error) {
@@ -218,7 +215,6 @@ export default function AdminPendaftaran() {
     }
   };
 
-  // FITUR BARU: Copy Link Langsung dari Admin
   const handleCopyLink = (form) => {
     const identifier = form.slug || form.id;
     const link = `${window.location.origin}/pendaftaran?form=${identifier}`;
@@ -493,7 +489,6 @@ export default function AdminPendaftaran() {
                     <h3 className="font-bold text-slate-800 text-sm leading-snug mb-2 pr-6">{form.judul}</h3>
                     <div className="text-[10px] text-slate-400 flex items-center gap-1 mb-3"><Users size={12}/> {pendaftarList.filter(p => p.formId === form.id).length} Pendaftar masuk</div>
                     
-                    {/* PERBAIKAN: Layout Tombol dengan Fitur Share Link */}
                     <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
                        <button onClick={() => handleCopyLink(form)} className="flex-1 min-w-[70px] bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[10px] font-bold py-1.5 rounded-lg transition border border-indigo-100 flex items-center justify-center gap-1"><Share2 size={12}/> Copy Link</button>
                        <button onClick={() => toggleFormStatus(form.id, form.status)} className="flex-1 min-w-[70px] bg-slate-50 hover:bg-slate-100 text-slate-600 text-[10px] font-bold py-1.5 rounded-lg transition border border-slate-200">{form.status === 'Buka' ? 'Tutup Form' : 'Buka Form'}</button>
@@ -538,7 +533,7 @@ export default function AdminPendaftaran() {
                <select value={selectedFormFilter} onChange={(e) => {setSelectedFormFilter(e.target.value); setSelectedPendaftar([]);}} className="p-2 border border-slate-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer max-w-[200px] truncate">
                  <option value="semua">Semua Data Pendaftar</option>
                  {formulirList.map(f => (
-                   <option key={f.id} value={f.id}>{f.judul}</option>
+                   <option key={`filter-${f.id}`} value={f.id}>{f.judul}</option>
                  ))}
                </select>
              </div>
@@ -565,9 +560,9 @@ export default function AdminPendaftaran() {
                   <th className="py-3 px-4 w-12 text-center">
                     <input type="checkbox" onChange={handleSelectAll} checked={filteredPendaftar.length > 0 && selectedPendaftar.length === filteredPendaftar.length} className="rounded" />
                   </th>
+                  {/* PERBAIKAN: Layout Kolom Tabel Sesuai Permintaan */}
+                  <th className="py-3 px-4 w-48">Nama Pendaftar</th>
                   <th className="py-3 px-4 w-32">Tanggal</th>
-                  <th className="py-3 px-4 w-48">Asal Formulir</th>
-                  <th className="py-3 px-4 w-40">Identifier Utama</th>
                   <th className="py-3 px-4 w-32 text-center">Berkas / Isian</th>
                   <th className="py-3 px-4 w-28 text-center">Status</th>
                   <th className="py-3 px-4 w-16 text-center">Aksi</th>
@@ -575,26 +570,26 @@ export default function AdminPendaftaran() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 {filteredPendaftar.length === 0 ? (
-                  <tr><td colSpan="7" className="py-12 text-center text-slate-400 font-medium">Belum ada data pendaftar pada filter ini.</td></tr>
+                  <tr><td colSpan="6" className="py-12 text-center text-slate-400 font-medium">Belum ada data pendaftar pada filter ini.</td></tr>
                 ) : (
                   filteredPendaftar.map((pendaftar) => {
                     const date = pendaftar.createdAt?.toDate ? pendaftar.createdAt.toDate().toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'}) : "-";
                     
+                    // PERBAIKAN: Sistem Pintar Mencari Nama dari Inputan Kustom
                     const ansKeys = pendaftar.answers ? Object.keys(pendaftar.answers) : [];
-                    const identifier = ansKeys.length > 0 ? pendaftar.answers[ansKeys[0]] : (pendaftar.nama || "Tanpa Nama");
+                    const namaKey = ansKeys.find(k => k.toLowerCase().includes("nama"));
+                    const identifier = namaKey ? pendaftar.answers[namaKey] : (ansKeys.length > 0 ? pendaftar.answers[ansKeys[0]] : (pendaftar.nama || "Tanpa Nama"));
                     
                     return (
-                      <tr key={pendaftar.id} className={`transition-colors ${selectedPendaftar.includes(pendaftar.id) ? 'bg-emerald-50' : 'hover:bg-slate-50'}`}>
+                      <tr key={`pendaftar-${pendaftar.id}`} className={`transition-colors ${selectedPendaftar.includes(pendaftar.id) ? 'bg-emerald-50' : 'hover:bg-slate-50'}`}>
                         <td className="py-3 px-4 text-center">
                           <input type="checkbox" checked={selectedPendaftar.includes(pendaftar.id)} onChange={() => handleSelectOne(pendaftar.id)} className="rounded" />
                         </td>
+                        <td className="py-3 px-4">
+                          <p className="font-bold text-blue-600 text-sm truncate w-48">{identifier}</p>
+                          <p className="text-[10px] text-slate-400 truncate w-48 mt-0.5">{pendaftar.formJudul || "-"}</p>
+                        </td>
                         <td className="py-3 px-4 text-xs font-medium text-slate-500">{date}</td>
-                        <td className="py-3 px-4">
-                          <p className="font-bold text-slate-800 text-xs truncate w-48">{pendaftar.formJudul || "-"}</p>
-                        </td>
-                        <td className="py-3 px-4">
-                          <p className="font-bold text-blue-600 text-xs truncate w-40">{identifier}</p>
-                        </td>
                         
                         <td className="py-3 px-4 text-center">
                            <button onClick={() => setViewDetailModal(pendaftar)} className="inline-flex items-center justify-center gap-1 bg-slate-100 hover:bg-blue-100 text-blue-700 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors border border-slate-200 hover:border-blue-200">
@@ -645,17 +640,21 @@ export default function AdminPendaftaran() {
               </div>
               
               <div className="p-5 overflow-y-auto space-y-4">
+                 {/* PERBAIKAN: Menggunakan Key Unik saat me-render jawaban di modal */}
                  {viewDetailModal.answers ? (
-                   Object.entries(viewDetailModal.answers).map(([pertanyaan, jawaban], idx) => (
-                     <div key={idx} className="border-b border-slate-100 pb-3">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{pertanyaan}</p>
-                        {typeof jawaban === 'string' && jawaban.startsWith('http') && (jawaban.includes('cloudinary') || pertanyaan.toLowerCase().includes('file')) ? (
-                           <a href={jawaban} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition border border-blue-100"><ExternalLink size={14}/> Buka File Lampiran</a>
-                        ) : (
-                           <p className="text-sm font-semibold text-slate-800 whitespace-pre-wrap">{jawaban || "-"}</p>
-                        )}
-                     </div>
-                   ))
+                   Object.entries(viewDetailModal.answers).map(([pertanyaan, jawaban], idx) => {
+                     const uniqueKey = `ans-${idx}-${pertanyaan.replace(/\s+/g, '-')}`;
+                     return (
+                       <div key={uniqueKey} className="border-b border-slate-100 pb-3">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{pertanyaan}</p>
+                          {typeof jawaban === 'string' && jawaban.startsWith('http') && (jawaban.includes('cloudinary') || pertanyaan.toLowerCase().includes('file')) ? (
+                             <a href={jawaban} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition border border-blue-100"><ExternalLink size={14}/> Buka File Lampiran</a>
+                          ) : (
+                             <p className="text-sm font-semibold text-slate-800 whitespace-pre-wrap">{jawaban || "-"}</p>
+                          )}
+                       </div>
+                     );
+                   })
                  ) : (
                    <p className="text-slate-400 text-sm text-center">Data kustom tidak ditemukan (Kemungkinan format data lama).</p>
                  )}
