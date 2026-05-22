@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, doc, getDocs, addDoc, setDoc, deleteDoc, query, orderBy, serverTimestamp, writeBatch } from "firebase/firestore";
 import * as XLSX from "xlsx";
-// PERBAIKAN 1: Menambahkan ExternalLink pada baris import di bawah ini
 import { ClipboardList, Users, Plus, Trash2, Edit, Save, Download, Settings, UploadCloud, Loader2, Image as ImageIcon, XCircle, Copy, Eye, X, Share2, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -276,7 +275,7 @@ export default function AdminPendaftaran() {
     }
   };
 
-  // Ekspor Excel
+  // Ekspor Excel yang Diurutkan
   const handleExportExcel = () => {
     const dataToExport = pendaftarList.filter(p => selectedFormFilter === "semua" || p.formId === selectedFormFilter);
     if (dataToExport.length === 0) return alert("Tidak ada data untuk diekspor!");
@@ -290,9 +289,27 @@ export default function AdminPendaftaran() {
       };
 
       if (p.answers) {
-        Object.keys(p.answers).forEach(questionTitle => {
-          baseData[questionTitle] = p.answers[questionTitle];
-        });
+        // Cari form aslinya untuk mendapatkan urutan
+        const originalForm = formulirList.find(f => f.id === p.formId);
+        if (originalForm && originalForm.customQuestions) {
+          // Masukkan jawaban sesuai urutan pertanyaan asli
+          originalForm.customQuestions.forEach(q => {
+             if (p.answers[q.question] !== undefined) {
+                 baseData[q.question] = p.answers[q.question];
+             }
+          });
+          // Tambahkan sisa jawaban yang mungkin form-nya sudah diganti tapi jawabannya masih nempel
+          Object.keys(p.answers).forEach(questionTitle => {
+            if(baseData[questionTitle] === undefined) {
+                baseData[questionTitle] = p.answers[questionTitle];
+            }
+          });
+        } else {
+           // Jika form tidak ditemukan, gunakan urutan default
+           Object.keys(p.answers).forEach(questionTitle => {
+             baseData[questionTitle] = p.answers[questionTitle];
+           });
+        }
       }
 
       if (p.nama) baseData["Nama Lengkap"] = p.nama;
@@ -308,6 +325,34 @@ export default function AdminPendaftaran() {
   };
 
   const filteredPendaftar = pendaftarList.filter(p => selectedFormFilter === "semua" || p.formId === selectedFormFilter);
+
+  // Helper untuk Merender Modal Pendaftar yang Berurutan
+  const getOrderedAnswers = (pendaftar) => {
+      if(!pendaftar.answers) return [];
+      
+      const originalForm = formulirList.find(f => f.id === pendaftar.formId);
+      let ordered = [];
+      const keysSudahDiproses = new Set();
+
+      // 1. Masukkan yang ada di Form Asli (Sesuai Urutan)
+      if (originalForm && originalForm.customQuestions) {
+          originalForm.customQuestions.forEach(q => {
+              if (pendaftar.answers[q.question] !== undefined) {
+                  ordered.push({ pertanyaan: q.question, jawaban: pendaftar.answers[q.question] });
+                  keysSudahDiproses.add(q.question);
+              }
+          });
+      }
+
+      // 2. Masukkan sisa jawaban (misal ada field yang dulunya ada tapi sekarang dihapus dari form)
+      Object.entries(pendaftar.answers).forEach(([q, a]) => {
+          if (!keysSudahDiproses.has(q)) {
+              ordered.push({ pertanyaan: q, jawaban: a });
+          }
+      });
+
+      return ordered;
+  }
 
   if (loading) return <p className="text-slate-500 animate-pulse font-medium text-center pt-20">Memuat Sistem...</p>;
 
@@ -574,26 +619,19 @@ export default function AdminPendaftaran() {
                   filteredPendaftar.map((pendaftar) => {
                     const date = pendaftar.createdAt?.toDate ? pendaftar.createdAt.toDate().toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'}) : "-";
                     
-                    // PERBAIKAN 2: Sistem Pencari Nama yang Lebih Akurat & Pintar
                     const ansKeys = pendaftar.answers ? Object.keys(pendaftar.answers) : [];
-                    
-                    // Prioritas 1: Cari yang mengandung kata "nama lengkap"
                     let namaKey = ansKeys.find(k => k.toLowerCase().includes("nama lengkap"));
                     
-                    // Prioritas 2: Cari yang ada kata "nama" TAPI BUKAN nama "orang tua" atau "panggilan"
                     if (!namaKey) {
                         namaKey = ansKeys.find(k => {
                            const l = k.toLowerCase();
                            return l.includes("nama") && !l.includes("orang tua") && !l.includes("panggilan");
                         });
                     }
-                    
-                    // Prioritas 3: Pokoknya ambil yang ada unsur kata "nama"
                     if (!namaKey) {
                         namaKey = ansKeys.find(k => k.toLowerCase().includes("nama"));
                     }
 
-                    // Hasil Akhir
                     const identifier = namaKey ? pendaftar.answers[namaKey] : (pendaftar.nama || (ansKeys.length > 0 ? pendaftar.answers[ansKeys[0]] : "Tanpa Nama"));
                     
                     return (
@@ -638,7 +676,7 @@ export default function AdminPendaftaran() {
         </div>
       )}
 
-      {/* ================= MODAL DETAIL PENDAFTAR ================= */}
+      {/* ================= MODAL DETAIL PENDAFTAR (DIURUTKAN) ================= */}
       <AnimatePresence>
         {viewDetailModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -656,16 +694,17 @@ export default function AdminPendaftaran() {
               </div>
               
               <div className="p-5 overflow-y-auto space-y-4">
+                 {/* PERBAIKAN: Render Data yang Sudah Diurutkan */}
                  {viewDetailModal.answers ? (
-                   Object.entries(viewDetailModal.answers).map(([pertanyaan, jawaban], idx) => {
-                     const uniqueKey = `ans-${idx}-${pertanyaan.replace(/\s+/g, '-')}`;
+                   getOrderedAnswers(viewDetailModal).map((item, idx) => {
+                     const uniqueKey = `ans-${idx}-${item.pertanyaan.replace(/\s+/g, '-')}`;
                      return (
                        <div key={uniqueKey} className="border-b border-slate-100 pb-3">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{pertanyaan}</p>
-                          {typeof jawaban === 'string' && jawaban.startsWith('http') && (jawaban.includes('cloudinary') || pertanyaan.toLowerCase().includes('file')) ? (
-                             <a href={jawaban} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition border border-blue-100"><ExternalLink size={14}/> Buka File Lampiran</a>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{item.pertanyaan}</p>
+                          {typeof item.jawaban === 'string' && item.jawaban.startsWith('http') && (item.jawaban.includes('cloudinary') || item.pertanyaan.toLowerCase().includes('file')) ? (
+                             <a href={item.jawaban} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition border border-blue-100"><ExternalLink size={14}/> Buka File Lampiran</a>
                           ) : (
-                             <p className="text-sm font-semibold text-slate-800 whitespace-pre-wrap">{jawaban || "-"}</p>
+                             <p className="text-sm font-semibold text-slate-800 whitespace-pre-wrap">{item.jawaban || "-"}</p>
                           )}
                        </div>
                      );
