@@ -277,12 +277,12 @@ export default function AdministrasiPage() {
                             <thead className="bg-emerald-50 border-b border-slate-200 text-slate-700 text-[11px] uppercase tracking-wider">
                               <tr>
                                 <th className="py-3 px-3 border-r border-slate-200 w-12 text-center font-bold">No</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-48 font-bold">Nama Kegiatan</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-48 font-bold">Tujuan</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-40 font-bold">Indikator</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-32 font-bold">Sasaran</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-36 font-bold">Waktu Pelaksanaan</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-36 font-bold">Penanggung Jawab</th>
+                                <th className="py-3 px-4 border-r border-slate-200 w-48 text-center font-bold">Nama Kegiatan</th>
+                                <th className="py-3 px-4 border-r border-slate-200 w-48 text-center font-bold">Tujuan</th>
+                                <th className="py-3 px-4 border-r border-slate-200 w-40 text-center font-bold">Indikator</th>
+                                <th className="py-3 px-4 border-r border-slate-200 w-32 text-center font-bold">Sasaran</th>
+                                <th className="py-3 px-4 border-r border-slate-200 w-36 text-center font-bold">Waktu Pelaksanaan</th>
+                                <th className="py-3 px-4 border-r border-slate-200 w-36 text-center font-bold">Penanggung Jawab</th>
                                 <th className="py-3 px-4 border-r border-slate-200 text-center font-bold">Estimasi Dana</th>
                                 {/* TAMBAHAN KOLOM BERKAS */}
                                 <th className="py-3 px-4 font-bold text-center w-24">Berkas</th>

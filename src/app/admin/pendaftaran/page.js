@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, writeBatch } from "firebase/firestore";
+// PERBAIKAN: Menambahkan setDoc pada import Firebase
+import { collection, doc, getDocs, addDoc, updateDoc, setDoc, deleteDoc, query, orderBy, serverTimestamp, writeBatch } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { ClipboardList, Users, Plus, Trash2, Edit, Save, Download, Settings, Power, PowerOff, UploadCloud, Loader2, Image as ImageIcon, XCircle, Copy, BarChart3, CheckSquare, Eye, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -151,7 +152,8 @@ export default function AdminPendaftaran() {
 
     try {
       if (isEditingForm && editFormId) {
-        await updateDoc(doc(db, "formulir_kaderisasi", editFormId), { ...formData, updatedAt: serverTimestamp() });
+        // PERBAIKAN PENTING: Mengganti updateDoc menjadi setDoc dengan opsi merge: true
+        await setDoc(doc(db, "formulir_kaderisasi", editFormId), { ...formData, updatedAt: serverTimestamp() }, { merge: true });
         alert("Formulir berhasil diperbarui!");
       } else {
         await addDoc(collection(db, "formulir_kaderisasi"), { ...formData, createdAt: serverTimestamp() });
@@ -206,6 +208,7 @@ export default function AdminPendaftaran() {
 
   const toggleFormStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "Buka" ? "Tutup" : "Buka";
+    // Untuk toggle status ini masih aman pakai updateDoc karena data pasti ada saat tombol ini ditekan dari list
     await updateDoc(doc(db, "formulir_kaderisasi", id), { status: newStatus });
     fetchData();
   };
@@ -333,7 +336,7 @@ export default function AdminPendaftaran() {
                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
                  {isEditingForm ? <><Edit size={16} className="text-amber-500" /> Edit Form</> : <><Plus size={16} className="text-blue-600" /> Buat Form Baru</>}
                </h2>
-               {isEditingForm && <button onClick={resetFormState} className="text-xs text-red-500 hover:underline font-bold">Batal Edit / Form Baru</button>}
+               {isEditingForm && <button type="button" onClick={resetFormState} className="text-xs text-red-500 hover:underline font-bold">Batal Edit / Form Baru</button>}
             </div>
 
             <form onSubmit={handleSaveFormulir} className="space-y-6">
