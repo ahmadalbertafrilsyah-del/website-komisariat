@@ -1,10 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-// PERBAIKAN: Menambahkan setDoc pada import Firebase
 import { collection, doc, getDocs, addDoc, updateDoc, setDoc, deleteDoc, query, orderBy, serverTimestamp, writeBatch } from "firebase/firestore";
 import * as XLSX from "xlsx";
-import { ClipboardList, Users, Plus, Trash2, Edit, Save, Download, Settings, Power, PowerOff, UploadCloud, Loader2, Image as ImageIcon, XCircle, Copy, BarChart3, CheckSquare, Eye, X } from "lucide-react";
+import { ClipboardList, Users, Plus, Trash2, Edit, Save, Download, Settings, Power, PowerOff, UploadCloud, Loader2, Image as ImageIcon, XCircle, Copy, BarChart3, CheckSquare, Eye, X, Share2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AdminPendaftaran() {
@@ -29,7 +28,6 @@ export default function AdminPendaftaran() {
     linkGrupWA: "",
     thumbnailUrl: "", 
     
-    // FITUR BARU: Auto-Close & Pesan Sukses
     kuota: "",
     deadline: "", 
     pesanSukses: "Terima kasih, pendaftaran Anda berhasil direkam!",
@@ -150,13 +148,17 @@ export default function AdminPendaftaran() {
     const invalidQ = formData.customQuestions.find(q => !q.question.trim());
     if (invalidQ) return alert("Ada pertanyaan kustom yang belum diisi teks pertanyaannya!");
 
+    // PERBAIKAN: Membuat Link Slug berdasar Judul Formulir (URL Friendly)
+    const formSlug = formData.judul.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    const finalData = { ...formData, slug: formSlug };
+
     try {
       if (isEditingForm && editFormId) {
-        // PERBAIKAN PENTING: Mengganti updateDoc menjadi setDoc dengan opsi merge: true
-        await setDoc(doc(db, "formulir_kaderisasi", editFormId), { ...formData, updatedAt: serverTimestamp() }, { merge: true });
+        // Menggunakan setDoc merge: true agar stabil dan tidak error
+        await setDoc(doc(db, "formulir_kaderisasi", editFormId), { ...finalData, updatedAt: serverTimestamp() }, { merge: true });
         alert("Formulir berhasil diperbarui!");
       } else {
-        await addDoc(collection(db, "formulir_kaderisasi"), { ...formData, createdAt: serverTimestamp() });
+        await addDoc(collection(db, "formulir_kaderisasi"), { ...finalData, createdAt: serverTimestamp() });
         alert("Formulir baru berhasil dibuat!");
       }
       resetFormState();
@@ -178,14 +180,13 @@ export default function AdminPendaftaran() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // FITUR BARU: DUPLIKAT FORMULIR
   const handleCloneForm = (form) => {
     setIsEditingForm(false);
     setEditFormId(null);
     setFormData({
       ...form,
       judul: `${form.judul} (Salinan)`,
-      status: "Tutup", // Default ditutup saat diduplikat agar aman
+      status: "Tutup", 
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
     alert("Formulir berhasil disalin ke editor! Silakan edit dan terbitkan.");
@@ -208,14 +209,26 @@ export default function AdminPendaftaran() {
 
   const toggleFormStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "Buka" ? "Tutup" : "Buka";
-    // Untuk toggle status ini masih aman pakai updateDoc karena data pasti ada saat tombol ini ditekan dari list
-    await updateDoc(doc(db, "formulir_kaderisasi", id), { status: newStatus });
-    fetchData();
+    try {
+      // PERBAIKAN: Menggunakan setDoc {merge: true} agar kebal dari error
+      await setDoc(doc(db, "formulir_kaderisasi", id), { status: newStatus }, { merge: true });
+      fetchData();
+    } catch (error) {
+      alert("Gagal mengubah status: " + error.message);
+    }
+  };
+
+  // FITUR BARU: Copy Link Langsung dari Admin
+  const handleCopyLink = (form) => {
+    const identifier = form.slug || form.id;
+    const link = `${window.location.origin}/pendaftaran?form=${identifier}`;
+    navigator.clipboard.writeText(link);
+    alert(`Link pendaftaran berhasil disalin:\n${link}`);
   };
 
   // ================= HANDLER PENDAFTAR & BULK ACTIONS =================
   const updateStatusPendaftar = async (id, statusBaru) => {
-    await updateDoc(doc(db, "data_pendaftar", id), { statusLulus: statusBaru });
+    await setDoc(doc(db, "data_pendaftar", id), { statusLulus: statusBaru }, { merge: true });
     setPendaftarList(pendaftarList.map(p => p.id === id ? { ...p, statusLulus: statusBaru } : p));
   };
 
@@ -226,7 +239,6 @@ export default function AdminPendaftaran() {
     setSelectedPendaftar(selectedPendaftar.filter(pid => pid !== id));
   };
 
-  // FITUR BARU: BULK ACTIONS
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       setSelectedPendaftar(filteredPendaftar.map(p => p.id));
@@ -261,7 +273,7 @@ export default function AdminPendaftaran() {
       } else {
         setPendaftarList(pendaftarList.map(p => selectedPendaftar.includes(p.id) ? { ...p, statusLulus: actionType } : p));
       }
-      setSelectedPendaftar([]); // reset selection
+      setSelectedPendaftar([]); 
       alert("Aksi massal berhasil diproses!");
     } catch (error) {
       alert("Terjadi kesalahan: " + error.message);
@@ -281,14 +293,12 @@ export default function AdminPendaftaran() {
         "Status": p.statusLulus || "Pending",
       };
 
-      // Extract semua jawaban custom (karena admin dibebaskan)
       if (p.answers) {
         Object.keys(p.answers).forEach(questionTitle => {
           baseData[questionTitle] = p.answers[questionTitle];
         });
       }
 
-      // Legacy support jika ada data lama
       if (p.nama) baseData["Nama Lengkap"] = p.nama;
       if (p.wa) baseData["No WhatsApp"] = p.wa;
       
@@ -301,7 +311,6 @@ export default function AdminPendaftaran() {
     XLSX.writeFile(workbook, `Pendaftar_${Date.now()}.xlsx`);
   };
 
-  // Filter Data
   const filteredPendaftar = pendaftarList.filter(p => selectedFormFilter === "semua" || p.formId === selectedFormFilter);
 
   if (loading) return <p className="text-slate-500 animate-pulse font-medium text-center pt-20">Memuat Sistem...</p>;
@@ -341,7 +350,6 @@ export default function AdminPendaftaran() {
 
             <form onSubmit={handleSaveFormulir} className="space-y-6">
               
-              {/* Bagian 1: Info Dasar */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
@@ -377,7 +385,6 @@ export default function AdminPendaftaran() {
                 </div>
               </div>
 
-              {/* FITUR BARU: Auto-Close & Success Message */}
               <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
                  <div className="flex items-center gap-2 mb-2">
                    <Settings size={16} className="text-blue-600"/>
@@ -399,7 +406,6 @@ export default function AdminPendaftaran() {
                  </div>
               </div>
 
-              {/* Bagian 2: Builder Pertanyaan Custom Tanpa Paksaan Default */}
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                  <div className="bg-slate-900 text-white p-3 flex justify-between items-center text-sm font-bold">
                     <span>Desain Pertanyaan Form</span>
@@ -407,7 +413,6 @@ export default function AdminPendaftaran() {
                  <div className="p-4 space-y-4 bg-slate-50/50">
                     <p className="text-xs font-semibold text-slate-500">Anda memiliki kebebasan 100% untuk menentukan field apa saja yang diisi pendaftar. Buat field seperti "Nama Lengkap", "NIM", atau Upload File Bukti Bayar.</p>
 
-                    {/* List Pertanyaan Kustom */}
                     {formData.customQuestions.map((q, index) => (
                       <div key={q.id} className="bg-white p-4 border border-blue-200 rounded-xl shadow-sm relative group">
                          <div className="flex flex-col md:flex-row justify-between gap-3 items-start md:items-center mb-3">
@@ -425,7 +430,6 @@ export default function AdminPendaftaran() {
                             </select>
                          </div>
 
-                         {/* Render Tipe Pilihan (Multiple Choice / Dropdown) */}
                          {(q.type === 'select' || q.type === 'radio') && (
                            <div className="pl-2 space-y-2 mt-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
                              {q.options.map((opt, oIdx) => (
@@ -453,7 +457,6 @@ export default function AdminPendaftaran() {
                       </div>
                     ))}
 
-                    {/* Tombol Tambah Pertanyaan */}
                     <div className="flex flex-wrap items-center gap-2 pt-2">
                       <span className="text-[10px] font-bold text-slate-400 uppercase mr-2">Tambah Kolom:</span>
                       <button type="button" onClick={() => addCustomQuestion('text')} className="bg-white border border-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:border-blue-400 hover:text-blue-600 transition">+ Teks</button>
@@ -490,11 +493,13 @@ export default function AdminPendaftaran() {
                     <h3 className="font-bold text-slate-800 text-sm leading-snug mb-2 pr-6">{form.judul}</h3>
                     <div className="text-[10px] text-slate-400 flex items-center gap-1 mb-3"><Users size={12}/> {pendaftarList.filter(p => p.formId === form.id).length} Pendaftar masuk</div>
                     
-                    <div className="grid grid-cols-4 gap-2 border-t border-slate-100 pt-3">
-                       <button onClick={() => toggleFormStatus(form.id, form.status)} className="col-span-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-[10px] font-bold py-1.5 rounded-lg transition border border-slate-200">{form.status === 'Buka' ? 'Tutup Form' : 'Buka Form'}</button>
-                       <button onClick={() => handleCloneForm(form)} className="col-span-2 bg-blue-50 hover:bg-blue-100 text-blue-600 text-[10px] font-bold py-1.5 rounded-lg transition border border-blue-200 flex items-center justify-center gap-1"><Copy size={12}/> Duplikat</button>
-                       <button onClick={() => handleEditClick(form)} className="col-span-2 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white text-[10px] font-bold py-1.5 rounded-lg transition border border-amber-100 flex justify-center items-center gap-1"><Edit size={12}/> Edit</button>
-                       <button onClick={() => handleDeleteFormulir(form.id)} className="col-span-2 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white text-[10px] font-bold py-1.5 rounded-lg transition border border-red-100 flex justify-center items-center gap-1"><Trash2 size={12}/> Hapus</button>
+                    {/* PERBAIKAN: Layout Tombol dengan Fitur Share Link */}
+                    <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                       <button onClick={() => handleCopyLink(form)} className="flex-1 min-w-[70px] bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[10px] font-bold py-1.5 rounded-lg transition border border-indigo-100 flex items-center justify-center gap-1"><Share2 size={12}/> Copy Link</button>
+                       <button onClick={() => toggleFormStatus(form.id, form.status)} className="flex-1 min-w-[70px] bg-slate-50 hover:bg-slate-100 text-slate-600 text-[10px] font-bold py-1.5 rounded-lg transition border border-slate-200">{form.status === 'Buka' ? 'Tutup Form' : 'Buka Form'}</button>
+                       <button onClick={() => handleCloneForm(form)} className="flex-1 min-w-[70px] bg-blue-50 hover:bg-blue-100 text-blue-600 text-[10px] font-bold py-1.5 rounded-lg transition border border-blue-200 flex items-center justify-center gap-1"><Copy size={12}/> Duplikat</button>
+                       <button onClick={() => handleEditClick(form)} className="flex-1 min-w-[70px] bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white text-[10px] font-bold py-1.5 rounded-lg transition border border-amber-100 flex justify-center items-center gap-1"><Edit size={12}/> Edit</button>
+                       <button onClick={() => handleDeleteFormulir(form.id)} className="flex-1 min-w-[70px] bg-red-50 text-red-600 hover:bg-red-500 hover:text-white text-[10px] font-bold py-1.5 rounded-lg transition border border-red-100 flex justify-center items-center gap-1"><Trash2 size={12}/> Hapus</button>
                     </div>
                   </div>
                 ))
@@ -508,7 +513,6 @@ export default function AdminPendaftaran() {
       {activeTab === "pendaftar" && (
         <div className="space-y-6 animate-in fade-in duration-300">
           
-          {/* FITUR BARU: Mini Dashboard Statistik */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                <p className="text-[10px] font-bold text-slate-400 uppercase">Total Pendaftar View</p>
@@ -528,7 +532,6 @@ export default function AdminPendaftaran() {
              </div>
           </div>
 
-          {/* Top Bar Actions */}
           <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col md:flex-row justify-between gap-4">
              <div className="flex items-center gap-3">
                <span className="text-sm font-bold text-slate-700 shrink-0">Filter Formulir:</span>
@@ -555,7 +558,6 @@ export default function AdminPendaftaran() {
              </div>
           </div>
 
-          {/* Tabel Dinamis Database Pendaftar */}
           <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-x-auto min-h-[400px]">
             <table className="w-full text-left whitespace-nowrap min-w-[900px]">
               <thead className="bg-[#064e3b] text-white text-xs uppercase tracking-wider">
@@ -578,7 +580,6 @@ export default function AdminPendaftaran() {
                   filteredPendaftar.map((pendaftar) => {
                     const date = pendaftar.createdAt?.toDate ? pendaftar.createdAt.toDate().toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'}) : "-";
                     
-                    // Ekstrak identitas (karena input custom, kita ambil value dari jawaban pertama jika ada)
                     const ansKeys = pendaftar.answers ? Object.keys(pendaftar.answers) : [];
                     const identifier = ansKeys.length > 0 ? pendaftar.answers[ansKeys[0]] : (pendaftar.nama || "Tanpa Nama");
                     
@@ -648,7 +649,6 @@ export default function AdminPendaftaran() {
                    Object.entries(viewDetailModal.answers).map(([pertanyaan, jawaban], idx) => (
                      <div key={idx} className="border-b border-slate-100 pb-3">
                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{pertanyaan}</p>
-                        {/* Jika jawaban berupa URL Cloudinary (berkas) */}
                         {typeof jawaban === 'string' && jawaban.startsWith('http') && (jawaban.includes('cloudinary') || pertanyaan.toLowerCase().includes('file')) ? (
                            <a href={jawaban} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition border border-blue-100"><ExternalLink size={14}/> Buka File Lampiran</a>
                         ) : (
@@ -660,7 +660,6 @@ export default function AdminPendaftaran() {
                    <p className="text-slate-400 text-sm text-center">Data kustom tidak ditemukan (Kemungkinan format data lama).</p>
                  )}
 
-                 {/* Legacy Data Support */}
                  {viewDetailModal.nama && !viewDetailModal.answers && (
                    <div className="space-y-3 border border-amber-200 bg-amber-50 p-4 rounded-xl">
                       <p className="text-xs font-bold text-amber-700 mb-2">Membaca Data Legacy (Versi Lama)</p>

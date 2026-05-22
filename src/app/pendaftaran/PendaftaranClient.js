@@ -69,7 +69,8 @@ function PendaftaranContent() {
       setActiveForms(validForms);
 
       if (formIdParam) {
-        const found = validForms.find(f => f.id === formIdParam);
+        // PERBAIKAN: Membaca form berdasarkan ID asli ATAU berdasarkan Slug (Judul URL)
+        const found = validForms.find(f => f.id === formIdParam || f.slug === formIdParam);
         if (found) setSelectedForm(found);
         else alert("Formulir tidak ditemukan atau pendaftaran sudah ditutup.");
       }
@@ -80,14 +81,18 @@ function PendaftaranContent() {
     }
   }
 
-  const handleShare = (id) => {
-    const link = `${window.location.origin}/pendaftaran?form=${id}`;
+  // PERBAIKAN: Tombol Share sekarang menggunakan slug (jika ada) agar link lebih cantik
+  const handleShare = (form) => {
+    const identifier = form.slug || form.id;
+    const link = `${window.location.origin}/pendaftaran?form=${identifier}`;
     navigator.clipboard.writeText(link);
     alert("Link pendaftaran berhasil disalin! Silakan bagikan via WhatsApp.");
   };
 
+  // PERBAIKAN: Mengarahkan URL menggunakan slug
   const handleOpenForm = (form) => {
-    router.push(`/pendaftaran?form=${form.id}`);
+    const identifier = form.slug || form.id;
+    router.push(`/pendaftaran?form=${identifier}`);
     setSelectedForm(form);
     setIsSuccess(false);
     setCustomAnswers({});
@@ -126,6 +131,7 @@ function PendaftaranContent() {
 
     setIsSubmitting(true);
     
+    // Payload menyimpan ID asli ke database agar mudah difilter oleh admin
     const payload = {
       formId: selectedForm.id,
       formJudul: selectedForm.judul,
@@ -204,7 +210,8 @@ function PendaftaranContent() {
                       )}
 
                       <div className="grid grid-cols-2 gap-2 mt-auto border-t border-slate-100 pt-4">
-                        <button onClick={() => handleShare(form.id)} className="bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold py-2.5 rounded-xl transition flex justify-center items-center gap-1.5 text-xs border border-slate-200">
+                        {/* Memanggil fungsi Share dengan Object Form */}
+                        <button onClick={() => handleShare(form)} className="bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold py-2.5 rounded-xl transition flex justify-center items-center gap-1.5 text-xs border border-slate-200">
                           <Share2 size={14}/> Share Link
                         </button>
                         <button onClick={() => handleOpenForm(form)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition flex justify-center items-center text-xs shadow-md">
@@ -226,7 +233,8 @@ function PendaftaranContent() {
                 <button onClick={() => {router.push('/pendaftaran'); setSelectedForm(null);}} className="flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
                   <ArrowLeft size={16}/> Kembali
                 </button>
-                <button onClick={() => handleShare(selectedForm.id)} className="flex items-center gap-1.5 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full border border-blue-200 transition">
+                {/* Memanggil fungsi Share dengan Object Form yang sedang aktif */}
+                <button onClick={() => handleShare(selectedForm)} className="flex items-center gap-1.5 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full border border-blue-200 transition">
                   <Share2 size={14}/> Bagikan
                 </button>
              </div>

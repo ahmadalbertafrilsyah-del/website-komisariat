@@ -227,9 +227,9 @@ export default function AdministrasiPage() {
                       <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
                         <tr>
                           <th className="py-3 px-4 w-12 text-center font-bold">No</th>
-                          <th className="py-3 px-4 w-1/4 font-bold">Nomor Surat</th>
-                          <th className="py-3 px-4 w-1/4 font-bold">Perihal</th>
-                          <th className="py-3 px-4 w-auto font-bold">Deskripsi</th>
+                          <th className="py-3 px-4 w-1/4 text-center font-bold">Nomor Surat</th>
+                          <th className="py-3 px-4 w-1/4 text-center font-bold">Perihal</th>
+                          <th className="py-3 px-4 w-auto text-center font-bold">Deskripsi</th>
                           <th className="py-3 px-4 w-32 text-center font-bold">Aksi</th>
                         </tr>
                       </thead>
@@ -238,11 +238,11 @@ export default function AdministrasiPage() {
                           <tr key={index} className="hover:bg-blue-50/20 transition-colors">
                             <td className="py-2.5 px-4 text-center font-bold text-slate-400">{index + 1}</td>
                             <td className="py-2.5 px-4"><span className="font-mono text-xs font-bold text-blue-700 block truncate max-w-[280px]">{doc.nomorSurat || "-"}</span></td>
-                            <td className="py-2.5 px-4 font-bold text-slate-800 text-sm">{doc.perihalSurat || "Tanpa Perihal"}</td>
+                            <td className="py-2.5 px-4 font-bold text-slate-800 text-center text-sm">{doc.perihalSurat || "Tanpa Perihal"}</td>
                             <td className="py-2.5 px-4 text-slate-500 text-xs leading-snug line-clamp-2 max-w-sm">{doc.deskripsiSurat || "-"}</td>
                             <td className="py-2.5 px-4 text-center">
                               {doc.linkFile ? (
-                                <a href={doc.linkFile} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1 w-full bg-slate-900 hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded-lg transition text-[11px] uppercase tracking-wider"><Download size={12} /> Unduh</a>
+                                <a href={doc.linkFile} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1 w-full bg-slate-900 hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded-lg transition text-[11px] uppercase tracking-wider"><Download size={12} /> Lihat</a>
                               ) : (
                                 <span className="text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg text-[11px] uppercase tracking-wider block text-center font-bold">Kosong</span>
                               )}
