@@ -1,3 +1,6 @@
+// Tambahkan baris ini untuk memaksa Next.js selalu membaca parameter URL secara dinamis (menghindari cache Vercel)
+export const dynamic = "force-dynamic";
+
 import ApresiasiClient from "./ApresiasiClient";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -25,7 +28,8 @@ export async function generateMetadata({ searchParams }) {
           description = `Lihat daftar prestasi akademik dan non-akademik dari sahabat/i ${kader.namaLengkap} di Hall of Fame PMII.`;
           
           if (kader.fotoKader) {
-            imageUrl = kader.fotoKader; // Pasang foto kader ke link preview
+            // WhatsApp hanya memunculkan preview jika URL berawalan http/https
+            imageUrl = kader.fotoKader.startsWith("http") ? kader.fotoKader : imageUrl;
           }
         }
       }
