@@ -53,6 +53,7 @@ export default function Footer() {
               <li><Link href="/anggota" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Cari Anggota</Link></li>
               <li><Link href="/rayon" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Daftar Rayon</Link></li>
               <li><Link href="/administrasi" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Administrasi Surat</Link></li>
+              <li><Link href="https://siakad.pmii-uinmalang.or.id/" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Portal Siakad</Link></li>
             </ul>
           </div>
           

@@ -78,10 +78,6 @@ export default function Navbar() {
               <Link href="/berita" className={isActive("/berita")}>Berita</Link>
               <Link href="/administrasi" className={isActive("/administrasi")}>Administrasi</Link>
               
-              <a href="https://siakad.pmii-uinmalang.or.id/" target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)} className="text-emerald-400 hover:text-emerald-300 transition font-bold flex items-center gap-2 pt-2 border-t border-slate-700">
-              Siakad PMII <ExternalLink size={14} />
-              </a>
-
               <Link href="/pendaftaran" className="bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 px-5 py-2 rounded-full font-bold transition shadow-md shadow-blue-500/20 ml-2 whitespace-nowrap">
                 Pendaftaran
               </Link>
