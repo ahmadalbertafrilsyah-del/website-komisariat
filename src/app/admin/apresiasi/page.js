@@ -344,7 +344,7 @@ export default function AdminApresiasi() {
                               </div>
                            </div>
 
-                           {/* Accordion Body (Form Edit yang sudah Diperbaiki Layout HP-nya) */}
+                           {/* Accordion Body */}
                            {isExpanded && (
                              <div className="p-4 md:p-5 grid grid-cols-1 md:grid-cols-12 gap-y-4 md:gap-x-4 bg-white">
                                
@@ -360,13 +360,13 @@ export default function AdminApresiasi() {
 
                                <div className="col-span-1 md:col-span-3">
                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Tingkat</label>
-                                 <select value={p.tingkat} onChange={e => handleUpdatePrestasi(activeEditKader.id, p.id, "tingkat", e.target.value)} className="w-full p-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-sm outline-none focus:border-blue-500 transition appearance-none">
-                                   <option value="">Pilih...</option>
-                                   <option value="Lokal / Rayon">Lokal / Rayon</option>
-                                   <option value="Regional / Cabang">Regional / Cabang</option>
-                                   <option value="Nasional">Nasional</option>
-                                   <option value="Internasional">Internasional</option>
-                                 </select>
+                                 <input 
+                                   type="text" 
+                                   value={p.tingkat} 
+                                   onChange={e => handleUpdatePrestasi(activeEditKader.id, p.id, "tingkat", e.target.value)} 
+                                   className="w-full p-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-sm outline-none focus:border-blue-500 transition" 
+                                   placeholder={isAkad ? "Misal: Sinta 2, Scopus..." : "Misal: Nasional, Kampus..."}
+                                 />
                                </div>
 
                                <div className="col-span-1 md:col-span-3">
