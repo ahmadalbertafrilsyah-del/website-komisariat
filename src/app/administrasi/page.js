@@ -304,19 +304,21 @@ export default function AdministrasiPage() {
                     <table className="w-full text-left border-collapse min-w-[1200px]">
                       <thead className="bg-amber-500 text-white text-[11px] uppercase tracking-wider text-center">
                         <tr>
-                          <th rowSpan={2} className="py-2 px-3 border border-amber-600 w-12 font-bold">No</th>
-                          <th rowSpan={2} className="py-2 px-4 border border-amber-600 w-auto whitespace-nowrap font-bold">No. Surat</th>
-                          <th rowSpan={2} className="py-2 px-4 border border-amber-600 w-48 font-bold">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</th>
+                          <th rowSpan={2} className="py-2 px-3 w-10 font-bold border border-amber-600">No</th>
+                          <th rowSpan={2} className="py-2 px-4 w-64 whitespace-nowrap font-bold border border-amber-600">No. Surat</th>
+                          <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600">
+                            {activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}
+                          </th>
                           <th colSpan={2} className="py-1.5 border border-amber-600 font-bold">Tgl Surat</th>
-                          <th rowSpan={2} className="py-2 px-4 border border-amber-600 w-48 font-bold">Hal</th>
-                          <th rowSpan={2} className="py-2 px-4 border border-amber-600 w-auto font-bold">Ket</th>
-                          <th rowSpan={2} className="py-2 px-3 border border-amber-600 w-24 font-bold bg-amber-600">Berkas</th>
+                          <th rowSpan={2} className="py-2 px-4 w-auto font-bold border border-amber-600">Hal</th>
+                          <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600">Ket</th>
+                          <th rowSpan={2} className="py-2 px-3 w-20 font-bold border border-amber-600 bg-amber-600">Berkas</th>
                         </tr>
                         <tr>
-                          <th className="py-1.5 px-3 border border-amber-600 w-24 font-bold bg-amber-500/90">Buat</th>
-                          <th className="py-1.5 px-3 border border-amber-600 w-24 font-bold bg-amber-500/90">{activeSuratTab === "masuk" ? "Datang" : "Kirim"}</th>
+                          <th className="py-1.5 px-3 w-24 font-bold border border-amber-600 bg-amber-500/90">Buat</th>
+                          <th className="py-1.5 px-3 w-24 font-bold border border-amber-600 bg-amber-500/90">{activeSuratTab === "masuk" ? "Datang" : "Kirim"}</th>
                         </tr>
-                      </thead>
+                    </thead>
                       
                       <tbody className="divide-y divide-amber-200 text-sm bg-white">
                         {paginatedSuratData.map((doc, index) => {
