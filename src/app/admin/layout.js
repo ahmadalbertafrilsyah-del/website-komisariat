@@ -67,6 +67,7 @@ export default function AdminLayout({ children }) {
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-2">Menu Utama</p>
           <Link href="/admin" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin")}><LayoutDashboard size={18} className={pathname === "/admin" ? "text-blue-400" : ""} /> Global & Footer</Link>
           <Link href="/admin/beranda" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/beranda")}><Settings size={18} className={pathname === "/admin/beranda" ? "text-blue-400" : ""} /> Beranda</Link>
+          <Link href="/admin/administrasi" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/administrasi")}><Newspaper size={18} className={pathname === "/admin/administrasi" ? "text-blue-400" : ""} /> Administrasi</Link>
           <Link href="/admin/struktur" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/struktur")}><Users size={18} className={pathname === "/admin/struktur" ? "text-blue-400" : ""} /> Pengurus</Link>
           <Link href="/admin/anggota" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/anggota")}><Users size={18} className={pathname === "/admin/anggota" ? "text-blue-400" : ""} /> Anggota</Link>
           <Link href="/admin/rayon" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/rayon")}><Users size={18} className={pathname === "/admin/rayon" ? "text-blue-400" : ""} /> Rayon</Link>
@@ -74,7 +75,6 @@ export default function AdminLayout({ children }) {
           <Link href="/admin/apresiasi" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/apresiasi")}><Trophy size={18} className={pathname === "/admin/apresiasi" ? "text-blue-400" : ""} /> Apresiasi Kader</Link>
           <Link href="/admin/berita" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/berita")}><Newspaper size={18} className={pathname === "/admin/berita" ? "text-blue-400" : ""} /> Berita & Artikel</Link>
           <Link href="/admin/pendaftaran" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/pendaftaran")}><Newspaper size={18} className={pathname === "/admin/pendaftaran" ? "text-blue-400" : ""} /> Pendaftaran</Link>
-          <Link href="/admin/administrasi" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/administrasi")}><Newspaper size={18} className={pathname === "/admin/administrasi" ? "text-blue-400" : ""} /> Administrasi</Link>
         </nav>
 
         <div className="p-4 border-t border-slate-800">
