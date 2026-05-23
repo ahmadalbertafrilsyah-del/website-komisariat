@@ -13,9 +13,8 @@ export default function AdministrasiPage() {
   const [loading, setLoading] = useState(true);
   
   // ================= STATE RUANG KERJA (LEMBAGA) =================
-  // Default lembaga adalah "Komisariat" sesuai dengan kodingan admin
   const [activeLembaga, setActiveLembaga] = useState("Komisariat"); 
-  const [listLSO, setListLSO] = useState([]); // State untuk menampung LSO Kustom
+  const [listLSO, setListLSO] = useState([]); 
   
   // State Data Master dari Firebase (Menyimpan seluruh data)
   const [masterSuratMasuk, setMasterSuratMasuk] = useState([]); 
@@ -32,26 +31,21 @@ export default function AdministrasiPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
-  // Tarik Data Administrasi (Hanya 1 Dokumen sesuai dengan logika admin)
+  // Tarik Data Administrasi
   useEffect(() => {
     async function fetchAdministrasiData() {
       setLoading(true);
       try {
-        // Mengambil dari satu tempat yang sama dengan admin
         const docRef = doc(db, "website_config", "database_administrasi");
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
           const data = docSnap.data();
-          
-          // Menyimpan seluruh data master
           setMasterSuratMasuk(data.listSuratMasuk || []); 
           setMasterSuratKeluar(data.listSuratKeluar || data.listDokumen || []); 
           setMasterProker(data.listProker || []);   
           setMasterProdukHukum(data.listProdukHukum || []); 
           setMasterLpj(data.listLpj || []); 
-          
-          // Menyimpan daftar LSO kustom yang dibuat admin
           setListLSO(data.listLSO || []);
         }
       } catch (error) {
@@ -63,9 +57,26 @@ export default function AdministrasiPage() {
     fetchAdministrasiData();
   }, []); 
 
-  // ================= FILTER DATA BERDASARKAN LEMBAGA AKTIF =================
-  // Disini kita memfilter data master berdasarkan 'activeLembaga'
-  // Jika field 'lembaga' kosong, kita asumsikan sebagai "Komisariat" agar tidak error
+  // ================= HELPER: PENERJEMAH TANGGAL EXCEL/SISTEM =================
+  const formatDisplayDate = (dateVal) => {
+    if (!dateVal) return "-";
+    
+    // 1. Jika nilai berupa angka serial Excel (misal: 45304)
+    if (!isNaN(dateVal) && Number(dateVal) > 20000) {
+      const date = new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000));
+      return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    }
+    
+    // 2. Jika formatnya ISO System Date (misal: "2026-05-23T11:37:00.000Z")
+    if (typeof dateVal === 'string' && dateVal.includes('T') && !isNaN(new Date(dateVal))) {
+      const d = new Date(dateVal);
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    }
+
+    // 3. Jika sudah format teks biasa (misal "12/01/2026"), biarkan saja
+    return dateVal;
+  };
+
   const filterByLembaga = (dataArray) => {
     return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   };
@@ -76,7 +87,7 @@ export default function AdministrasiPage() {
   const currentProdukHukum = filterByLembaga(masterProdukHukum);
   const currentLpj = filterByLembaga(masterLpj);
 
-  // Logika Filter Pencarian Cerdas (menggunakan data yang sudah difilter by lembaga)
+  // Logika Filter Pencarian Cerdas
   const getFilteredData = () => {
     const q = searchQuery.toLowerCase();
     
@@ -112,12 +123,10 @@ export default function AdministrasiPage() {
 
   const currentListData = getFilteredData();
 
-  // Reset Halaman
   const handleTabChange = (tab) => { setActiveTab(tab); setSearchQuery(""); setCurrentPage(1); };
   const handleSuratTabChange = (tab) => { setActiveSuratTab(tab); setSearchQuery(""); setCurrentPage(1); };
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); setCurrentPage(1); };
   
-  // Ganti Lembaga
   const handleLembagaChange = (e) => {
     setActiveLembaga(e.target.value);
     setActiveTab("persuratan");
@@ -130,7 +139,7 @@ export default function AdministrasiPage() {
     ? currentListData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE) 
     : currentListData;
 
-  // ================= EXPORT EXCEL =================
+  // ================= EXPORT EXCEL (Dengan Tanggal yang Diforrmat) =================
   const handleExportExcel = () => {
     if (currentListData.length === 0) return alert("Tidak ada data arsip untuk diekspor!");
     
@@ -140,8 +149,8 @@ export default function AdministrasiPage() {
         "No": idx + 1,
         "Nomor Surat": item.nomorSurat || "-",
         [activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"]: activeSuratTab === "masuk" ? (item.asalSurat||"-") : (item.tujuanSurat||"-"),
-        "Tanggal Buat": item.tglBuat || "-",
-        [activeSuratTab === "masuk" ? "Tanggal Datang" : "Tanggal Kirim"]: activeSuratTab === "masuk" ? (item.tglDatang||"-") : (item.tglKirim||"-"),
+        "Tanggal Buat": formatDisplayDate(item.tglBuat),
+        [activeSuratTab === "masuk" ? "Tanggal Datang" : "Tanggal Kirim"]: activeSuratTab === "masuk" ? formatDisplayDate(item.tglDatang) : formatDisplayDate(item.tglKirim),
         "Perihal": item.hal || item.perihalSurat || "-",
         "Keterangan": item.ket || item.deskripsiSurat || "-",
         "Link Berkas": item.linkFile || "Tidak Ada"
@@ -154,7 +163,7 @@ export default function AdministrasiPage() {
         "Tujuan": item.tujuan || "-",
         "Indikator": item.indikator || "-",
         "Sasaran": item.sasaran || "-",
-        "Waktu Pelaksanaan": item.waktuPelaksanaan || "-",
+        "Waktu Pelaksanaan": formatDisplayDate(item.waktuPelaksanaan),
         "Penanggung Jawab": item.penanggungJawab || "-",
         "Estimasi Dana": item.estimasiDana || "-"
       }));
@@ -175,7 +184,6 @@ export default function AdministrasiPage() {
 
   if (loading) return <LoadingScreen text={`Memuat Bank Data Arsip`} />;
 
-  // Komponen Kartu Dokumen PDF
   const DocumentCard = ({ item, isHukum }) => (
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col h-full">
       <div className="relative w-full pt-[141.4%] bg-slate-100 border-b border-slate-200 overflow-hidden">
@@ -214,7 +222,6 @@ export default function AdministrasiPage() {
 
       <section className="px-5 max-w-7xl mx-auto w-full -mt-10 md:-mt-12 relative z-20 space-y-4">
         
-        {/* ================= UI PILIH RUANG KERJA ================= */}
         <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100 flex items-center justify-between relative z-30">
            <div className="flex items-center gap-3 w-full">
                <div className="bg-blue-100 p-2 rounded-lg text-blue-600 hidden sm:flex">
@@ -227,11 +234,8 @@ export default function AdministrasiPage() {
                      onChange={handleLembagaChange}
                      className="w-full text-sm sm:text-base font-black text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
                    >
-                      {/* Pilihan Default sesuai Kodingan Admin */}
                       <option value="Komisariat">Administrasi Komisariat</option>
                       <option value="KOPRI">Administrasi KOPRI</option>
-                      
-                      {/* Pilihan LSO Kustom hasil inputan Admin */}
                       {listLSO.map((lso, index) => (
                           <option key={index} value={lso}>Administrasi {lso}</option>
                       ))}
@@ -324,8 +328,11 @@ export default function AdministrasiPage() {
                                 <span className="font-mono text-[11px] md:text-xs font-bold text-slate-800">{doc.nomorSurat || "-"}</span>
                               </td>
                               <td className="py-1.5 px-4 border-r border-amber-200 text-xs font-semibold text-slate-700 leading-snug">{activeSuratTab === "masuk" ? (doc.asalSurat || "-") : (doc.tujuanSurat || "-")}</td>
-                              <td className="py-1.5 px-3 border-r border-amber-200 text-[11px] text-center text-slate-600 font-mono whitespace-nowrap">{doc.tglBuat || "-"}</td>
-                              <td className="py-1.5 px-3 border-r border-amber-200 text-[11px] text-center text-slate-600 font-mono whitespace-nowrap">{activeSuratTab === "masuk" ? (doc.tglDatang || "-") : (doc.tglKirim || "-")}</td>
+                              
+                              {/* PERUBAHAN: TANGGAL DIPARSING DENGAN HELPER AGAR TIDAK MUNCUL ANGKA ANEH */}
+                              <td className="py-1.5 px-3 border-r border-amber-200 text-[11px] text-center text-slate-600 font-mono whitespace-nowrap">{formatDisplayDate(doc.tglBuat)}</td>
+                              <td className="py-1.5 px-3 border-r border-amber-200 text-[11px] text-center text-slate-600 font-mono whitespace-nowrap">{activeSuratTab === "masuk" ? formatDisplayDate(doc.tglDatang) : formatDisplayDate(doc.tglKirim)}</td>
+                              
                               <td className="py-1.5 px-4 border-r border-amber-200">
                                 <div className="font-bold text-slate-800 text-xs leading-snug w-48">{doc.hal || doc.perihalSurat || "-"}</div>
                               </td>
@@ -346,7 +353,6 @@ export default function AdministrasiPage() {
                     </table>
                   </div>
 
-                  {/* KONTROL PAGINATION */}
                   {totalPages > 1 && (
                     <div className="bg-amber-50 border-t border-amber-200 p-3 flex justify-center items-center gap-2">
                       <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-1.5 rounded-md bg-white border border-amber-300 text-amber-700 hover:bg-amber-200 disabled:opacity-50 transition"><ChevronLeft size={16}/></button>
@@ -406,7 +412,8 @@ export default function AdministrasiPage() {
                                   <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{doc.tujuan || "-"}</td>
                                   <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{doc.indikator || "-"}</td>
                                   <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{doc.sasaran || "-"}</td>
-                                  <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{doc.waktuPelaksanaan || "-"}</td>
+                                  {/* TANGGAL WAKTU PROKER JUGA DIPARSING */}
+                                  <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{formatDisplayDate(doc.waktuPelaksanaan)}</td>
                                   <td className="py-3 px-4 border-r border-slate-100 font-semibold text-emerald-700 text-xs leading-relaxed">{doc.penanggungJawab || "-"}</td>
                                   <td className="py-3 px-4 border-r border-slate-100 text-center font-mono text-xs font-bold text-slate-700 bg-slate-50/50">{doc.estimasiDana || "-"}</td>
                                   <td className="py-3 px-4 text-center">

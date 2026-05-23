@@ -11,8 +11,8 @@ export default function AdminAdministrasiEditor() {
   const [activeSuratTab, setActiveSuratTab] = useState("masuk");
 
   // ================= STATE RUANG KERJA (LEMBAGA) =================
-  const [activeLembaga, setActiveLembaga] = useState("Komisariat"); // Default
-  const [listLSO, setListLSO] = useState([]); // List LSO Kustom
+  const [activeLembaga, setActiveLembaga] = useState("Komisariat"); 
+  const [listLSO, setListLSO] = useState([]); 
   const [showLSOModal, setShowLSOModal] = useState(false);
   const [newLSO, setNewLSO] = useState("");
 
@@ -33,7 +33,6 @@ export default function AdminAdministrasiEditor() {
   const fileInputSuratKeluarRef = useRef(null);
   const fileInputProkerRef = useRef(null);
 
-  // Load Data dari Firebase
   useEffect(() => {
     async function loadSemuaData() {
       try {
@@ -46,7 +45,7 @@ export default function AdminAdministrasiEditor() {
           setProkerData(data.listProker || []);
           setHukumData(data.listProdukHukum || []);
           setLpjData(data.listLpj || []);
-          setListLSO(data.listLSO || []); // Tarik data custom LSO
+          setListLSO(data.listLSO || []); 
         }
       } catch (error) {
         console.error("Gagal mengambil data administrasi:", error);
@@ -57,14 +56,12 @@ export default function AdminAdministrasiEditor() {
     loadSemuaData();
   }, []);
 
-  // ================= FILTER DATA BERDASARKAN LEMBAGA AKTIF =================
   const filteredSuratMasuk = suratMasukData.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   const filteredSuratKeluar = suratKeluarData.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   const filteredProker = prokerData.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   const filteredHukum = hukumData.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   const filteredLpj = lpjData.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
 
-  // ================= FUNGSI KELOLA LSO =================
   const handleAddLSO = async () => {
     if(!newLSO.trim() || listLSO.includes(newLSO.trim())) return;
     const updated = [...listLSO, newLSO.trim()];
@@ -80,7 +77,6 @@ export default function AdminAdministrasiEditor() {
     await setDoc(doc(db, "website_config", "database_administrasi"), { listLSO: updated }, { merge: true });
   };
 
-  // ================= FUNGSI UPLOAD FILE KE CLOUDINARY =================
   const handleFileUpload = async (e, fieldKey) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -106,7 +102,6 @@ export default function AdminAdministrasiEditor() {
     }
   };
 
-  // ================= FUNGSI HAPUS & UPDATE (AUTO-SAVE) =================
   const handleDelete = async (type, id) => {
     if (!confirm("Hapus berkas ini secara permanen?")) return;
     const docRef = doc(db, "website_config", "database_administrasi");
@@ -149,7 +144,6 @@ export default function AdminAdministrasiEditor() {
     } catch (error) { alert("Gagal menyimpan: " + error.message); }
   };
 
-  // ================= FUNGSI TAMBAH MANUAL (Menyisipkan Lembaga Aktif) =================
   const handleAddSuratMasuk = async (e) => {
     e.preventDefault(); const fd = new FormData(e.target);
     const newItem = { id: Date.now(), lembaga: activeLembaga, nomorSurat: fd.get("nomorSurat"), asalSurat: fd.get("asalSurat"), tglBuat: fd.get("tglBuat"), tglDatang: fd.get("tglDatang"), hal: fd.get("hal"), ket: fd.get("ket"), linkFile: urls.suratFile };
@@ -187,7 +181,6 @@ export default function AdminAdministrasiEditor() {
     try { await setDoc(doc(db, "website_config", "database_administrasi"), { listLpj: updated }, { merge: true }); } catch (err) { console.error(err); }
   };
 
-  // ================= FUNGSI TEMPLATE & IMPORT EXCEL (Menyisipkan Lembaga Aktif) =================
   const downloadTemplateSuratMasuk = () => {
     const ws = XLSX.utils.json_to_sheet([{ "No Surat": "001/Masuk/2026", "Asal Surat": "BEM", "Tgl Buat": "12/01/2026", "Tgl Datang": "14/01/2026", "Hal": "Undangan", "Ket": "Segera", "Link File": "https://..." }]);
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template"); XLSX.writeFile(wb, "Template_Surat_Masuk.xlsx");
@@ -203,17 +196,47 @@ export default function AdminAdministrasiEditor() {
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template"); XLSX.writeFile(wb, "Template_Program_Kerja.xlsx");
   };
 
+  // Helper untuk mengubah Excel Date serial number ke DD/MM/YYYY string
+  const formatExcelDate = (excelDate) => {
+    if (!excelDate) return "";
+    
+    // Jika bentuknya sudah string/teks biasa dari Excel (bukan tipe Date)
+    if (typeof excelDate === 'string') return excelDate;
+    
+    // Jika bentuknya benar-benar object Date bawaan JS
+    if (excelDate instanceof Date) {
+       const day = String(excelDate.getDate()).padStart(2, '0');
+       const month = String(excelDate.getMonth() + 1).padStart(2, '0');
+       const year = excelDate.getFullYear();
+       return `${day}/${month}/${year}`;
+    }
+
+    return String(excelDate);
+  };
+
+  // ================= 7. FUNGSI IMPORT EXCEL YANG DIPERBAIKI (TANGGAL) =================
   const handleExcelSuratMasuk = (e) => {
     const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        const data = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, { type: "binary" }).Sheets[XLSX.read(evt.target.result, { type: "binary" }).SheetNames[0]]);
+        // PERBAIKAN: cellDates: true agar angka serial Excel otomatis dikonversi jadi Object Date
+        const workbook = XLSX.read(evt.target.result, { type: "binary", cellDates: true });
+        const sheetName = workbook.SheetNames[0];
+        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        
         const validData = data.map(row => ({
-          id: Date.now() + Math.random(), lembaga: activeLembaga,
-          nomorSurat: String(row["No Surat"] || row["Nomor Surat"] || ""), asalSurat: String(row["Asal Surat"] || ""),
-          tglBuat: String(row["Tgl Buat"] || ""), tglDatang: String(row["Tgl Datang"] || ""),
-          hal: String(row["Hal"] || row["Perihal"] || ""), ket: String(row["Ket"] || row["Keterangan"] || ""), linkFile: String(row["Link File"] || "")
+          id: Date.now() + Math.random(), 
+          lembaga: activeLembaga,
+          nomorSurat: String(row["No Surat"] || row["Nomor Surat"] || ""), 
+          asalSurat: String(row["Asal Surat"] || ""),
+          // Gunakan helper formatExcelDate agar terbaca sempurna
+          tglBuat: formatExcelDate(row["Tgl Buat"] || row["Tanggal Buat"]), 
+          tglDatang: formatExcelDate(row["Tgl Datang"] || row["Tanggal Datang"]),
+          hal: String(row["Hal"] || row["Perihal"] || ""), 
+          ket: String(row["Ket"] || row["Keterangan"] || ""), 
+          linkFile: String(row["Link File"] || "")
         })).filter(i => i.nomorSurat || i.hal);
+        
         setSuratMasukData(prev => { const updated = [...prev, ...validData]; setDoc(doc(db, "website_config", "database_administrasi"), { listSuratMasuk: updated }, { merge: true }); return updated; });
         alert(`Berhasil mengimpor ${validData.length} data Surat Masuk ke Ruang Kerja ${activeLembaga}!`);
       } catch (error) { alert("Format excel salah."); }
@@ -224,13 +247,24 @@ export default function AdminAdministrasiEditor() {
     const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        const data = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, { type: "binary" }).Sheets[XLSX.read(evt.target.result, { type: "binary" }).SheetNames[0]]);
+        // PERBAIKAN: cellDates: true
+        const workbook = XLSX.read(evt.target.result, { type: "binary", cellDates: true });
+        const sheetName = workbook.SheetNames[0];
+        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
         const validData = data.map(row => ({
-          id: Date.now() + Math.random(), lembaga: activeLembaga,
-          nomorSurat: String(row["No Surat"] || row["Nomor Surat"] || ""), tujuanSurat: String(row["Tujuan Surat"] || ""),
-          tglBuat: String(row["Tgl Buat"] || ""), tglKirim: String(row["Tgl Kirim"] || ""),
-          hal: String(row["Hal"] || row["Perihal"] || ""), ket: String(row["Ket"] || row["Keterangan"] || ""), linkFile: String(row["Link File"] || "")
+          id: Date.now() + Math.random(), 
+          lembaga: activeLembaga,
+          nomorSurat: String(row["No Surat"] || row["Nomor Surat"] || ""), 
+          tujuanSurat: String(row["Tujuan Surat"] || ""),
+          // Gunakan helper formatExcelDate
+          tglBuat: formatExcelDate(row["Tgl Buat"] || row["Tanggal Buat"]), 
+          tglKirim: formatExcelDate(row["Tgl Kirim"] || row["Tanggal Kirim"]),
+          hal: String(row["Hal"] || row["Perihal"] || ""), 
+          ket: String(row["Ket"] || row["Keterangan"] || ""), 
+          linkFile: String(row["Link File"] || "")
         })).filter(i => i.nomorSurat || i.hal);
+        
         setSuratKeluarData(prev => { const updated = [...prev, ...validData]; setDoc(doc(db, "website_config", "database_administrasi"), { listSuratKeluar: updated }, { merge: true }); return updated; });
         alert(`Berhasil mengimpor ${validData.length} data Surat Keluar ke Ruang Kerja ${activeLembaga}!`);
       } catch (error) { alert("Format excel salah."); }
@@ -241,14 +275,25 @@ export default function AdminAdministrasiEditor() {
     const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        const data = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, { type: "binary" }).Sheets[XLSX.read(evt.target.result, { type: "binary" }).SheetNames[0]]);
+        // PERBAIKAN: cellDates: true (Meskipun Proker biasanya format string, jaga-jaga bila ada tanggal)
+        const workbook = XLSX.read(evt.target.result, { type: "binary", cellDates: true });
+        const sheetName = workbook.SheetNames[0];
+        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
         const validData = data.map(row => ({
-          id: Date.now() + Math.random(), lembaga: activeLembaga,
-          pelaksanaProker: String(row["Pelaksana"] || ""), namaProker: String(row["Nama Kegiatan"] || ""),
-          tujuan: String(row["Tujuan"] || ""), indikator: String(row["Indikator"] || ""), sasaran: String(row["Sasaran"] || ""),
-          waktuPelaksanaan: String(row["Waktu Pelaksanaan"] || ""), penanggungJawab: String(row["Penanggung Jawab"] || ""),
-          estimasiDana: String(row["Estimasi Dana"] || ""), linkFile: String(row["Link File"] || "")
+          id: Date.now() + Math.random(), 
+          lembaga: activeLembaga,
+          pelaksanaProker: String(row["Pelaksana"] || ""), 
+          namaProker: String(row["Nama Kegiatan"] || ""),
+          tujuan: String(row["Tujuan"] || ""), 
+          indikator: String(row["Indikator"] || ""), 
+          sasaran: String(row["Sasaran"] || ""),
+          waktuPelaksanaan: formatExcelDate(row["Waktu Pelaksanaan"] || row["Waktu"]), 
+          penanggungJawab: String(row["Penanggung Jawab"] || ""),
+          estimasiDana: String(row["Estimasi Dana"] || ""), 
+          linkFile: String(row["Link File"] || "")
         })).filter(i => i.namaProker);
+        
         setProkerData(prev => { const updated = [...prev, ...validData]; setDoc(doc(db, "website_config", "database_administrasi"), { listProker: updated }, { merge: true }); return updated; });
         alert(`Berhasil mengimpor ${validData.length} data Proker ke Ruang Kerja ${activeLembaga}!`);
       } catch (error) { alert("Format excel salah."); }
@@ -270,7 +315,6 @@ export default function AdminAdministrasiEditor() {
         </div>
       </div>
 
-      {/* ================= BARU: PEMILIH RUANG KERJA (LEMBAGA) ================= */}
       <div className="bg-white p-3 md:px-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center gap-4">
          <div className="flex items-center gap-2 text-slate-600 font-bold text-sm shrink-0">
             <Building size={16} className="text-blue-600"/> Ruang Kerja:
@@ -288,7 +332,6 @@ export default function AdminAdministrasiEditor() {
          </button>
       </div>
 
-      {/* KATEGORI ARSIP (Berdasarkan Ruang Kerja Aktif) */}
       <div className="bg-blue-50/50 p-2 rounded-2xl flex overflow-x-auto whitespace-nowrap scrollbar-none gap-2 border border-blue-100">
         <button onClick={() => setActiveTab("persuratan")} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === "persuratan" ? "bg-blue-600 text-white shadow-sm" : "text-blue-700 hover:bg-blue-100"}`}><Mail size={16} /> Arsip Surat</button>
         <button onClick={() => setActiveTab("proker")} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === "proker" ? "bg-blue-600 text-white shadow-sm" : "text-blue-700 hover:bg-blue-100"}`}><Briefcase size={16} /> Program Kerja</button>
@@ -296,7 +339,6 @@ export default function AdminAdministrasiEditor() {
         <button onClick={() => setActiveTab("lpj")} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === "lpj" ? "bg-blue-600 text-white shadow-sm" : "text-blue-700 hover:bg-blue-100"}`}><FileCheck size={16} /> Laporan</button>
       </div>
 
-      {/* Notifikasi Sedang Berada di Ruang Kerja Apa */}
       <div className="text-xs font-bold text-slate-400 pl-2">
          Menampilkan & Mengedit Data Arsip: <span className="text-blue-600 uppercase tracking-widest">{activeLembaga}</span>
       </div>
@@ -308,8 +350,8 @@ export default function AdminAdministrasiEditor() {
           <div className="space-y-4 animate-in fade-in zoom-in duration-300">
             
             <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 w-max">
-              <button onClick={() => setActiveSuratTab("masuk")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeSuratTab === "masuk" ? "bg-amber-500 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}><Inbox size={14} /> Agenda Surat Masuk</button>
-              <button onClick={() => setActiveSuratTab("keluar")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeSuratTab === "keluar" ? "bg-amber-500 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}><Send size={14} /> Agenda Surat Keluar</button>
+              <button onClick={() => setActiveSuratTab("masuk")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeSuratTab === "masuk" ? "bg-amber-500 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}><Inbox size={14} /> Surat Masuk</button>
+              <button onClick={() => setActiveSuratTab("keluar")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeSuratTab === "keluar" ? "bg-amber-500 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}><Send size={14} /> Surat Keluar</button>
             </div>
 
             {activeSuratTab === "masuk" ? (
