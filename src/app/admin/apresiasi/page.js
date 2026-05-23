@@ -278,15 +278,15 @@ export default function AdminApresiasi() {
         </div>
         <div className="flex flex-wrap gap-2 md:gap-3 w-full xl:w-auto">
            <button onClick={handleDownloadTemplate} className="flex-1 xl:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-sm font-bold px-4 py-2.5 rounded-xl transition flex justify-center items-center gap-2 shadow-sm">
-             <Download size={18}/> Template Excel
+             <Download size={18}/> Template
            </button>
            <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={excelInputRef} onChange={handleImportExcel} />
            <button onClick={() => excelInputRef.current.click()} className="flex-1 xl:flex-none bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-sm font-bold px-4 py-2.5 rounded-xl transition flex justify-center items-center gap-2">
-             <FileSpreadsheet size={18}/> Import Excel
+             <FileSpreadsheet size={18}/> Import
            </button>
            {kaderData.length > 0 && (
              <button onClick={handleSaveAll} className="w-full xl:w-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition flex justify-center items-center gap-2 shadow-lg shadow-blue-600/20">
-               <Save size={18}/> Simpan Permanen
+               <Save size={18}/> Simpan
              </button>
            )}
         </div>
