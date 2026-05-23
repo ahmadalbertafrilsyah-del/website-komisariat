@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import { Search, Trophy, Award, BookOpen, ExternalLink, Calendar, Medal, Share2 } from "lucide-react";
+import { Search, Trophy, Award, BookOpen, ExternalLink, Calendar, Medal, Share2, Sparkles } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -78,100 +78,111 @@ export default function ApresiasiClient() {
   if (loading) return <LoadingScreen text="Memuat Galeri Prestasi" />;
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 flex flex-col">
+    <main className="min-h-screen bg-[#f1f5f9] font-sans text-slate-800 flex flex-col">
       <Navbar />
 
-      <section className="pt-28 md:pt-36 pb-16 md:pb-24 px-5 bg-[#0f172a] text-center relative overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-amber-500/20 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+      {/* Hero Section dengan desain lebih premium */}
+      <section className="pt-28 md:pt-36 pb-20 md:pb-28 px-5 bg-gradient-to-b from-[#0f172a] to-[#1e293b] text-center relative overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/20 via-transparent to-transparent pointer-events-none"></div>
         
         <div className="relative z-10 max-w-3xl mx-auto">
-          <motion.span initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-amber-400 bg-white/10 border border-white/20 px-4 py-1.5 rounded-full mb-5 inline-flex items-center justify-center gap-2 w-max backdrop-blur-sm">
-            <Trophy size={14} /> Hall of Fame PMII
-          </motion.span>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tight leading-tight">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6">
+            <Sparkles size={14} className="text-amber-400" />
+            <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-amber-400">Hall of Fame PMII</span>
+          </motion.div>
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-4xl md:text-6xl font-black text-white mb-5 tracking-tight">
             Apresiasi <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-500">Kader</span>
           </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-300 text-sm md:text-lg font-light max-w-2xl mx-auto leading-relaxed">
-            Galeri pencapaian prestasi akademik dan non-akademik sahabat/i PMII Komisariat. Menghidupkan nilai intelektualitas di kancah nasional maupun internasional.
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-300 text-sm md:text-base font-medium max-w-2xl mx-auto leading-relaxed">
+            Pusat galeri pencapaian sahabat/i PMII Komisariat. Ruang apresiasi untuk mereka yang menghidupkan nilai intelektualitas di kancah nasional maupun internasional.
           </motion.p>
         </div>
       </section>
 
-      <section className="px-5 max-w-7xl mx-auto w-full -mt-10 md:-mt-12 relative z-20">
-        <div className="bg-white p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center relative mb-8">
-          <input
-            type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari nama kader atau judul perlombaan / jurnal..."
-            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all font-medium"
-          />
-          <Search className="absolute left-7 h-5 w-5 text-slate-400" />
-        </div>
-
-        <div className="flex justify-center gap-3 sm:gap-4 mb-8">
-          <button 
-            onClick={() => setActiveTab("akademik")} 
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 shadow-sm flex items-center gap-2 ${activeTab === "akademik" ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-white text-slate-500 hover:bg-slate-50"}`}
-          >
-            <BookOpen size={16}/> Akademik
-          </button>
-          <button 
-            onClick={() => setActiveTab("non-akademik")} 
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 shadow-sm flex items-center gap-2 ${activeTab === "non-akademik" ? "bg-amber-500 text-white shadow-amber-200" : "bg-white text-slate-500 hover:bg-slate-50"}`}
-          >
-            <Award size={16}/> Non-Akademik
-          </button>
+      {/* Search & Filter Section */}
+      <section className="px-4 max-w-7xl mx-auto w-full -mt-12 md:-mt-14 relative z-20">
+        <div className="bg-white/80 backdrop-blur-xl p-3 md:p-4 rounded-3xl shadow-xl border border-white flex flex-col md:flex-row items-center gap-4 mb-10">
+          <div className="relative w-full">
+            <input
+              type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari nama kader atau judul prestasi..."
+              className="w-full pl-12 pr-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all font-medium"
+            />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+          </div>
+          
+          <div className="flex w-full md:w-auto bg-slate-100/50 p-1 rounded-2xl">
+            <button 
+              onClick={() => setActiveTab("akademik")} 
+              className={`flex-1 md:w-auto px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === "akademik" ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+            >
+              <BookOpen size={18}/> <span className="hidden sm:inline">Akademik</span><span className="sm:hidden">Akad</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab("non-akademik")} 
+              className={`flex-1 md:w-auto px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === "non-akademik" ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+            >
+              <Award size={18}/> <span className="hidden sm:inline">Non-Akademik</span><span className="sm:hidden">Non-Akad</span>
+            </button>
+          </div>
         </div>
       </section>
 
-      <section className="py-8 px-5 max-w-7xl mx-auto w-full flex-grow">
+      {/* Grid Prestasi - Disesuaikan agar bisa 2 kolom di HP, 3 di Tablet, 4 di Laptop */}
+      <section className="pb-16 px-4 max-w-7xl mx-auto w-full flex-grow">
         {processedData.length === 0 ? (
-           <div className="text-center text-slate-400 py-10">
-             <Trophy size={48} className="mx-auto mb-4 opacity-50"/>
-             <p>Belum ada rekam prestasi {activeTab} ditemukan.</p>
+           <div className="text-center text-slate-400 py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+             <Trophy size={56} className="mx-auto mb-4 opacity-30 text-slate-300"/>
+             <p className="font-medium text-slate-500">Belum ada rekam prestasi {activeTab} ditemukan.</p>
            </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {processedData.map((kader, idx) => {
               const highlight = kader.filteredPrestasi[0];
               const isAkademik = activeTab === "akademik";
 
               return (
-                <motion.div key={idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 flex flex-col group">
-                   <div className="p-5 flex items-center gap-4 bg-slate-900 text-white">
-                      {kader.fotoKader ? (
-                        <img src={kader.fotoKader} className="w-14 h-14 rounded-full object-cover border-2 border-slate-700 shrink-0" />
-                      ) : (
-                        <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border-2 border-slate-700"><Trophy size={20} className="text-slate-500"/></div>
-                      )}
-                      <div>
-                         <h3 className="font-bold text-sm leading-snug line-clamp-2">{kader.namaLengkap}</h3>
-                         <span className="text-[9px] text-amber-400 uppercase tracking-widest font-bold bg-amber-400/10 px-2 py-0.5 rounded-md mt-1 inline-block">{kader.asalRayon || "Kader"}</span>
+                <motion.div key={idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group cursor-pointer" onClick={() => setActiveKader(kader)}>
+                   
+                   {/* Banner Atas Kartu */}
+                   <div className={`h-16 w-full relative ${isAkademik ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-amber-500 to-orange-400'}`}>
+                      <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1 text-white text-[10px] font-bold">
+                        <Trophy size={12} /> {kader.filteredPrestasi.length}
                       </div>
                    </div>
 
-                   <div className="p-5 bg-white flex flex-col flex-grow border-t border-slate-100 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">{isAkademik ? <BookOpen size={100}/> : <Award size={100}/>}</div>
-                      
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md ${isAkademik ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                          Highlight {isAkademik ? 'Jurnal' : 'Lomba'}
-                        </span>
-                        <span className="text-xs font-bold text-slate-400">{kader.filteredPrestasi.length} Prestasi</span>
-                      </div>
-                      
-                      <h4 className="font-extrabold text-slate-800 text-base leading-snug mb-1 line-clamp-2 relative z-10">{highlight.judul}</h4>
-                      <p className="text-sm font-semibold text-blue-600 mb-4">{highlight.pencapaian}</p>
-                      
-                      <div className="flex items-center gap-3 text-xs text-slate-500 font-medium mt-auto border-t border-slate-50 pt-3">
-                         <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded"><Medal size={12}/> {highlight.tingkat || "Lokal"}</span>
-                         <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded"><Calendar size={12}/> {highlight.tahun || "-"}</span>
+                   {/* Foto Profil Overlapping */}
+                   <div className="relative px-4 flex justify-center -mt-10 mb-2">
+                      <div className="w-20 h-20 bg-white rounded-full p-1 shadow-md">
+                        {kader.fotoKader ? (
+                          <img src={kader.fotoKader} alt={kader.namaLengkap} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-slate-100 flex items-center justify-center"><Trophy size={28} className="text-slate-300"/></div>
+                        )}
                       </div>
                    </div>
-                   
-                   <button onClick={() => setActiveKader(kader)} className="w-full bg-slate-50 hover:bg-amber-500 text-slate-600 hover:text-white font-bold py-3.5 text-xs transition-colors flex items-center justify-center gap-1.5 border-t border-slate-100">
-                     Lihat Detail Prestasi <ExternalLink size={14}/>
-                   </button>
+
+                   {/* Identitas Kader */}
+                   <div className="px-4 text-center mb-4">
+                      <h3 className="font-extrabold text-slate-800 text-sm md:text-base leading-snug line-clamp-2">{kader.namaLengkap}</h3>
+                      <p className="text-[10px] md:text-xs text-slate-500 font-semibold mt-1 bg-slate-100 inline-block px-2 py-0.5 rounded-md">{kader.asalRayon || "Kader PMII"}</p>
+                   </div>
+
+                   {/* Highlight Prestasi */}
+                   <div className="px-4 pb-5 flex flex-col flex-grow text-center">
+                      <div className="w-8 h-1 bg-slate-100 mx-auto rounded-full mb-3"></div>
+                      <h4 className="font-bold text-slate-700 text-xs md:text-sm leading-tight line-clamp-2 mb-1">{highlight.judul}</h4>
+                      <p className="text-[10px] md:text-xs font-bold text-blue-600 line-clamp-1 mb-3">{highlight.pencapaian}</p>
+                      
+                      <div className="mt-auto flex justify-center gap-2">
+                        <span className={`text-[9px] md:text-[10px] font-bold px-2 py-1 rounded-md ${isAkademik ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                          {highlight.tingkat || "Lokal"}
+                        </span>
+                        <span className="text-[9px] md:text-[10px] font-bold px-2 py-1 rounded-md bg-slate-50 text-slate-500">
+                          {highlight.tahun || "-"}
+                        </span>
+                      </div>
+                   </div>
                 </motion.div>
               )
             })}
@@ -179,63 +190,66 @@ export default function ApresiasiClient() {
         )}
       </section>
 
+      {/* MODAL DETAIL - Tetap Sama Tapi Lebih Rapi */}
       <AnimatePresence>
         {activeKader && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveKader(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveKader(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-[#f8fafc] rounded-3xl shadow-2xl w-full max-w-3xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
               
-              <div className="bg-slate-900 text-white p-6 flex flex-col sm:flex-row sm:items-center gap-4 shrink-0 relative">
+              <div className="bg-white p-5 md:p-6 flex flex-col sm:flex-row sm:items-center gap-4 shrink-0 relative border-b border-slate-100 z-20">
                  <div className="flex items-center gap-4">
-                   {activeKader.fotoKader ? <img src={activeKader.fotoKader} className="w-16 h-16 rounded-full object-cover border-2 border-slate-700"/> : <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center"><Trophy size={24}/></div>}
+                   <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-slate-50 shadow-sm overflow-hidden shrink-0">
+                     {activeKader.fotoKader ? <img src={activeKader.fotoKader} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-slate-100 flex items-center justify-center"><Trophy size={24} className="text-slate-400"/></div>}
+                   </div>
                    <div>
-                     <h2 className="text-xl font-bold">{activeKader.namaLengkap}</h2>
-                     <p className="text-amber-400 text-xs font-bold tracking-widest uppercase mt-0.5">{activeKader.asalRayon}</p>
+                     <h2 className="text-lg md:text-2xl font-extrabold text-slate-800">{activeKader.namaLengkap}</h2>
+                     <p className="text-amber-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">{activeKader.asalRayon}</p>
                    </div>
                  </div>
                  
-                 <div className="flex items-center gap-2 sm:ml-auto mt-4 sm:mt-0">
-                    <button onClick={() => handleShare(activeKader)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition">
+                 <div className="flex items-center gap-2 sm:ml-auto mt-2 sm:mt-0">
+                    <button onClick={() => handleShare(activeKader)} className="flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs md:text-sm font-bold px-4 py-2.5 rounded-xl transition flex-1 sm:flex-none">
                       <Share2 size={16} /> Bagikan
                     </button>
-                    <button onClick={() => setActiveKader(null)} className="bg-slate-800 hover:bg-red-500 text-white p-2 rounded-xl transition">
+                    <button onClick={() => setActiveKader(null)} className="bg-red-50 hover:bg-red-500 hover:text-white text-red-500 p-2.5 rounded-xl transition">
                       <span className="sr-only">Tutup</span>✕
                     </button>
                  </div>
               </div>
 
-              <div className="p-6 overflow-y-auto bg-slate-50 flex-1 space-y-6">
-                 <h4 className="font-bold text-slate-700 flex items-center gap-2 border-b border-slate-200 pb-2">
-                   Total Catatan Prestasi: {activeKader.prestasi.length}
-                 </h4>
-                 <div className="space-y-4">
-                   {activeKader.prestasi.map((p, idx) => {
-                     const isAkad = p.tipe === 'akademik';
-                     return (
-                       <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-5 items-start">
-                          {p.linkOrFoto && !isAkad ? (
-                            <img src={p.linkOrFoto} alt="Piala" className="w-full md:w-48 h-32 object-cover rounded-xl shrink-0 border border-slate-100" />
-                          ) : (
-                            <div className={`w-full md:w-32 h-24 rounded-xl flex items-center justify-center shrink-0 border ${isAkad ? 'bg-emerald-50 border-emerald-100 text-emerald-500' : 'bg-amber-50 border-amber-100 text-amber-500'}`}>
-                               {isAkad ? <BookOpen size={36}/> : <Award size={36}/>}
-                            </div>
-                          )}
-                          <div className="flex-1">
-                             <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md mb-2 inline-block ${isAkad ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                               {isAkad ? 'Publikasi Jurnal' : 'Kejuaraan'}
-                             </span>
-                             <h3 className="font-bold text-slate-800 text-lg leading-tight mb-1">{p.judul}</h3>
-                             <p className="font-bold text-blue-600 mb-3">{p.pencapaian}</p>
-                             <div className="flex flex-wrap gap-2 text-xs font-bold text-slate-500">
-                               <span className="bg-slate-100 px-2.5 py-1 rounded-lg">Tingkat: {p.tingkat || "-"}</span>
-                               <span className="bg-slate-100 px-2.5 py-1 rounded-lg">Tahun: {p.tahun || "-"}</span>
-                               {isAkad && p.linkOrFoto && <a href={p.linkOrFoto} target="_blank" rel="noopener noreferrer" className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-2.5 py-1 rounded-lg transition inline-flex items-center gap-1"><ExternalLink size={12}/> Link Jurnal / DOI</a>}
-                             </div>
-                          </div>
-                       </div>
-                     )
-                   })}
+              <div className="p-4 md:p-6 overflow-y-auto flex-1 space-y-4">
+                 <div className="flex items-center justify-between mb-2 px-1">
+                   <h4 className="font-bold text-slate-700 text-sm md:text-base">Detail Rekam Prestasi</h4>
+                   <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-black">{activeKader.prestasi.length} Total</span>
                  </div>
+
+                 {activeKader.prestasi.map((p, idx) => {
+                   const isAkad = p.tipe === 'akademik';
+                   return (
+                     <div key={idx} className="bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-4 md:gap-5 items-start hover:border-slate-200 transition">
+                        {p.linkOrFoto && !isAkad ? (
+                          <img src={p.linkOrFoto} alt="Dokumentasi" className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0 bg-slate-50" />
+                        ) : (
+                          <div className={`w-full sm:w-32 h-24 rounded-xl flex items-center justify-center shrink-0 border ${isAkad ? 'bg-emerald-50/50 border-emerald-100 text-emerald-400' : 'bg-amber-50/50 border-amber-100 text-amber-400'}`}>
+                             {isAkad ? <BookOpen size={40} strokeWidth={1.5}/> : <Award size={40} strokeWidth={1.5}/>}
+                          </div>
+                        )}
+                        <div className="flex-1 w-full">
+                           <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md mb-2 inline-block ${isAkad ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                             {isAkad ? 'Jurnal / Akademik' : 'Kejuaraan / Lomba'}
+                           </span>
+                           <h3 className="font-bold text-slate-800 text-base md:text-lg leading-tight mb-1.5">{p.judul}</h3>
+                           <p className="font-bold text-blue-600 text-sm mb-3">{p.pencapaian}</p>
+                           <div className="flex flex-wrap gap-2 text-[10px] md:text-xs font-bold text-slate-500">
+                             <span className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Medal size={12}/> {p.tingkat || "-"}</span>
+                             <span className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Calendar size={12}/> {p.tahun || "-"}</span>
+                             {isAkad && p.linkOrFoto && <a href={p.linkOrFoto} target="_blank" rel="noopener noreferrer" className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5"><ExternalLink size={12}/> Buka Jurnal</a>}
+                           </div>
+                        </div>
+                     </div>
+                   )
+                 })}
               </div>
             </motion.div>
           </div>
