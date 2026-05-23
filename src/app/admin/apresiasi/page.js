@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { Save, Plus, Trash2, Trophy, Search, Image as ImageIcon, Award, BookOpen, UploadCloud, FileSpreadsheet, ChevronDown, ChevronUp, Link as LinkIcon, Loader2 } from "lucide-react";
+import { Save, Plus, Trash2, Trophy, Search, Image as ImageIcon, Award, BookOpen, UploadCloud, FileSpreadsheet, ChevronDown, ChevronUp, Link as LinkIcon, Loader2, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 
 // --- KONFIGURASI CLOUDINARY DARI .ENV ---
@@ -85,6 +85,53 @@ export default function AdminApresiasi() {
     }
   };
 
+  // --- FUNGSI DOWNLOAD TEMPLATE EXCEL (2 SHEET) ---
+  const handleDownloadTemplate = () => {
+    // Data untuk Sheet 1: Akademik
+    const dataAkademik = [
+      {
+        "Nama Kader": "Ahmad Albert Afrilsyah",
+        "Asal Rayon": "PR. PMII “KAWAH” Chondrodimuko",
+        "Foto Profil (Upload/Link)": "",
+        "Judul Jurnal / Karya / Materi Kaderisasi": "Penerapan AI dalam Konsep Andragogi",
+        "Pencapaian / Nilai IPK": "Sinta 2",
+        "Tingkat / Jenjang Kaderisasi": "Nasional",
+        "Tahun Terbit / Angkatan": "2026",
+        "Link DOI / Website / Raport Kaderisasi (G-Drive)": "https://doi.org/10..."
+      }
+    ];
+
+    // Data untuk Sheet 2: Non-Akademik
+    const dataNonAkademik = [
+      {
+        "Nama Kader": "Sahabat PMII",
+        "Asal Rayon": "PR. PMII “Perjuangan” Ibnu Aqil",
+        "Foto Profil (Upload/Link)": "",
+        "Nama Kompetisi / Lomba": "Lomba Gagasan Sinergis Adaptif",
+        "Pencapaian": "Juara 1",
+        "Tingkat": "Regional Jawa Timur",
+        "Tahun": "2025",
+        "Bukti Link Sertifikat (G-Drive) / Upload Dokumentasi": "https://drive.google.com/..."
+      }
+    ];
+
+    const wsAkademik = XLSX.utils.json_to_sheet(dataAkademik);
+    const wsNonAkademik = XLSX.utils.json_to_sheet(dataNonAkademik);
+    
+    // Melebarkan kolom agar rapi saat excel dibuka
+    wsAkademik['!cols'] = [{wch: 25}, {wch: 35}, {wch: 25}, {wch: 45}, {wch: 25}, {wch: 30}, {wch: 25}, {wch: 60}];
+    wsNonAkademik['!cols'] = [{wch: 25}, {wch: 35}, {wch: 25}, {wch: 40}, {wch: 20}, {wch: 25}, {wch: 15}, {wch: 60}];
+
+    const wb = XLSX.utils.book_new();
+    
+    // Memasukkan 2 Sheet ke dalam 1 File Excel
+    XLSX.utils.book_append_sheet(wb, wsAkademik, "Akademik");
+    XLSX.utils.book_append_sheet(wb, wsNonAkademik, "Non-Akademik");
+    
+    XLSX.writeFile(wb, "Template_Apresiasi_Kader.xlsx");
+  };
+
+  // --- FUNGSI IMPORT EXCEL (MEMBACA BANYAK SHEET) ---
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -93,50 +140,69 @@ export default function AdminApresiasi() {
       try {
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: "binary" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(ws);
         
         let updatedKader = [...kaderData];
+        let importedRowsCount = 0;
         
-        data.forEach(row => {
-           const nama = row["Nama Kader"];
-           if(!nama) return;
+        // Looping untuk membaca SEMUA sheet (Akademik & Non-Akademik)
+        wb.SheetNames.forEach(sheetName => {
+           const ws = wb.Sheets[sheetName];
+           const data = XLSX.utils.sheet_to_json(ws);
            
-           let kaderIndex = updatedKader.findIndex(k => k.namaLengkap.toLowerCase() === nama.toLowerCase());
-           
-           if (kaderIndex === -1) {
-               const newKader = {
-                   id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
-                   namaLengkap: nama,
-                   asalRayon: row["Asal Rayon"] || "",
-                   fotoKader: row["Foto Profil URL"] || "",
-                   prestasi: []
-               };
-               updatedKader.push(newKader);
-               kaderIndex = updatedKader.length - 1;
-           }
-           
-           if (row["Judul Prestasi"]) {
-               updatedKader[kaderIndex].prestasi.push({
-                   id: Date.now() + Math.random(),
-                   tipe: (row["Tipe"] || "non-akademik").toLowerCase(),
-                   judul: row["Judul Prestasi"] || "",
-                   pencapaian: row["Pencapaian"] || "",
-                   tingkat: row["Tingkat"] || "",
-                   tahun: row["Tahun"] || "",
-                   linkOrFoto: row["Link Bukti"] || ""
-               });
-           }
+           // Identifikasi Kategori otomatis dari nama sheet
+           const isNonAkadSheet = sheetName.toLowerCase().includes("non");
+           const defaultTipe = isNonAkadSheet ? "non-akademik" : "akademik";
+
+           data.forEach(row => {
+              const nama = row["Nama Kader"];
+              if(!nama) return;
+              importedRowsCount++;
+              
+              // Cek apakah kader sudah ada di database atau list
+              let kaderIndex = updatedKader.findIndex(k => k.namaLengkap.toLowerCase() === nama.toLowerCase());
+              
+              if (kaderIndex === -1) {
+                  // Jika kader belum ada, buat profil baru
+                  const newKader = {
+                      id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+                      namaLengkap: nama,
+                      asalRayon: row["Asal Rayon"] || "",
+                      fotoKader: row["Foto Profil (Upload/Link)"] || "",
+                      prestasi: []
+                  };
+                  updatedKader.push(newKader);
+                  kaderIndex = updatedKader.length - 1;
+              }
+              
+              // Tarik data dengan menyesuaikan nama header di masing-masing Sheet
+              const judul = row["Judul Jurnal / Karya / Materi Kaderisasi"] || row["Nama Kompetisi / Lomba"] || "";
+              const pencapaian = row["Pencapaian / Nilai IPK"] || row["Pencapaian"] || "";
+              const tingkat = row["Tingkat / Jenjang Kaderisasi"] || row["Tingkat"] || "";
+              const tahun = row["Tahun Terbit / Angkatan"] || row["Tahun"] || "";
+              const linkOrFoto = row["Link DOI / Website / Raport Kaderisasi (G-Drive)"] || row["Bukti Link Sertifikat (G-Drive) / Upload Dokumentasi"] || "";
+              
+              if (judul) {
+                  updatedKader[kaderIndex].prestasi.push({
+                      id: Date.now() + Math.random(),
+                      tipe: defaultTipe,
+                      judul: judul,
+                      pencapaian: pencapaian,
+                      tingkat: tingkat,
+                      tahun: tahun,
+                      linkOrFoto: linkOrFoto
+                  });
+              }
+           });
         });
         
         setKaderData(updatedKader);
-        alert(`Berhasil mengimpor ${data.length} baris data dari Excel! Jangan lupa klik 'Simpan Permanen'.`);
+        alert(`Berhasil mengimpor ${importedRowsCount} baris riwayat prestasi dari Excel! Jangan lupa klik 'Simpan Permanen'.`);
       } catch (error) {
-        alert("Gagal membaca file Excel. Pastikan format tabel sudah sesuai.");
+        alert("Gagal membaca file Excel. Pastikan format tabel sudah sesuai dengan Template Excel.");
       }
     };
     reader.readAsBinaryString(file);
-    e.target.value = null;
+    e.target.value = null; // Reset input file agar bisa import file yang sama 2x
   };
 
   const handleAddKader = (e) => {
@@ -205,18 +271,21 @@ export default function AdminApresiasi() {
   return (
     <div className="space-y-6 pb-12 max-w-7xl mx-auto px-4">
       {/* HEADER PANEL */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>
            <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2"><Trophy size={28} className="text-amber-500"/> Kelola Apresiasi Kader</h1>
            <p className="text-sm text-slate-500 mt-1 font-medium">Input kader berprestasi secara manual atau unggah via Excel.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 md:gap-3 w-full xl:w-auto">
+           <button onClick={handleDownloadTemplate} className="flex-1 xl:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-sm font-bold px-4 py-2.5 rounded-xl transition flex justify-center items-center gap-2 shadow-sm">
+             <Download size={18}/> Template Excel
+           </button>
            <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={excelInputRef} onChange={handleImportExcel} />
-           <button onClick={() => excelInputRef.current.click()} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+           <button onClick={() => excelInputRef.current.click()} className="flex-1 xl:flex-none bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-sm font-bold px-4 py-2.5 rounded-xl transition flex justify-center items-center gap-2">
              <FileSpreadsheet size={18}/> Import Excel
            </button>
            {kaderData.length > 0 && (
-             <button onClick={handleSaveAll} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-blue-600/20">
+             <button onClick={handleSaveAll} className="w-full xl:w-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition flex justify-center items-center gap-2 shadow-lg shadow-blue-600/20">
                <Save size={18}/> Simpan Permanen
              </button>
            )}
@@ -311,8 +380,8 @@ export default function AdminApresiasi() {
               {/* Modal Body */}
               <div className="p-4 md:p-6 overflow-y-auto flex-1 space-y-4">
                  <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                    <button onClick={() => handleAddPrestasi(activeEditKader.id, 'non-akademik')} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm transition"><Award size={18}/> Tambah Lomba / Kejuaraan</button>
-                    <button onClick={() => handleAddPrestasi(activeEditKader.id, 'akademik')} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm transition"><BookOpen size={18}/> Tambah Jurnal / Akademik</button>
+                    <button onClick={() => handleAddPrestasi(activeEditKader.id, 'non-akademik')} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm transition"><Award size={18}/> Tambah Lomba / Non-Akademik</button>
+                    <button onClick={() => handleAddPrestasi(activeEditKader.id, 'akademik')} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm transition"><BookOpen size={18}/> Tambah Jurnal / Kaderisasi</button>
                  </div>
 
                  {/* List Prestasi (Accordion) */}
@@ -330,7 +399,7 @@ export default function AdminApresiasi() {
                            >
                               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 flex-1 pr-4">
                                 <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded w-max ${isAkad ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                  {isAkad ? 'Jurnal / Akademik' : 'Lomba / Non-Akademik'}
+                                  {isAkad ? 'Akademik / Kaderisasi' : 'Lomba / Non-Akademik'}
                                 </span>
                                 <h4 className={`font-bold text-sm md:text-base line-clamp-1 ${p.judul ? 'text-slate-800' : 'text-slate-400 italic'}`}>
                                   {p.judul || "(Judul belum diisi... klik untuk mengedit)"}
@@ -349,34 +418,34 @@ export default function AdminApresiasi() {
                              <div className="p-4 md:p-5 grid grid-cols-1 md:grid-cols-12 gap-y-4 md:gap-x-4 bg-white">
                                
                                <div className="col-span-1 md:col-span-12">
-                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">{isAkad ? 'Judul Jurnal / Karya' : 'Nama Kompetisi / Lomba'}</label>
+                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">{isAkad ? 'Judul Jurnal / Karya / Materi Kaderisasi' : 'Nama Kompetisi / Lomba'}</label>
                                  <input type="text" value={p.judul} onChange={e => handleUpdatePrestasi(activeEditKader.id, p.id, "judul", e.target.value)} className="w-full p-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-sm outline-none focus:border-blue-500 transition" placeholder="Tulis di sini..."/>
                                </div>
                                
                                <div className="col-span-1 md:col-span-6">
-                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">{isAkad ? 'Pencapaian (Misal: Sinta 2, Penulis ke-1)' : 'Pencapaian (Misal: Juara 1, Finalis)'}</label>
+                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">{isAkad ? 'Pencapaian / Nilai IPK (Misal: Sinta 2, IPK 3.8)' : 'Pencapaian (Misal: Juara 1, Finalis)'}</label>
                                  <input type="text" value={p.pencapaian} onChange={e => handleUpdatePrestasi(activeEditKader.id, p.id, "pencapaian", e.target.value)} className="w-full p-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-sm outline-none focus:border-blue-500 transition" placeholder="Tulis di sini..."/>
                                </div>
 
                                <div className="col-span-1 md:col-span-3">
-                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Tingkat</label>
+                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">{isAkad ? 'Tingkat / Jenjang Kaderisasi' : 'Tingkat'}</label>
                                  <input 
                                    type="text" 
                                    value={p.tingkat} 
                                    onChange={e => handleUpdatePrestasi(activeEditKader.id, p.id, "tingkat", e.target.value)} 
                                    className="w-full p-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-sm outline-none focus:border-blue-500 transition" 
-                                   placeholder={isAkad ? "Misal: Sinta 2, Scopus..." : "Misal: Nasional, Kampus..."}
+                                   placeholder={isAkad ? "Misal: Mapaba, PKD, Sinta 2" : "Misal: Nasional, Kampus"}
                                  />
                                </div>
 
                                <div className="col-span-1 md:col-span-3">
-                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Tahun</label>
+                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">{isAkad ? 'Tahun Terbit / Angkatan' : 'Tahun'}</label>
                                  <input type="number" value={p.tahun} onChange={e => handleUpdatePrestasi(activeEditKader.id, p.id, "tahun", e.target.value)} className="w-full p-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-sm outline-none focus:border-blue-500 transition" placeholder="Misal: 2024"/>
                                </div>
 
                                <div className="col-span-1 md:col-span-12 mt-1">
                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-                                   {isAkad ? 'Link DOI / Website Publikasi / Sertifikat' : 'Bukti Link Sertifikat / Upload Dokumentasi'}
+                                   {isAkad ? 'Link DOI / Website / Raport Kaderisasi (G-Drive)' : 'Bukti Link Sertifikat (G-Drive) / Upload Dokumentasi'}
                                  </label>
                                  <div className="flex flex-col sm:flex-row gap-2">
                                    <input type="text" value={p.linkOrFoto} onChange={e => handleUpdatePrestasi(activeEditKader.id, p.id, "linkOrFoto", e.target.value)} className="w-full flex-1 p-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-sm outline-none focus:border-blue-500 transition font-mono" placeholder="https://..."/>

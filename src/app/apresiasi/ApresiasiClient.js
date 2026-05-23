@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import { Search, Trophy, Award, BookOpen, ExternalLink, Calendar, Medal, Share2, Sparkles } from "lucide-react";
+import { Search, Trophy, Award, BookOpen, ExternalLink, Calendar, Medal, Share2, Sparkles, FileText } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -62,8 +62,8 @@ export default function ApresiasiClient() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Prestasi ${kader.namaLengkap} - PMII`,
-          text: `Lihat prestasi dari sahabat/i ${kader.namaLengkap} di Hall of Fame PMII!`,
+          title: `Rekam Jejak ${kader.namaLengkap} - PMII`,
+          text: `Lihat profil pencapaian akademik, perlombaan, dan kaderisasi dari sahabat/i ${kader.namaLengkap} di Hall of Fame PMII!`,
           url: shareUrl,
         });
       } catch (error) {
@@ -75,13 +75,13 @@ export default function ApresiasiClient() {
     }
   };
 
-  if (loading) return <LoadingScreen text="Memuat Galeri Prestasi" />;
+  if (loading) return <LoadingScreen text="Memuat Galeri Apresiasi" />;
 
   return (
     <main className="min-h-screen bg-[#f1f5f9] font-sans text-slate-800 flex flex-col">
       <Navbar />
 
-      {/* Hero Section dengan desain lebih premium */}
+      {/* Hero Section */}
       <section className="pt-28 md:pt-36 pb-20 md:pb-28 px-5 bg-gradient-to-b from-[#0f172a] to-[#1e293b] text-center relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/20 via-transparent to-transparent pointer-events-none"></div>
         
@@ -94,7 +94,7 @@ export default function ApresiasiClient() {
             Apresiasi <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-500">Kader</span>
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-300 text-sm md:text-base font-medium max-w-2xl mx-auto leading-relaxed">
-            Pusat galeri pencapaian sahabat/i PMII Komisariat. Ruang apresiasi untuk mereka yang menghidupkan nilai intelektualitas di kancah nasional maupun internasional.
+            Pusat galeri pencapaian prestasi dan rekam jejak kaderisasi sahabat/i PMII Komisariat. Ruang apresiasi untuk mereka yang terus berproses dan menghidupkan nilai intelektualitas.
           </motion.p>
         </div>
       </section>
@@ -105,7 +105,7 @@ export default function ApresiasiClient() {
           <div className="relative w-full">
             <input
               type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama kader atau judul prestasi..."
+              placeholder="Cari nama kader, judul jurnal, atau status kaderisasi..."
               className="w-full pl-12 pr-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all font-medium"
             />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -116,24 +116,24 @@ export default function ApresiasiClient() {
               onClick={() => setActiveTab("akademik")} 
               className={`flex-1 md:w-auto px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === "akademik" ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
             >
-              <BookOpen size={18}/> <span className="hidden sm:inline">Akademik</span><span className="sm:hidden">Akad</span>
+              <BookOpen size={18}/> <span className="hidden sm:inline">Akad & Kaderisasi</span><span className="sm:hidden">Akademik</span>
             </button>
             <button 
               onClick={() => setActiveTab("non-akademik")} 
               className={`flex-1 md:w-auto px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === "non-akademik" ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
             >
-              <Award size={18}/> <span className="hidden sm:inline">Non-Akademik</span><span className="sm:hidden">Non-Akad</span>
+              <Award size={18}/> <span className="hidden sm:inline">Lomba & Non-Akad</span><span className="sm:hidden">Non-Akad</span>
             </button>
           </div>
         </div>
       </section>
 
-      {/* Grid Prestasi - Disesuaikan agar bisa 2 kolom di HP, 3 di Tablet, 4 di Laptop */}
+      {/* Grid Profil */}
       <section className="pb-16 px-4 max-w-7xl mx-auto w-full flex-grow">
         {processedData.length === 0 ? (
            <div className="text-center text-slate-400 py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
              <Trophy size={56} className="mx-auto mb-4 opacity-30 text-slate-300"/>
-             <p className="font-medium text-slate-500">Belum ada rekam prestasi {activeTab} ditemukan.</p>
+             <p className="font-medium text-slate-500">Belum ada rekam data {activeTab === 'akademik' ? 'Akademik/Kaderisasi' : 'Lomba/Kejuaraan'} ditemukan.</p>
            </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
@@ -151,7 +151,7 @@ export default function ApresiasiClient() {
                       </div>
                    </div>
 
-                   {/* Foto Profil Overlapping */}
+                   {/* Foto Profil */}
                    <div className="relative px-4 flex justify-center -mt-10 mb-2">
                       <div className="w-20 h-20 bg-white rounded-full p-1 shadow-md">
                         {kader.fotoKader ? (
@@ -162,13 +162,11 @@ export default function ApresiasiClient() {
                       </div>
                    </div>
 
-                   {/* Identitas Kader */}
                    <div className="px-4 text-center mb-4">
                       <h3 className="font-extrabold text-slate-800 text-sm md:text-base leading-snug line-clamp-2">{kader.namaLengkap}</h3>
                       <p className="text-[10px] md:text-xs text-slate-500 font-semibold mt-1 bg-slate-100 inline-block px-2 py-0.5 rounded-md">{kader.asalRayon || "Kader PMII"}</p>
                    </div>
 
-                   {/* Highlight Prestasi */}
                    <div className="px-4 pb-5 flex flex-col flex-grow text-center">
                       <div className="w-8 h-1 bg-slate-100 mx-auto rounded-full mb-3"></div>
                       <h4 className="font-bold text-slate-700 text-xs md:text-sm leading-tight line-clamp-2 mb-1">{highlight.judul}</h4>
@@ -190,7 +188,7 @@ export default function ApresiasiClient() {
         )}
       </section>
 
-      {/* MODAL DETAIL - Tetap Sama Tapi Lebih Rapi */}
+      {/* MODAL DETAIL KADER */}
       <AnimatePresence>
         {activeKader && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -220,31 +218,51 @@ export default function ApresiasiClient() {
 
               <div className="p-4 md:p-6 overflow-y-auto flex-1 space-y-4">
                  <div className="flex items-center justify-between mb-2 px-1">
-                   <h4 className="font-bold text-slate-700 text-sm md:text-base">Detail Rekam Prestasi</h4>
+                   <h4 className="font-bold text-slate-700 text-sm md:text-base">Detail Rekam Jejak</h4>
                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-black">{activeKader.prestasi.length} Total</span>
                  </div>
 
                  {activeKader.prestasi.map((p, idx) => {
                    const isAkad = p.tipe === 'akademik';
+                   
+                   // Deteksi Cerdas: Apakah linkOrFoto berisi Gambar atau Tautan Biasa (Google Drive dll)?
+                   const hasMedia = p.linkOrFoto && p.linkOrFoto.trim() !== "";
+                   const isImage = hasMedia && (p.linkOrFoto.match(/\.(jpeg|jpg|gif|png|webp)$/i) || p.linkOrFoto.includes("res.cloudinary.com") || p.linkOrFoto.includes("ibb.co") || p.linkOrFoto.includes("imgbb"));
+
                    return (
                      <div key={idx} className="bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-4 md:gap-5 items-start hover:border-slate-200 transition">
-                        {p.linkOrFoto && !isAkad ? (
-                          <img src={p.linkOrFoto} alt="Dokumentasi" className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0 bg-slate-50" />
+                        
+                        {/* Area Tampilan Media / Ikon */}
+                        {isImage ? (
+                          <img src={p.linkOrFoto} alt="Dokumentasi" className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0 bg-slate-50 border border-slate-100" />
                         ) : (
                           <div className={`w-full sm:w-32 h-24 rounded-xl flex items-center justify-center shrink-0 border ${isAkad ? 'bg-emerald-50/50 border-emerald-100 text-emerald-400' : 'bg-amber-50/50 border-amber-100 text-amber-400'}`}>
                              {isAkad ? <BookOpen size={40} strokeWidth={1.5}/> : <Award size={40} strokeWidth={1.5}/>}
                           </div>
                         )}
-                        <div className="flex-1 w-full">
-                           <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md mb-2 inline-block ${isAkad ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                             {isAkad ? 'Jurnal / Akademik' : 'Kejuaraan / Lomba'}
-                           </span>
-                           <h3 className="font-bold text-slate-800 text-base md:text-lg leading-tight mb-1.5">{p.judul}</h3>
-                           <p className="font-bold text-blue-600 text-sm mb-3">{p.pencapaian}</p>
-                           <div className="flex flex-wrap gap-2 text-[10px] md:text-xs font-bold text-slate-500">
+
+                        <div className="flex-1 w-full flex flex-col">
+                           <div className="flex items-start justify-between gap-2">
+                             <div>
+                               <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md mb-2 inline-block ${isAkad ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                 {isAkad ? 'Akademik / Kaderisasi' : 'Lomba / Non-Akademik'}
+                               </span>
+                               <h3 className="font-bold text-slate-800 text-base md:text-lg leading-tight mb-1.5">{p.judul}</h3>
+                               <p className="font-bold text-blue-600 text-sm mb-3">{p.pencapaian}</p>
+                             </div>
+                           </div>
+
+                           <div className="flex flex-wrap items-center gap-2 text-[10px] md:text-xs font-bold text-slate-500 mt-auto">
                              <span className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Medal size={12}/> {p.tingkat || "-"}</span>
                              <span className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Calendar size={12}/> {p.tahun || "-"}</span>
-                             {isAkad && p.linkOrFoto && <a href={p.linkOrFoto} target="_blank" rel="noopener noreferrer" className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5"><ExternalLink size={12}/> Buka Jurnal</a>}
+                             
+                             {/* Jika memiliki link tapi bukan format gambar, munculkan sebagai tombol */}
+                             {hasMedia && !isImage && (
+                               <a href={p.linkOrFoto} target="_blank" rel="noopener noreferrer" className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5">
+                                 {isAkad ? <FileText size={12}/> : <ExternalLink size={12}/>} 
+                                 {isAkad ? 'Buka Tautan / Raport' : 'Lihat Sertifikat'}
+                               </a>
+                             )}
                            </div>
                         </div>
                      </div>
