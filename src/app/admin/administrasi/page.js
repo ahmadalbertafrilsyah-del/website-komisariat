@@ -199,43 +199,40 @@ export default function AdminAdministrasiEditor() {
   // Helper untuk mengubah Excel Date serial number ke DD/MM/YYYY string
   const formatExcelDate = (excelDate) => {
     if (!excelDate) return "";
-    
-    // Jika bentuknya sudah string/teks biasa dari Excel (bukan tipe Date)
     if (typeof excelDate === 'string') return excelDate;
-    
-    // Jika bentuknya benar-benar object Date bawaan JS
     if (excelDate instanceof Date) {
        const day = String(excelDate.getDate()).padStart(2, '0');
        const month = String(excelDate.getMonth() + 1).padStart(2, '0');
        const year = excelDate.getFullYear();
        return `${day}/${month}/${year}`;
     }
-
     return String(excelDate);
   };
 
-  // ================= 7. FUNGSI IMPORT EXCEL YANG DIPERBAIKI (TANGGAL) =================
+  // ================= 7. FUNGSI IMPORT EXCEL (DENGAN SMART COLUMN DETECTOR) =================
   const handleExcelSuratMasuk = (e) => {
     const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        // PERBAIKAN: cellDates: true agar angka serial Excel otomatis dikonversi jadi Object Date
         const workbook = XLSX.read(evt.target.result, { type: "binary", cellDates: true });
-        const sheetName = workbook.SheetNames[0];
-        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
-        const validData = data.map(row => ({
-          id: Date.now() + Math.random(), 
-          lembaga: activeLembaga,
-          nomorSurat: String(row["No Surat"] || row["Nomor Surat"] || ""), 
-          asalSurat: String(row["Asal Surat"] || ""),
-          // Gunakan helper formatExcelDate agar terbaca sempurna
-          tglBuat: formatExcelDate(row["Tgl Buat"] || row["Tanggal Buat"]), 
-          tglDatang: formatExcelDate(row["Tgl Datang"] || row["Tanggal Datang"]),
-          hal: String(row["Hal"] || row["Perihal"] || ""), 
-          ket: String(row["Ket"] || row["Keterangan"] || ""), 
-          linkFile: String(row["Link File"] || "")
-        })).filter(i => i.nomorSurat || i.hal);
+        const validData = data.map(row => {
+          // Normalize Keys: Menghilangkan spasi berlebih dan merubah ke huruf kecil
+          const lRow = Object.keys(row).reduce((acc, key) => { acc[key.toLowerCase().trim()] = row[key]; return acc; }, {});
+          return {
+            id: Date.now() + Math.random(), 
+            lembaga: activeLembaga,
+            nomorSurat: String(lRow["no surat"] || lRow["nomor surat"] || lRow["nomor"] || ""), 
+            asalSurat: String(lRow["asal surat"] || lRow["asal"] || ""),
+            tglBuat: formatExcelDate(lRow["tgl buat"] || lRow["tanggal buat"] || lRow["waktu buat"]), 
+            tglDatang: formatExcelDate(lRow["tgl datang"] || lRow["tanggal datang"] || lRow["waktu datang"]),
+            hal: String(lRow["hal"] || lRow["perihal"] || ""), 
+            ket: String(lRow["ket"] || lRow["keterangan"] || ""), 
+            // Cerdas mencari kolom URL/Link
+            linkFile: String(lRow["link file"] || lRow["link file surat"] || lRow["link"] || lRow["link berkas"] || lRow["url"] || "")
+          };
+        }).filter(i => i.nomorSurat || i.hal);
         
         setSuratMasukData(prev => { const updated = [...prev, ...validData]; setDoc(doc(db, "website_config", "database_administrasi"), { listSuratMasuk: updated }, { merge: true }); return updated; });
         alert(`Berhasil mengimpor ${validData.length} data Surat Masuk ke Ruang Kerja ${activeLembaga}!`);
@@ -247,23 +244,23 @@ export default function AdminAdministrasiEditor() {
     const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        // PERBAIKAN: cellDates: true
         const workbook = XLSX.read(evt.target.result, { type: "binary", cellDates: true });
-        const sheetName = workbook.SheetNames[0];
-        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-        const validData = data.map(row => ({
-          id: Date.now() + Math.random(), 
-          lembaga: activeLembaga,
-          nomorSurat: String(row["No Surat"] || row["Nomor Surat"] || ""), 
-          tujuanSurat: String(row["Tujuan Surat"] || ""),
-          // Gunakan helper formatExcelDate
-          tglBuat: formatExcelDate(row["Tgl Buat"] || row["Tanggal Buat"]), 
-          tglKirim: formatExcelDate(row["Tgl Kirim"] || row["Tanggal Kirim"]),
-          hal: String(row["Hal"] || row["Perihal"] || ""), 
-          ket: String(row["Ket"] || row["Keterangan"] || ""), 
-          linkFile: String(row["Link File"] || "")
-        })).filter(i => i.nomorSurat || i.hal);
+        const validData = data.map(row => {
+          const lRow = Object.keys(row).reduce((acc, key) => { acc[key.toLowerCase().trim()] = row[key]; return acc; }, {});
+          return {
+            id: Date.now() + Math.random(), 
+            lembaga: activeLembaga,
+            nomorSurat: String(lRow["no surat"] || lRow["nomor surat"] || lRow["nomor"] || ""), 
+            tujuanSurat: String(lRow["tujuan surat"] || lRow["tujuan"] || ""),
+            tglBuat: formatExcelDate(lRow["tgl buat"] || lRow["tanggal buat"] || lRow["waktu buat"]), 
+            tglKirim: formatExcelDate(lRow["tgl kirim"] || lRow["tanggal kirim"] || lRow["waktu kirim"]),
+            hal: String(lRow["hal"] || lRow["perihal"] || ""), 
+            ket: String(lRow["ket"] || lRow["keterangan"] || ""), 
+            linkFile: String(lRow["link file"] || lRow["link file surat"] || lRow["link"] || lRow["link berkas"] || lRow["url"] || "")
+          };
+        }).filter(i => i.nomorSurat || i.hal);
         
         setSuratKeluarData(prev => { const updated = [...prev, ...validData]; setDoc(doc(db, "website_config", "database_administrasi"), { listSuratKeluar: updated }, { merge: true }); return updated; });
         alert(`Berhasil mengimpor ${validData.length} data Surat Keluar ke Ruang Kerja ${activeLembaga}!`);
@@ -275,24 +272,25 @@ export default function AdminAdministrasiEditor() {
     const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        // PERBAIKAN: cellDates: true (Meskipun Proker biasanya format string, jaga-jaga bila ada tanggal)
         const workbook = XLSX.read(evt.target.result, { type: "binary", cellDates: true });
-        const sheetName = workbook.SheetNames[0];
-        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-        const validData = data.map(row => ({
-          id: Date.now() + Math.random(), 
-          lembaga: activeLembaga,
-          pelaksanaProker: String(row["Pelaksana"] || ""), 
-          namaProker: String(row["Nama Kegiatan"] || ""),
-          tujuan: String(row["Tujuan"] || ""), 
-          indikator: String(row["Indikator"] || ""), 
-          sasaran: String(row["Sasaran"] || ""),
-          waktuPelaksanaan: formatExcelDate(row["Waktu Pelaksanaan"] || row["Waktu"]), 
-          penanggungJawab: String(row["Penanggung Jawab"] || ""),
-          estimasiDana: String(row["Estimasi Dana"] || ""), 
-          linkFile: String(row["Link File"] || "")
-        })).filter(i => i.namaProker);
+        const validData = data.map(row => {
+          const lRow = Object.keys(row).reduce((acc, key) => { acc[key.toLowerCase().trim()] = row[key]; return acc; }, {});
+          return {
+            id: Date.now() + Math.random(), 
+            lembaga: activeLembaga,
+            pelaksanaProker: String(lRow["pelaksana"] || lRow["biro"] || lRow["divisi"] || ""), 
+            namaProker: String(lRow["nama kegiatan"] || lRow["nama proker"] || lRow["kegiatan"] || ""),
+            tujuan: String(lRow["tujuan"] || ""), 
+            indikator: String(lRow["indikator"] || ""), 
+            sasaran: String(lRow["sasaran"] || ""),
+            waktuPelaksanaan: formatExcelDate(lRow["waktu pelaksanaan"] || lRow["waktu"] || lRow["tanggal"]), 
+            penanggungJawab: String(lRow["penanggung jawab"] || lRow["pj"] || ""),
+            estimasiDana: String(lRow["estimasi dana"] || lRow["dana"] || lRow["anggaran"] || ""), 
+            linkFile: String(lRow["link file"] || lRow["link"] || lRow["link berkas"] || lRow["url"] || "")
+          };
+        }).filter(i => i.namaProker);
         
         setProkerData(prev => { const updated = [...prev, ...validData]; setDoc(doc(db, "website_config", "database_administrasi"), { listProker: updated }, { merge: true }); return updated; });
         alert(`Berhasil mengimpor ${validData.length} data Proker ke Ruang Kerja ${activeLembaga}!`);
