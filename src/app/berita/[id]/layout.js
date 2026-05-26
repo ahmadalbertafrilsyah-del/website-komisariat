@@ -1,14 +1,11 @@
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 
-// Fungsi untuk mengubah Judul menjadi URL (Slug)
 const createSlug = (title) => {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 };
 
-// FUNGSI INI AKAN DIBACA OLEH BOT WHATSAPP / FACEBOOK / GOOGLE
 export async function generateMetadata({ params }) {
-  // PERBAIKAN NEXT.JS TERBARU: Wajib di-await agar tidak terjadi Server Error!
   const resolvedParams = await params;
   const rawId = resolvedParams.id;
   const decodedId = decodeURIComponent(rawId);
@@ -16,14 +13,12 @@ export async function generateMetadata({ params }) {
   let article = null;
 
   try {
-    // Skenario 1: Coba cari berdasarkan Document ID asli (Kode Acak Firebase)
     const docRef = doc(db, "berita", decodedId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
       article = docSnap.data();
     } else {
-      // Skenario 2: Jika tidak ketemu, berarti URL menggunakan Judul Berita (Slug).
       const snapshot = await getDocs(collection(db, "berita"));
       const found = snapshot.docs.find(d => createSlug(d.data().title || "") === decodedId);
       if (found) article = found.data();
@@ -32,9 +27,8 @@ export async function generateMetadata({ params }) {
     console.error("Gagal menarik metadata:", error);
   }
 
-  const siteUrl = "https://pmii-uinmalang.or.id"; // Pastikan domain Anda benar
+  const siteUrl = "https://pmii-uinmalang.or.id";
 
-  // Jika berita benar-benar tidak ada
   if (!article) {
     return { 
       metadataBase: new URL(siteUrl),
@@ -42,27 +36,32 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  // Tentukan gambar: gunakan cover artikel, jika kosong gunakan default
-  const defaultImage = "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png";
-  const coverImage = article.imageUrl ? article.imageUrl : defaultImage;
+  // 1. Ambil URL Gambar Mentah dari Database
+  let coverImage = article.imageUrl || "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png";
 
-  // Tembakkan Metadata yang Sempurna untuk SEO
+  // 2. SIHIR CLOUDINARY UNTUK WHATSAPP
+  // Kita sisipkan parameter: c_fill (potong pas), w_800 (lebar 800px), h_418 (tinggi 418px), q_80 (kualitas 80%), f_jpg (paksa jadi JPG)
+  // Ini akan mengubah gambar 3MB menjadi hanya ~40KB dalam sekejap tanpa merusak gambar asli di database!
+  if (coverImage.includes('cloudinary.com') && coverImage.includes('/upload/')) {
+    coverImage = coverImage.replace('/upload/', '/upload/c_fill,w_800,h_418,q_80,f_jpg/');
+  }
+
   return {
-    metadataBase: new URL(siteUrl), // PERBAIKAN: Wajib ada di Next.js App Router agar gambar terbaca bot!
+    metadataBase: new URL(siteUrl), 
     title: `${article.title} | PMII Sunan Ampel Malang`,
     description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
     openGraph: {
       type: "article",
       locale: "id_ID",
-      url: `/berita/${rawId}`, // Karena ada metadataBase, otomatis akan ditambah https://pmii... di depannya
+      url: `/berita/${rawId}`,
       title: article.title,
       description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
       siteName: "PMII Sunan Ampel Malang",
       images: [
         {
           url: coverImage, 
-          width: 1200,
-          height: 630,
+          width: 800,   // Mengikuti ukuran kompresi
+          height: 418,  // Mengikuti ukuran kompresi
           alt: article.title,
         },
       ],
