@@ -24,7 +24,6 @@ export async function generateMetadata({ params }) {
       article = docSnap.data();
     } else {
       // Skenario 2: Jika tidak ketemu, berarti URL menggunakan Judul Berita (Slug).
-      // Sistem akan mencari judul yang cocok di seluruh database berita.
       const snapshot = await getDocs(collection(db, "berita"));
       const found = snapshot.docs.find(d => createSlug(d.data().title || "") === decodedId);
       if (found) article = found.data();
@@ -33,28 +32,35 @@ export async function generateMetadata({ params }) {
     console.error("Gagal menarik metadata:", error);
   }
 
+  const siteUrl = "https://pmii-uinmalang.or.id"; // Pastikan domain Anda benar
+
   // Jika berita benar-benar tidak ada
   if (!article) {
-    return { title: "Artikel Tidak Ditemukan | PMII UIN Malang" };
+    return { 
+      metadataBase: new URL(siteUrl),
+      title: "Artikel Tidak Ditemukan | PMII UIN Malang" 
+    };
   }
 
-  const siteUrl = "https://pmii-uinmalang.or.id"; // Pastikan domain Anda benar
+  // Tentukan gambar: gunakan cover artikel, jika kosong gunakan default
+  const defaultImage = "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png";
+  const coverImage = article.imageUrl ? article.imageUrl : defaultImage;
 
   // Tembakkan Metadata yang Sempurna untuk SEO
   return {
+    metadataBase: new URL(siteUrl), // PERBAIKAN: Wajib ada di Next.js App Router agar gambar terbaca bot!
     title: `${article.title} | PMII Sunan Ampel Malang`,
     description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
     openGraph: {
       type: "article",
       locale: "id_ID",
-      url: `${siteUrl}/berita/${rawId}`,
+      url: `/berita/${rawId}`, // Karena ada metadataBase, otomatis akan ditambah https://pmii... di depannya
       title: article.title,
       description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
       siteName: "PMII Sunan Ampel Malang",
       images: [
         {
-          // Menarik langsung gambar Cloudinary
-          url: article.imageUrl || "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png", 
+          url: coverImage, 
           width: 1200,
           height: 630,
           alt: article.title,
@@ -64,8 +70,8 @@ export async function generateMetadata({ params }) {
     twitter: {
       card: "summary_large_image",
       title: article.title,
-      description: article.excerpt,
-      images: [article.imageUrl || "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png"],
+      description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
+      images: [coverImage],
     },
   };
 }
