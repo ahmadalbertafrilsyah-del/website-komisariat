@@ -7,27 +7,23 @@ import dynamic from "next/dynamic";
 
 // IMPORT REACT QUILL SECARA DINAMIS AGAR TIDAK ERROR DI NEXT.JS (SSR)
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
-import "react-quill-new/dist/quill.snow.css"; // Style bawaan Quill
+import "react-quill-new/dist/quill.snow.css"; 
 
 export default function AdminBerita() {
   const [loading, setLoading] = useState(true);
   
-  // State Konfigurasi Link Eksternal
   const [externalLink, setExternalLink] = useState("");
 
-  // State CRUD Data Berita
   const [newsList, setNewsList] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
 
-  // State Form Editor
   const [title, setTitle] = useState("");
   const [kategori, setKategori] = useState("Berita Utama");
   const [excerpt, setExcerpt] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [content, setContent] = useState("");
 
-  // State Status Upload Gambar
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -56,12 +52,10 @@ export default function AdminBerita() {
     }
   }
 
-  // ================= FUNGSI UPLOAD GAMBAR KE CLOUDINARY =================
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validasi tipe file (harus gambar)
     if (!file.type.startsWith("image/")) {
       alert("Harap pilih file berupa gambar (JPG, PNG, dll)!");
       return;
@@ -80,14 +74,14 @@ export default function AdminBerita() {
       if (!res.ok) throw new Error("Gagal mengunggah gambar ke server");
 
       const data = await res.json();
-      setImageUrl(data.url); // Otomatis mengisi kolom URL dengan link Cloudinary
+      setImageUrl(data.url); 
       alert("Gambar cover berhasil diunggah!");
     } catch (error) {
       console.error("Error Upload:", error);
       alert("Terjadi kesalahan saat mengunggah gambar. Pastikan API dan Env Cloudinary sudah benar.");
     } finally {
       setIsUploading(false);
-      e.target.value = null; // Reset input file
+      e.target.value = null; 
     }
   };
 
@@ -109,12 +103,21 @@ export default function AdminBerita() {
       return;
     }
 
+    // === PEMBERSIH OTOMATIS (AUTO-CLEANSER) ===
+    // Menghapus inline-style nakal dan karakter tak kasat mata bawaan copy-paste Word/PDF
+    const cleanedContent = content
+      .replace(/word-break:\s*[^;"]+;?/gi, '') 
+      .replace(/overflow-wrap:\s*[^;"]+;?/gi, '') 
+      .replace(/white-space:\s*[^;"]+;?/gi, '') 
+      .replace(/&shy;/gi, '') 
+      .replace(/[\u200B-\u200D\uFEFF]/g, '');
+
     const payload = {
       title,
       kategori,
       excerpt,
       imageUrl,
-      content,
+      content: cleanedContent, // Menyimpan konten yang sudah dibersihkan ke Firebase
       updatedAt: serverTimestamp()
     };
 
@@ -167,7 +170,11 @@ export default function AdminBerita() {
     setContent("");
   };
 
+  // Tambahan konfigurasi modul Quill agar lebih bersih saat di-paste
   const quillModules = {
+    clipboard: {
+      matchVisual: false // Mencegah spasi berlebih saat copy-paste
+    },
     toolbar: [
       [{ 'header': [1, 2, 3, false] }],
       ['bold', 'italic', 'underline', 'strike', 'blockquote'],
@@ -183,7 +190,6 @@ export default function AdminBerita() {
   return (
     <div className="space-y-6 pb-12 w-full max-w-6xl mx-auto">
       
-      {/* HEADER */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -197,7 +203,6 @@ export default function AdminBerita() {
         </div>
       </div>
 
-      {/* ================= 1. KOTAK KONFIGURASI WEB UTAMA (DIPINDAH KE ATAS) ================= */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden w-full">
         <div className="bg-slate-50 p-4 border-b border-slate-200 flex items-center gap-2 font-bold text-slate-800 text-sm">
            <LinkIcon size={16} className="text-blue-600" /> Portal Berita Eksternal
@@ -222,7 +227,6 @@ export default function AdminBerita() {
         </form>
       </div>
 
-      {/* ================= 2. EDITOR ARTIKEL PROFESIONAL (LEBAR PENUH) ================= */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden w-full">
         <div className="bg-blue-600 p-4 border-b border-blue-700 flex items-center justify-between text-white">
           <h2 className="font-bold text-sm flex items-center gap-2">
@@ -237,7 +241,6 @@ export default function AdminBerita() {
         </div>
         
         <form onSubmit={handleSaveArticle} className="p-5 md:p-6 space-y-5">
-          {/* Baris 1: Judul & Kategori */}
           <div className="grid md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Judul Artikel</label>
@@ -261,7 +264,6 @@ export default function AdminBerita() {
             </div>
           </div>
 
-          {/* Baris 2: Excerpt & Upload Cover Modern */}
           <div className="grid md:grid-cols-2 gap-4">
              <div>
                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Deskripsi Singkat (Excerpt)</label>
@@ -277,7 +279,6 @@ export default function AdminBerita() {
                   <ImageIcon size={12}/> Cover Gambar Berita
                 </label>
                 <div className="flex flex-col sm:flex-row items-center gap-2">
-                  {/* Tombol Upload */}
                   <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border shrink-0 ${isUploading ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-sm'}`}>
                     {isUploading ? <><Loader2 size={14} className="animate-spin" /> Mengunggah...</> : <><UploadCloud size={14} /> Pilih Foto</>}
                     <input 
@@ -287,7 +288,6 @@ export default function AdminBerita() {
                       disabled={isUploading} 
                     />
                   </label>
-                  {/* Input URL Otomatis/Manual */}
                   <input 
                     type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
                     className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs font-mono bg-slate-50 text-slate-600"
@@ -298,7 +298,6 @@ export default function AdminBerita() {
              </div>
           </div>
 
-          {/* Baris 3: Rich Text Editor (React Quill) */}
           <div>
             <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Isi Konten Berita</label>
             <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
@@ -315,7 +314,7 @@ export default function AdminBerita() {
               .quill { display: flex; flex-direction: column; }
               .ql-toolbar { border: none !important; border-bottom: 1px solid #e2e8f0 !important; background-color: #f8fafc; border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; }
               .ql-container { border: none !important; min-height: 300px; font-size: 15px; font-family: inherit; }
-              .ql-editor { min-height: 300px; }
+              .ql-editor { min-height: 300px; word-break: normal !important; overflow-wrap: break-word !important; }
             `}</style>
           </div>
 
@@ -328,7 +327,6 @@ export default function AdminBerita() {
         </form>
       </div>
 
-      {/* ================= 3. TABEL DAFTAR ARTIKEL ================= */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
          <div className="bg-slate-50 p-4 border-b border-slate-200 flex items-center gap-2 font-bold text-slate-800">
              <Newspaper size={18} className="text-slate-600" /> Riwayat Publikasi Artikel
