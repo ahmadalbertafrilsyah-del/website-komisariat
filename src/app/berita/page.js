@@ -7,6 +7,12 @@ import { Search, Calendar, ChevronRight, BookOpen, Sparkles, ExternalLink, Image
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore";
 
+// Fungsi untuk mengubah Judul menjadi URL (Slug)
+const createSlug = (title) => {
+  if (!title) return "";
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+};
+
 export default function Berita() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
@@ -202,8 +208,13 @@ export default function Berita() {
                   layoutType = "square";
                 }
 
+                // =========================================================================
+                // PERBAIKAN: Menggunakan createSlug(item.title) agar link berupa Judul
+                // =========================================================================
+                const articleSlug = createSlug(item.title);
+
                 return (
-                  <Link href={`/berita/${item.id}`} key={item.id} className={`${gridClass} block group h-full`}>
+                  <Link href={`/berita/${articleSlug}`} key={item.id} className={`${gridClass} block group h-full`}>
                     
                     {/* LAYOUT FEATURED */}
                     {layoutType === "featured" && (
