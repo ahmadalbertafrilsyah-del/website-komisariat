@@ -61,19 +61,16 @@ export default function AdministrasiPage() {
   const formatDisplayDate = (dateVal) => {
     if (!dateVal) return "-";
     
-    // 1. Jika nilai berupa angka serial Excel (misal: 45304)
     if (!isNaN(dateVal) && Number(dateVal) > 20000) {
       const date = new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000));
       return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
     }
     
-    // 2. Jika formatnya ISO System Date (misal: "2026-05-23T11:37:00.000Z")
     if (typeof dateVal === 'string' && dateVal.includes('T') && !isNaN(new Date(dateVal))) {
       const d = new Date(dateVal);
       return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     }
 
-    // 3. Jika sudah format teks biasa (misal "12/01/2026"), biarkan saja
     return dateVal;
   };
 
@@ -139,7 +136,7 @@ export default function AdministrasiPage() {
     ? currentListData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE) 
     : currentListData;
 
-  // ================= EXPORT EXCEL (Dengan Tanggal yang Diforrmat) =================
+  // ================= EXPORT EXCEL =================
   const handleExportExcel = () => {
     if (currentListData.length === 0) return alert("Tidak ada data arsip untuk diekspor!");
     
@@ -295,7 +292,7 @@ export default function AdministrasiPage() {
                   
                   <div className="bg-amber-50 px-4 py-3 border-b border-amber-300 flex items-center justify-between">
                     <h3 className="font-black text-amber-800 uppercase tracking-wide text-sm underline underline-offset-4">
-                      {activeSuratTab === "masuk" ? "BUKU AGENDA SURAT MASUK" : "BUKU AGENDA SURAT KELUAR"}
+                      {activeSuratTab === "masuk" ? "ARSIP SURAT MASUK" : "ARSIP SURAT KELUAR"}
                     </h3>
                     <span className="text-[10px] font-bold text-amber-600 bg-amber-200/50 px-2 py-1 rounded">Hal. {currentPage} / {totalPages || 1}</span>
                   </div>
@@ -305,12 +302,10 @@ export default function AdministrasiPage() {
                       <thead className="bg-amber-500 text-white text-[11px] uppercase tracking-wider text-center">
                         <tr>
                           <th rowSpan={2} className="py-2 px-3 w-10 font-bold border border-amber-600">No</th>
-                          <th rowSpan={2} className="py-2 px-4 w-64 whitespace-nowrap font-bold border border-amber-600">No. Surat</th>
-                          <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600">
-                            {activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}
-                          </th>
+                          <th rowSpan={2} className="py-2 px-4 w-64 lg:w-56 font-bold border border-amber-600">No. Surat</th>
+                          <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</th>
                           <th colSpan={2} className="py-1.5 border border-amber-600 font-bold">Tgl Surat</th>
-                          <th rowSpan={2} className="py-2 px-4 w-auto font-bold border border-amber-600">Hal</th>
+                          <th rowSpan={2} className="py-2 px-4 w-20 font-bold border border-amber-600">Hal</th>
                           <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600">Ket</th>
                           <th rowSpan={2} className="py-2 px-3 w-20 font-bold border border-amber-600 bg-amber-600">Berkas</th>
                         </tr>
@@ -326,12 +321,18 @@ export default function AdministrasiPage() {
                           return (
                             <tr key={index} className="hover:bg-amber-50 transition-colors">
                               <td className="py-1.5 px-3 text-center border-r border-amber-200 font-bold text-slate-500">{realNumber}</td>
-                              <td className="py-1.5 px-4 border-r border-amber-200 whitespace-nowrap">
-                                <span className="font-mono text-[11px] md:text-xs font-bold text-slate-800">{doc.nomorSurat || "-"}</span>
+                              
+                              {/* PERUBAHAN UTAMA: Dibungkus dengan Div khusus yang memiliki Scroll Horizontal dan Scrollbar kustom tipis */}
+                              <td className="py-1.5 px-4 border-r border-amber-200 max-w-[160px] md:max-w-[220px]">
+                                <div className="w-full overflow-x-auto whitespace-nowrap pb-1.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-amber-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-amber-400">
+                                  <span className="font-mono text-[11px] md:text-xs font-bold text-slate-800 px-1">
+                                    {doc.nomorSurat || "-"}
+                                  </span>
+                                </div>
                               </td>
+                              
                               <td className="py-1.5 px-4 border-r border-amber-200 text-xs font-semibold text-slate-700 leading-snug">{activeSuratTab === "masuk" ? (doc.asalSurat || "-") : (doc.tujuanSurat || "-")}</td>
                               
-                              {/* PERUBAHAN: TANGGAL DIPARSING DENGAN HELPER AGAR TIDAK MUNCUL ANGKA ANEH */}
                               <td className="py-1.5 px-3 border-r border-amber-200 text-[11px] text-center text-slate-600 font-mono whitespace-nowrap">{formatDisplayDate(doc.tglBuat)}</td>
                               <td className="py-1.5 px-3 border-r border-amber-200 text-[11px] text-center text-slate-600 font-mono whitespace-nowrap">{activeSuratTab === "masuk" ? formatDisplayDate(doc.tglDatang) : formatDisplayDate(doc.tglKirim)}</td>
                               
@@ -414,7 +415,6 @@ export default function AdministrasiPage() {
                                   <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{doc.tujuan || "-"}</td>
                                   <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{doc.indikator || "-"}</td>
                                   <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{doc.sasaran || "-"}</td>
-                                  {/* TANGGAL WAKTU PROKER JUGA DIPARSING */}
                                   <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{formatDisplayDate(doc.waktuPelaksanaan)}</td>
                                   <td className="py-3 px-4 border-r border-slate-100 font-semibold text-emerald-700 text-xs leading-relaxed">{doc.penanggungJawab || "-"}</td>
                                   <td className="py-3 px-4 border-r border-slate-100 text-center font-mono text-xs font-bold text-slate-700 bg-slate-50/50">{doc.estimasiDana || "-"}</td>
