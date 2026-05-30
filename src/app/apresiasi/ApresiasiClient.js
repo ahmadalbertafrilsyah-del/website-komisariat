@@ -44,9 +44,20 @@ export default function ApresiasiClient() {
     fetchApresiasi();
   }, []);
 
+  // ================= PERBAIKAN: FILTER CERDAS (FUZZY MATCH) =================
   const processedData = kaderData
     .map(kader => {
-      const filteredPrestasi = kader.prestasi.filter(p => (p.tipe || "").toLowerCase() === activeTab);
+      const filteredPrestasi = kader.prestasi.filter(p => {
+        const tipeLower = (p.tipe || p.kategori || "").toLowerCase();
+        
+        if (activeTab === "akademik") {
+          // Masuk Akademik JIKA ada kata 'akad' (tapi bukan non-akad), atau 'kaderisasi', 'jurnal', dll
+          return (tipeLower.includes("akad") && !tipeLower.includes("non")) || tipeLower.includes("kaderisasi") || tipeLower.includes("jurnal");
+        } else {
+          // Masuk Non-Akademik JIKA ada kata 'non', 'lomba', 'minat', atau 'bakat'
+          return tipeLower.includes("non") || tipeLower.includes("lomba") || tipeLower.includes("minat") || tipeLower.includes("bakat");
+        }
+      });
       return { ...kader, filteredPrestasi };
     })
     .filter(kader => kader.filteredPrestasi.length > 0)
@@ -223,7 +234,9 @@ export default function ApresiasiClient() {
                  </div>
 
                  {activeKader.prestasi.map((p, idx) => {
-                   const isAkad = p.tipe === 'akademik';
+                   // PERBAIKAN: Deteksi tipe di dalam modal agar warnanya akurat
+                   const tipeLower = (p.tipe || p.kategori || "").toLowerCase();
+                   const isAkad = (tipeLower.includes("akad") && !tipeLower.includes("non")) || tipeLower.includes("kaderisasi");
                    
                    // Deteksi Cerdas: Apakah linkOrFoto berisi Gambar atau Tautan Biasa (Google Drive dll)?
                    const hasMedia = p.linkOrFoto && p.linkOrFoto.trim() !== "";
