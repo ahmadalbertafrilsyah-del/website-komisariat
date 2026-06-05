@@ -24,6 +24,58 @@ const stripFormatting = (text) => {
   return text.replace(/[*_]/g, '');
 };
 
+// ================= FUNGSI KOMPRESI GAMBAR (ANTI-GAGAL HP) =================
+// Memeras foto 5MB-10MB dari HP menjadi ukuran kecil (Ratusan KB) sebelum diupload
+const compressImage = (file) => {
+  return new Promise((resolve) => {
+    // Jika file BUKAN gambar (misal PDF), langsung lewati kompresi
+    if (!file.type.startsWith('image/')) {
+      resolve(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1200; // Lebar maksimal gambar
+        const MAX_HEIGHT = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+        } else {
+          if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Kompres ke format JPEG dengan Kualitas 80%
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+              type: 'image/jpeg',
+              lastModified: Date.now()
+            });
+            resolve(compressedFile);
+          } else {
+            resolve(file); // Fallback jika kompresi gagal
+          }
+        }, 'image/jpeg', 0.8);
+      };
+      img.onerror = () => resolve(file); // Fallback error render
+    };
+    reader.onerror = () => resolve(file); // Fallback error baca
+  });
+};
+
 export default function PendaftaranClient() {
   return (
     <Suspense fallback={
@@ -69,7 +121,6 @@ function PendaftaranContent() {
       setActiveForms(validForms);
 
       if (formIdParam) {
-        // PERBAIKAN: Membaca form berdasarkan ID asli ATAU berdasarkan Slug (Judul URL)
         const found = validForms.find(f => f.id === formIdParam || f.slug === formIdParam);
         if (found) setSelectedForm(found);
         else alert("Formulir tidak ditemukan atau pendaftaran sudah ditutup.");
@@ -81,7 +132,6 @@ function PendaftaranContent() {
     }
   }
 
-  // PERBAIKAN: Tombol Share sekarang menggunakan slug (jika ada) agar link lebih cantik
   const handleShare = (form) => {
     const identifier = form.slug || form.id;
     const link = `${window.location.origin}/pendaftaran?form=${identifier}`;
@@ -89,7 +139,6 @@ function PendaftaranContent() {
     alert("Link pendaftaran berhasil disalin! Silakan bagikan via WhatsApp.");
   };
 
-  // PERBAIKAN: Mengarahkan URL menggunakan slug
   const handleOpenForm = (form) => {
     const identifier = form.slug || form.id;
     router.push(`/pendaftaran?form=${identifier}`);
@@ -99,21 +148,27 @@ function PendaftaranContent() {
   };
 
   const handleFileUpload = async (e, questionText, questionId) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const originalFile = e.target.files[0];
+    if (!originalFile) return;
 
     setUploadingFiles(prev => ({ ...prev, [questionId]: true }));
-    const formUpload = new FormData();
-    formUpload.append("file", file);
-
+    
     try {
+      // 1. Eksekusi Kompresi Gambar sebelum Upload!
+      const fileToUpload = await compressImage(originalFile);
+
+      // 2. Upload File yang sudah ringan ke API
+      const formUpload = new FormData();
+      formUpload.append("file", fileToUpload);
+
       const res = await fetch("/api/upload", { method: "POST", body: formUpload });
       if (!res.ok) throw new Error("Upload gagal");
       const data = await res.json();
       
       setCustomAnswers(prev => ({ ...prev, [questionText]: data.url }));
     } catch (error) {
-      alert("Gagal mengunggah file. Silakan coba lagi.");
+      console.error("Upload error:", error);
+      alert("Gagal mengunggah file. Pastikan sinyal stabil atau coba file lain.");
     } finally {
       setUploadingFiles(prev => ({ ...prev, [questionId]: false }));
     }
@@ -122,23 +177,31 @@ function PendaftaranContent() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validasi file wajib terisi
     if (selectedForm.customQuestions) {
       const requiredFiles = selectedForm.customQuestions.filter(q => q.type === 'file' && q.required);
       for (let q of requiredFiles) {
-        if (!customAnswers[q.question]) return alert(`Harap unggah file untuk pertanyaan: ${q.question}`);
+        if (!customAnswers[q.question]) return alert(`Harap tunggu proses unggah file selesai, atau unggah file untuk pertanyaan: ${q.question}`);
       }
     }
 
     setIsSubmitting(true);
     
-    // Payload menyimpan ID asli ke database agar mudah difilter oleh admin
+    // PERBAIKAN FATAL FIREBASE: Bersihkan data "undefined" agar database tidak error
+    const cleanAnswers = {};
+    for (const key in customAnswers) {
+      if (customAnswers[key] !== undefined) {
+        cleanAnswers[key] = customAnswers[key];
+      }
+    }
+
     const payload = {
       formId: selectedForm.id,
       formJudul: selectedForm.judul,
       formKategori: selectedForm.kategori || "Umum",
       statusLulus: "Pending",
       createdAt: serverTimestamp(),
-      answers: customAnswers 
+      answers: cleanAnswers 
     };
 
     try {
@@ -146,11 +209,14 @@ function PendaftaranContent() {
       setIsSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      alert("Terjadi kesalahan: " + error.message);
+      alert("Terjadi kesalahan sistem pendaftaran: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Cek apakah ada file yang masih diproses loading upload
+  const isAnyFileUploading = Object.values(uploadingFiles).some(isUploading => isUploading === true);
 
   if (loading) {
     return (
@@ -210,7 +276,6 @@ function PendaftaranContent() {
                       )}
 
                       <div className="grid grid-cols-2 gap-2 mt-auto border-t border-slate-100 pt-4">
-                        {/* Memanggil fungsi Share dengan Object Form */}
                         <button onClick={() => handleShare(form)} className="bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold py-2.5 rounded-xl transition flex justify-center items-center gap-1.5 text-xs border border-slate-200">
                           <Share2 size={14}/> Share Link
                         </button>
@@ -233,7 +298,6 @@ function PendaftaranContent() {
                 <button onClick={() => {router.push('/pendaftaran'); setSelectedForm(null);}} className="flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
                   <ArrowLeft size={16}/> Kembali
                 </button>
-                {/* Memanggil fungsi Share dengan Object Form yang sedang aktif */}
                 <button onClick={() => handleShare(selectedForm)} className="flex items-center gap-1.5 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full border border-blue-200 transition">
                   <Share2 size={14}/> Bagikan
                 </button>
@@ -312,8 +376,19 @@ function PendaftaranContent() {
                   )}
 
                   <div className="pt-8 mt-8 border-t border-slate-100">
-                    <button type="submit" disabled={isSubmitting || !selectedForm.customQuestions || selectedForm.customQuestions.length === 0} className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold py-4 rounded-xl transition-all duration-300 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-slate-900/10">
-                      {isSubmitting ? <><Loader2 size={20} className="animate-spin" /> Sedang Mengirim Data...</> : <>Kirim Formulir Pendaftaran <Send size={20} /></>}
+                    <button 
+                      type="submit" 
+                      // Mencegah submit jika file sedang di-upload atau jika Firebase akan menganggap formnya kosong
+                      disabled={isSubmitting || !selectedForm.customQuestions || selectedForm.customQuestions.length === 0 || isAnyFileUploading} 
+                      className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold py-4 rounded-xl transition-all duration-300 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-slate-900/10"
+                    >
+                      {isSubmitting ? (
+                        <><Loader2 size={20} className="animate-spin" /> Sedang Mengirim Data...</>
+                      ) : isAnyFileUploading ? (
+                        <><Loader2 size={20} className="animate-spin" /> Mohon Tunggu Upload Selesai...</>
+                      ) : (
+                        <>Kirim Formulir Pendaftaran <Send size={20} /></>
+                      )}
                     </button>
                     <p className="text-center text-[10px] font-semibold text-slate-400 mt-4 uppercase tracking-widest">Sistem Terintegrasi Database PMII</p>
                   </div>
