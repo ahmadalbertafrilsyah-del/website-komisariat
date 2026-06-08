@@ -50,9 +50,11 @@ export default function AdminAnggotaEditor() {
 
         let newData = [];
 
-        data.forEach((row) => {
+        // PERBAIKAN: Tambahkan parameter 'index' di dalam forEach
+        data.forEach((row, index) => { 
           newData.push({
-            id: Date.now() + Math.random(), // ID unik untuk React Key
+            // PERBAIKAN: Gabungkan Date.now(), index, dan string acak agar ID mutlak unik
+            id: `excel-import-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`, 
             nama: String(row["Nama Lengkap"] || row["Nama"] || "").trim(),
             nim: String(row["NIM"] || "").trim(),
             nia: String(row["NIA"] || "").trim(),
