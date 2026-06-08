@@ -13,8 +13,8 @@ import Footer from "@/components/Footer";
 import { db } from "@/lib/firebase"; 
 import { doc, getDoc, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 
-// IMPORT FRAMER MOTION
-import { motion, useInView } from "framer-motion";
+// IMPORT FRAMER MOTION (Ditambah AnimatePresence untuk Slider)
+import { motion, useInView, AnimatePresence } from "framer-motion";
 
 // ================= KOMPONEN ANIMASI ANGKA MENGHITUNG =================
 const AnimatedCounter = ({ value, suffix = "" }) => {
@@ -58,6 +58,9 @@ export default function Home() {
   const [latestNews, setLatestNews] = useState([]); 
   const [loading, setLoading] = useState(true);
   
+  // STATE SLIDER HERO
+  const [currentSlide, setCurrentSlide] = useState(0);
+
   // STATE STATISTIK
   const [stats, setStats] = useState({ kader: 0, rayon: 0, proker: 0, alumni: 0 });
 
@@ -91,14 +94,12 @@ export default function Home() {
           localStorage.setItem('pmii_global_config', JSON.stringify(gData));
         }
 
-        // ================= LOGIKA MEMBACA ARRAY BERTINGKAT (NESTED) =================
         if (apresiasiSnap.exists()) {
           const listApresiasi = apresiasiSnap.data().listApresiasi || [];
           const scores = [];
 
           listApresiasi.forEach(kader => {
             if (!kader.prestasi || !Array.isArray(kader.prestasi)) return;
-
             let countAkad = 0;
             let countNonAkad = 0;
 
@@ -120,17 +121,8 @@ export default function Home() {
             });
           });
 
-          const akademikRanks = scores
-            .filter(x => x.akademik > 0)
-            .map(x => ({ ...x, jumlahPrestasi: x.akademik }))
-            .sort((a, b) => b.akademik - a.akademik)
-            .slice(0, 3);
-
-          const nonAkademikRanks = scores
-            .filter(x => x.nonAkademik > 0)
-            .map(x => ({ ...x, jumlahPrestasi: x.nonAkademik }))
-            .sort((a, b) => b.nonAkademik - a.nonAkademik)
-            .slice(0, 3);
+          const akademikRanks = scores.filter(x => x.akademik > 0).map(x => ({ ...x, jumlahPrestasi: x.akademik })).sort((a, b) => b.akademik - a.akademik).slice(0, 3);
+          const nonAkademikRanks = scores.filter(x => x.nonAkademik > 0).map(x => ({ ...x, jumlahPrestasi: x.nonAkademik })).sort((a, b) => b.nonAkademik - a.nonAkademik).slice(0, 3);
 
           setTopAkademik(akademikRanks);
           setTopNonAkademik(nonAkademikRanks);
@@ -159,13 +151,40 @@ export default function Home() {
     return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date());
   };
 
+  // ================= DATA SLIDER HERO (TERHUBUNG KE FIREBASE ADMIN) =================
+  const HERO_SLIDES = config?.heroSlides && config.heroSlides.length > 0 
+    ? config.heroSlides 
+    : [
+        {
+          id: "default-1",
+          badge: "Tumbuh, Bergerak, Berdampak",
+          title: config?.heroTitle || "Kaderisasi \nTanpa Batas.",
+          subtitle: config?.heroSubtitle || "Memuat data dari server...",
+          button1Text: "Gabung PMII",
+          button1Link: "/pendaftaran",
+          button2Text: "Kenali Pengurus",
+          button2Link: "/struktur",
+          image: config?.heroImage || "",
+          bgColor: "from-[#0f172a] to-[#1e293b]"
+        }
+      ];
+
+  // Efek Slider Otomatis tiap 5 Detik
+  useEffect(() => {
+    const slideTimer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(slideTimer);
+  }, [HERO_SLIDES.length]);
+
+
   // ================= KOMPONEN KARTU SUPER RESPONSIP KHUSUS 3 KOLOM HP =================
   const AppreciationCard = ({ data, index, category }) => {
     const isFirst = index === 0;
     const colors = [
-      "from-amber-400 to-yellow-600", // Peringkat 1
-      "from-slate-300 to-slate-500", // Peringkat 2
-      "from-orange-400 to-orange-700" // Peringkat 3
+      "from-amber-400 to-yellow-600", 
+      "from-slate-300 to-slate-500", 
+      "from-orange-400 to-orange-700" 
     ];
 
     return (
@@ -176,13 +195,11 @@ export default function Home() {
         className={`relative group bg-white rounded-xl md:rounded-3xl p-2 md:p-6 shadow-xl border border-slate-100 flex flex-col items-center justify-between transition-transform duration-300
         ${isFirst ? 'scale-105 md:scale-105 z-10 border-amber-200' : 'scale-95 md:scale-95 opacity-95 hover:opacity-100'}`}
       >
-        {/* Badge Peringkat (Teks diubah agar muat di HP) */}
         <div className={`absolute -top-2.5 md:-top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r ${colors[index]} text-white px-2 md:px-4 py-0.5 md:py-1 rounded-full text-[8px] md:text-xs font-black shadow-lg flex items-center gap-1 whitespace-nowrap`}>
           {isFirst ? <Trophy className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" /> : <Award className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />}
           <span className="hidden md:inline">PERINGKAT</span> <span className="md:hidden">#</span>{index + 1}
         </div>
 
-        {/* Foto Profil (Diperkecil khusus HP) */}
         <div className="relative mt-2 md:mt-4 mb-2 md:mb-4 shrink-0">
           <div className={`w-12 h-12 md:w-24 md:h-24 rounded-full p-[2px] md:p-1 bg-gradient-to-tr ${colors[index]} overflow-hidden`}>
             <div className="w-full h-full rounded-full bg-white overflow-hidden flex items-center justify-center border-[1.5px] md:border-2 border-white">
@@ -202,13 +219,11 @@ export default function Home() {
           )}
         </div>
 
-        {/* Info Nama (Font responsif, hindari tabrakan teks) */}
         <div className="flex flex-col items-center flex-grow justify-start w-full px-0.5 text-center mb-2 md:mb-4">
           <h4 className="text-slate-900 font-bold text-[10px] md:text-base line-clamp-2 leading-tight mb-0.5 md:mb-1" title={data.nama}>{data.nama}</h4>
           <p className="text-slate-500 text-[7px] md:text-xs font-bold uppercase tracking-widest line-clamp-1" title={data.asalRayon || "Kader PMII"}>{data.asalRayon || "Kader PMII"}</p>
         </div>
 
-        {/* Counter Prestasi (Layout khusus HP di tengah tanpa logo) */}
         <div className="w-full bg-slate-50 rounded-lg md:rounded-xl p-1.5 md:p-4 flex flex-col md:flex-row justify-center md:justify-between items-center mb-2 md:mb-4 shrink-0 border border-slate-100 text-center md:text-left gap-0 md:gap-2">
           <div className="flex flex-col">
             <span className="hidden md:block text-xs font-bold text-slate-400 uppercase leading-none mb-1">Total {category}</span>
@@ -221,7 +236,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tombol Lihat (Singkat di HP) */}
         <Link 
           href={`/apresiasi?kader=${encodeURIComponent(data.nama)}`}
           className={`w-full py-1.5 md:py-2.5 rounded-lg md:rounded-xl font-bold text-[9px] md:text-sm flex items-center justify-center gap-1 md:gap-2 transition-all border shrink-0
@@ -257,42 +271,72 @@ export default function Home() {
     <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 overflow-x-hidden w-full">
       <Navbar />
 
-      {/* ================= HERO SECTION ================= */}
-      <section className="relative pt-24 pb-20 md:pt-32 md:pb-24 flex items-center bg-[#0f172a] overflow-hidden w-full">
+      {/* ================= HERO SLIDER SECTION ================= */}
+      {/* Background Section berubah dinamis mengikuti HERO_SLIDES[currentSlide].bgColor */}
+      <section className={`relative pt-24 pb-12 md:pt-28 md:pb-16 flex flex-col items-center bg-gradient-to-br ${HERO_SLIDES[currentSlide]?.bgColor || 'from-[#0f172a] to-[#1e293b]'} overflow-hidden w-full transition-colors duration-1000`}>
         <div className="absolute top-[-10%] left-[-10%] w-[80%] md:w-[50%] h-[50%] bg-blue-600/30 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="relative z-10 max-w-7xl mx-auto px-5 w-full grid lg:grid-cols-2 gap-8 items-center">
-          <motion.div className="text-center lg:text-left flex flex-col items-center lg:items-start z-20" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-blue-200 text-xs md:text-sm font-medium mb-6 backdrop-blur-md mt-4 lg:mt-0">
-              <Sparkles size={14} className="text-yellow-400" /> Tumbuh, Bergerak, Berdampak
-            </div>
-            <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-white mb-4 leading-[1.2] lg:leading-[1.1] tracking-tight whitespace-pre-line">
-              {config?.heroTitle || "Kaderisasi \nTanpa Batas."}
-            </h1>
-            <p className="text-sm md:text-lg text-slate-300 mb-8 font-light leading-relaxed max-w-xl mx-auto lg:mx-0">
-              {config?.heroSubtitle || "Wadah pergerakan mahasiswa Islam di UIN Maulana Malik Ibrahim Malang."}
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 w-full sm:w-auto">
-              <Link href="/pendaftaran" className="bg-yellow-400 hover:bg-yellow-300 text-slate-900 font-bold py-3.5 px-6 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-lg w-full sm:w-auto">
-                Gabung PMII <ArrowRight size={16} />
-              </Link>
-              <Link href="/struktur" className="bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm font-semibold py-3.5 px-6 rounded-xl transition flex items-center justify-center text-sm w-full sm:w-auto">
-                Kenali Pengurus
-              </Link>
-            </div>
-          </motion.div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-5 w-full">
+          {/* AnimatePresence mengontrol animasi keluar masuk antar slide */}
+          <AnimatePresence mode="wait">
+            <motion.div 
+              key={currentSlide}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.5 }}
+              className="grid lg:grid-cols-2 gap-6 md:gap-8 items-center"
+            >
+              <div className="text-center lg:text-left flex flex-col items-center lg:items-start z-20">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-blue-200 text-xs md:text-sm font-medium mb-4 md:mb-6 backdrop-blur-md mt-4 lg:mt-0 shadow-lg">
+                  <Sparkles size={14} className="text-yellow-400" /> {HERO_SLIDES[currentSlide]?.badge}
+                </div>
+                
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-3 md:mb-4 leading-[1.2] lg:leading-[1.1] tracking-tight whitespace-pre-line drop-shadow-md">
+                  {HERO_SLIDES[currentSlide]?.title}
+                </h1>
+                
+                <p className="text-sm md:text-lg text-slate-300 mb-6 md:mb-8 font-light leading-relaxed max-w-xl mx-auto lg:mx-0 drop-shadow-md">
+                  {HERO_SLIDES[currentSlide]?.subtitle}
+                </p>
+                
+                <div className="flex flex-row justify-center lg:justify-start gap-2 sm:gap-3 w-full sm:w-auto">
+                  <Link href={HERO_SLIDES[currentSlide]?.button1Link || "#"} className="flex-1 sm:flex-none bg-yellow-400 hover:bg-yellow-300 text-slate-900 font-bold py-3 sm:py-3.5 px-2 sm:px-6 rounded-xl transition flex items-center justify-center gap-1 sm:gap-2 text-[11px] sm:text-sm shadow-lg text-center">
+                    {HERO_SLIDES[currentSlide]?.button1Text} <ArrowRight size={14} className="sm:w-4 sm:h-4" />
+                  </Link>
+                  <Link href={HERO_SLIDES[currentSlide]?.button2Link || "#"} className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm font-semibold py-3 sm:py-3.5 px-2 sm:px-6 rounded-xl transition flex items-center justify-center text-[11px] sm:text-sm text-center shadow-lg">
+                    {HERO_SLIDES[currentSlide]?.button2Text}
+                  </Link>
+                </div>
+              </div>
 
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full flex justify-center lg:justify-end items-end h-[280px] sm:h-[400px] lg:h-[500px]">
-            {config?.heroImage ? (
-                <img src={config.heroImage} alt="Ketua" className="h-full w-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-10" />
-            ) : (
-                <div className="w-full h-full bg-white/5 rounded-3xl flex flex-col items-center justify-center text-white/30 border border-white/10 backdrop-blur-sm"><User size={64} /></div>
-            )}
-          </motion.div>
+              <div className="relative w-full flex justify-center lg:justify-end items-end h-[240px] sm:h-[350px] lg:h-[450px]">
+                {HERO_SLIDES[currentSlide]?.image ? (
+                    <img src={HERO_SLIDES[currentSlide].image} alt="Hero Image" className="max-h-full w-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.4)] z-10" />
+                ) : (
+                    <div className="w-full h-full bg-white/5 rounded-3xl flex flex-col items-center justify-center text-white/30 border border-white/10 backdrop-blur-sm"><ImageIcon size={64} /></div>
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* INDIKATOR TITIK-TITIK SLIDER */}
+          {HERO_SLIDES.length > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8 md:mt-4 z-20 relative">
+              {HERO_SLIDES.map((_, idx) => (
+                <button 
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`transition-all duration-300 rounded-full ${idx === currentSlide ? 'w-8 h-2 bg-yellow-400' : 'w-2 h-2 bg-white/30 hover:bg-white/50'}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
       {/* ================= STATS SECTION ================= */}
-      <section className="relative z-20 max-w-6xl mx-auto px-4 sm:px-5 -mt-10 sm:-mt-20 mb-16 sm:mb-20 w-full">
+      <section className="relative z-20 max-w-6xl mx-auto px-4 sm:px-5 -mt-6 md:-mt-10 mb-16 sm:mb-20 w-full">
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-100 grid grid-cols-2 lg:grid-cols-4 gap-y-8 lg:divide-x divide-slate-100">
           <div className="text-center px-2 sm:px-4">
             <h3 className="text-3xl md:text-5xl font-black text-slate-900 mb-1"><AnimatedCounter value={stats.kader} suffix="" /></h3>
@@ -319,7 +363,7 @@ export default function Home() {
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-[10px] md:text-xs font-black uppercase tracking-[0.1em] md:tracking-[0.2em] mb-4">
             <Star className="w-3.5 h-3.5" fill="currentColor" /> Hall of Fame
           </motion.div>
-          <h2 className="text-2xl md:text-5xl font-extrabold text-slate-900 mb-2 md:mb-3 tracking-tight">Apresiasi <span className="text-blue-600">Kader Terbaik</span></h2>
+          <h2 className="text-2xl md:text-5xl font-extrabold text-slate-900 mb-2 md:mb-3 tracking-tight">Apresiasi <span className="text-blue-600">Kader</span></h2>
           <p className="text-xs md:text-base text-slate-500 font-medium">Periode: <span className="text-slate-800 font-bold">{getCurrentMonth()}</span></p>
         </div>
 
@@ -335,7 +379,6 @@ export default function Home() {
               </div>
             </div>
             
-            {/* GRID DIPAKSA 3 KOLOM SEKALIPUN DI HP */}
             <div className="grid grid-cols-3 gap-2 md:gap-6">
               {topAkademik.length > 0 ? topAkademik.map((kader, i) => (
                 <AppreciationCard key={kader.id || i} data={kader} index={i} category="Akademik" />
@@ -355,7 +398,6 @@ export default function Home() {
               </div>
             </div>
             
-            {/* GRID DIPAKSA 3 KOLOM SEKALIPUN DI HP */}
             <div className="grid grid-cols-3 gap-2 md:gap-6">
               {topNonAkademik.length > 0 ? topNonAkademik.map((kader, i) => (
                 <AppreciationCard key={kader.id || i} data={kader} index={i} category="Non-Akademik" />
@@ -472,9 +514,13 @@ export default function Home() {
           <div className="relative z-10 max-w-3xl mx-auto">
             <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white mb-4 md:mb-6 leading-tight tracking-tight">Mari Melangkah <br/>Bersama PMII.</h2>
             <p className="text-blue-100 mb-8 md:mb-10 text-sm md:text-lg leading-relaxed opacity-80 px-2">Daftarkan diri Anda dan jadilah bagian dari agen perubahan yang progresif untuk masa depan Indonesia.</p>
-            <div className="flex flex-col sm:flex-row justify-center gap-3 md:gap-4">
-               <Link href="/pendaftaran" className="bg-yellow-400 hover:bg-yellow-300 text-slate-900 font-black py-3.5 md:py-4 px-6 md:px-10 rounded-xl md:rounded-2xl transition shadow-xl text-sm md:text-base flex items-center justify-center gap-2 w-full sm:w-auto">DAFTAR SEKARANG <ArrowRight size={18}/></Link>
-               <Link href="/anggota" className="bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-md font-bold py-3.5 md:py-4 px-6 md:px-10 rounded-xl md:rounded-2xl flex items-center justify-center text-sm md:text-base w-full sm:w-auto">CARI KADER</Link>
+            <div className="flex flex-row justify-center gap-2 sm:gap-4 w-full">
+               <Link href="/pendaftaran" className="flex-1 sm:flex-none bg-yellow-400 hover:bg-yellow-300 text-slate-900 font-black py-3 md:py-4 px-2 sm:px-10 rounded-xl md:rounded-2xl transition shadow-xl text-[10px] sm:text-base flex items-center justify-center gap-1 sm:gap-2 text-center leading-tight">
+                 DAFTAR SEKARANG <ArrowRight size={14} className="sm:w-[18px] sm:h-[18px] shrink-0" />
+               </Link>
+               <Link href="/anggota" className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-md font-bold py-3 md:py-4 px-2 sm:px-10 rounded-xl md:rounded-2xl flex items-center justify-center text-[10px] sm:text-base text-center leading-tight">
+                 CARI KADER
+               </Link>
             </div>
           </div>
         </motion.div>

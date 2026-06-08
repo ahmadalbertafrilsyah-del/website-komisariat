@@ -2,18 +2,17 @@
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { Save, FileText, BarChart3, History, MessageSquare, Image as ImageIcon, Target, AlertCircle, UploadCloud, Loader2 } from "lucide-react";
+import { Save, FileText, BarChart3, History, MessageSquare, Image as ImageIcon, Target, AlertCircle, UploadCloud, Loader2, Plus, Trash2, GripVertical } from "lucide-react";
 
 export default function AdminBerandaEditor() {
   const [loading, setLoading] = useState(true);
   
-  // State untuk melacak proses upload (menyimpan nama field yang sedang diupload)
+  // State untuk melacak proses upload (menyimpan nama field atau indeks yang sedang diupload)
   const [uploadingField, setUploadingField] = useState(null);
   
   const [berandaConfig, setBerandaConfig] = useState({
-    heroTitle: "Kaderisasi \nTanpa Batas.",
-    heroSubtitle: "Wadah pergerakan mahasiswa Islam di UIN Maulana Malik Ibrahim Malang. Mari bersama mencetak agen perubahan yang religius, intelektual, dan profesional.",
-    heroImage: "", 
+    // ARRAY SLIDER HERO BARU
+    heroSlides: [],
     
     statKader: "200",
     statRayon: "3",
@@ -48,7 +47,27 @@ export default function AdminBerandaEditor() {
         const docRef = doc(db, "website_config", "settings");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setBerandaConfig({ ...berandaConfig, ...docSnap.data() });
+          const data = docSnap.data();
+          
+          // MENGAMANKAN DATA LAMA: Jika data heroSlides belum ada, kita buatkan 1 slide default dari data lama
+          if (!data.heroSlides || data.heroSlides.length === 0) {
+            data.heroSlides = [
+              {
+                id: Date.now().toString(),
+                badge: "Tumbuh, Bergerak, Berdampak",
+                title: data.heroTitle || "Kaderisasi \nTanpa Batas.",
+                subtitle: data.heroSubtitle || "Wadah pergerakan mahasiswa Islam di UIN Maulana Malik Ibrahim Malang.",
+                button1Text: "Gabung PMII",
+                button1Link: "/pendaftaran",
+                button2Text: "Kenali Pengurus",
+                button2Link: "/struktur",
+                image: data.heroImage || "",
+                bgColor: "from-[#0f172a] to-[#1e293b]"
+              }
+            ];
+          }
+          
+          setBerandaConfig({ ...berandaConfig, ...data });
         }
       } catch (error) {
         console.error("Gagal mengambil data beranda:", error);
@@ -59,7 +78,77 @@ export default function AdminBerandaEditor() {
     loadBerandaSettings();
   }, []);
 
-  // ================= FUNGSI UPLOAD GAMBAR KE CLOUDINARY =================
+  // ================= FUNGSI MANAJEMEN SLIDER =================
+  const handleAddSlide = () => {
+    const newSlide = {
+      id: Date.now().toString(),
+      badge: "Label Baru",
+      title: "Judul Slide Baru",
+      subtitle: "Keterangan slide baru.",
+      button1Text: "Gabung PMII",
+      button1Link: "/pendaftaran",
+      button2Text: "Info Lanjut",
+      button2Link: "/berita",
+      image: "",
+      bgColor: "from-blue-900 to-indigo-900"
+    };
+    setBerandaConfig(prev => ({
+      ...prev,
+      heroSlides: [...prev.heroSlides, newSlide]
+    }));
+  };
+
+  const handleRemoveSlide = (indexToRemove) => {
+    if (confirm("Yakin ingin menghapus slide ini?")) {
+      setBerandaConfig(prev => ({
+        ...prev,
+        heroSlides: prev.heroSlides.filter((_, index) => index !== indexToRemove)
+      }));
+    }
+  };
+
+  const handleSlideChange = (index, field, value) => {
+    setBerandaConfig(prev => {
+      const updatedSlides = [...prev.heroSlides];
+      updatedSlides[index] = { ...updatedSlides[index], [field]: value };
+      return { ...prev, heroSlides: updatedSlides };
+    });
+  };
+
+  // ================= FUNGSI UPLOAD GAMBAR (KHUSUS SLIDER) =================
+  const handleSlideImageUpload = async (e, index) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Harap pilih file berupa gambar!");
+      return;
+    }
+    if (file.type !== "image/png") {
+      alert("Catatan: Sangat disarankan memakai gambar PNG Transparan agar tampilan slider maksimal dan menyatu dengan background!");
+    }
+
+    setUploadingField(`slide-${index}`);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Gagal mengunggah gambar ke server");
+      
+      const data = await res.json();
+      handleSlideChange(index, 'image', data.url);
+      alert("Gambar slide berhasil diunggah!");
+    } catch (error) {
+      console.error("Error Upload:", error);
+      alert("Terjadi kesalahan saat mengunggah gambar.");
+    } finally {
+      setUploadingField(null);
+      e.target.value = null; 
+    }
+  };
+
+  // ================= FUNGSI UPLOAD GAMBAR (UMUM/SEJARAH) =================
   const handleImageUpload = async (e, fieldName) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -69,33 +158,23 @@ export default function AdminBerandaEditor() {
       return;
     }
 
-    // Khusus Banner Hero, berikan peringatan kecil jika bukan PNG
-    if (fieldName === 'heroImage' && file.type !== "image/png") {
-      alert("Catatan: Anda tidak memilih format PNG. Sangat disarankan memakai gambar PNG Transparan agar tampilan web maksimal!");
-    }
-
     setUploadingField(fieldName);
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Gagal mengunggah gambar ke server");
 
       const data = await res.json();
-      // Update state sesuai dengan field yang diupload (heroImage atau sejarahImage)
       setBerandaConfig(prev => ({ ...prev, [fieldName]: data.url }));
       alert("Gambar berhasil diunggah!");
     } catch (error) {
       console.error("Error Upload:", error);
-      alert("Terjadi kesalahan saat mengunggah gambar. Pastikan API dan Env Cloudinary sudah benar.");
+      alert("Terjadi kesalahan saat mengunggah gambar.");
     } finally {
       setUploadingField(null);
-      e.target.value = null; // Reset input file
+      e.target.value = null; 
     }
   };
 
@@ -123,57 +202,98 @@ export default function AdminBerandaEditor() {
 
       <form onSubmit={handleSaveBeranda} className="space-y-6 max-w-4xl">
         
-        {/* ================= SEKSI 1: BANNER HERO UTAMA ================= */}
+        {/* ================= SEKSI 1: PENGATURAN SLIDER HERO ================= */}
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-          <div className="bg-slate-50 p-4 border-b border-slate-200 flex items-center gap-2 font-bold text-slate-800">
-             <FileText size={18} className="text-blue-600" /> 1. Area Banner Utama (Top Hero)
+          <div className="bg-slate-50 p-4 border-b border-slate-200 flex items-center justify-between font-bold text-slate-800">
+             <div className="flex items-center gap-2">
+               <ImageIcon size={18} className="text-blue-600" /> 1. Area Slider Utama (Hero)
+             </div>
+             <button type="button" onClick={handleAddSlide} className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors">
+               <Plus size={14} /> Tambah Slide
+             </button>
           </div>
-          <div className="p-6 space-y-4">
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Judul Utama Banner Hero</label>
-              <input type="text" required value={berandaConfig.heroTitle} onChange={(e) => setBerandaConfig({...berandaConfig, heroTitle: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-semibold" />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Sub-Judul Narasi Keterangan</label>
-              <textarea required rows="3" value={berandaConfig.heroSubtitle} onChange={(e) => setBerandaConfig({...berandaConfig, heroSubtitle: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm leading-relaxed" />
-            </div>
-            
-            {/* FITUR BARU: Upload Foto Banner PNG ke Cloudinary */}
-            <div className="pt-4 border-t border-slate-100 mt-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                 <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                   <ImageIcon size={14} className="text-blue-500"/> Foto Banner (Sebelah Kanan)
-                 </label>
-                 <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded font-bold border border-emerald-100 uppercase tracking-wider w-max">
-                   PNG Transparan (Wajib)
-                 </span>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row items-center gap-2">
-                <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border shrink-0 ${uploadingField === 'heroImage' ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-sm'}`}>
-                  {uploadingField === 'heroImage' ? <><Loader2 size={14} className="animate-spin" /> Mengunggah...</> : <><UploadCloud size={14} /> Pilih Foto PNG</>}
-                  <input 
-                    type="file" accept="image/png" className="hidden" 
-                    onChange={(e) => handleImageUpload(e, 'heroImage')} 
-                    disabled={uploadingField === 'heroImage'} 
-                  />
-                </label>
-                <input 
-                  type="text" value={berandaConfig.heroImage || ""} 
-                  onChange={(e) => setBerandaConfig({...berandaConfig, heroImage: e.target.value})} 
-                  className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono bg-slate-50 text-slate-600" 
-                  placeholder="URL otomatis terisi setelah upload..." 
-                  readOnly={uploadingField === 'heroImage'}
-                />
-              </div>
+          
+          <div className="p-4 space-y-6 bg-slate-50/50">
+            {berandaConfig.heroSlides.length === 0 && (
+              <p className="text-center text-sm text-slate-400 py-4">Belum ada slide. Klik "Tambah Slide" untuk memulai.</p>
+            )}
 
-              <div className="mt-2.5 flex items-start gap-1.5 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-                <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
-                <p className="text-[10px] md:text-xs text-blue-700 leading-relaxed font-medium">
-                  <strong>Tips Desain Maksimal:</strong> Agar tampilan web terlihat mahal dan menyatu dengan *background*, pastikan Anda mengunggah foto kader/tokoh yang <strong>latar belakangnya sudah dihapus</strong> (format .PNG).
-                </p>
+            {berandaConfig.heroSlides.map((slide, index) => (
+              <div key={slide.id || index} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm relative">
+                <div className="absolute top-4 right-4 flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-400">SLIDE {index + 1}</span>
+                  <button type="button" onClick={() => handleRemoveSlide(index)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-md transition-colors" title="Hapus Slide">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4 mt-2">
+                  <div className="sm:col-span-2">
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Pilih Warna Background Slider</label>
+                    <select value={slide.bgColor} onChange={(e) => handleSlideChange(index, 'bgColor', e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm font-semibold bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="from-[#0f172a] to-[#1e293b]">Biru Gelap Default</option>
+                      <option value="from-blue-900 to-indigo-900">Biru Terang Elegan</option>
+                      <option value="from-slate-900 to-emerald-900">Hijau Gelap Pergerakan</option>
+                      <option value="from-amber-700 to-orange-900">Jingga Hangat</option>
+                      <option value="from-slate-800 to-gray-900">Hitam Minimalis</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Badge Teks Kecil (Atas)</label>
+                    <input type="text" required value={slide.badge} onChange={(e) => handleSlideChange(index, 'badge', e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm" placeholder="Contoh: Info Terkini" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Judul Utama (Gunakan \n untuk baris baru)</label>
+                    <input type="text" required value={slide.title} onChange={(e) => handleSlideChange(index, 'title', e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm font-bold" placeholder="Judul Slide" />
+                  </div>
+                  
+                  <div className="sm:col-span-2">
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1">Sub-Judul Deskripsi</label>
+                    <textarea rows="2" required value={slide.subtitle} onChange={(e) => handleSlideChange(index, 'subtitle', e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm leading-relaxed" />
+                  </div>
+
+                  {/* Pengaturan Tombol 1 */}
+                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                    <label className="text-[10px] font-bold text-yellow-700 block mb-2 uppercase">Tombol 1 (Kuning)</label>
+                    <div className="space-y-2">
+                      <input type="text" required value={slide.button1Text} onChange={(e) => handleSlideChange(index, 'button1Text', e.target.value)} className="w-full p-2 border border-yellow-200 rounded text-xs" placeholder="Teks Tombol 1" />
+                      <input type="text" required value={slide.button1Link} onChange={(e) => handleSlideChange(index, 'button1Link', e.target.value)} className="w-full p-2 border border-yellow-200 rounded text-xs" placeholder="Link Tujuan (Contoh: /pendaftaran)" />
+                    </div>
+                  </div>
+
+                  {/* Pengaturan Tombol 2 */}
+                  <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
+                    <label className="text-[10px] font-bold text-slate-600 block mb-2 uppercase">Tombol 2 (Transparan)</label>
+                    <div className="space-y-2">
+                      <input type="text" required value={slide.button2Text} onChange={(e) => handleSlideChange(index, 'button2Text', e.target.value)} className="w-full p-2 border border-slate-300 rounded text-xs" placeholder="Teks Tombol 2" />
+                      <input type="text" required value={slide.button2Link} onChange={(e) => handleSlideChange(index, 'button2Link', e.target.value)} className="w-full p-2 border border-slate-300 rounded text-xs" placeholder="Link Tujuan (Contoh: /struktur)" />
+                    </div>
+                  </div>
+
+                  {/* Upload Foto Slide */}
+                  <div className="sm:col-span-2 pt-3 border-t border-slate-100 mt-2">
+                    <div className="flex flex-col sm:flex-row items-center gap-2">
+                      <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${uploadingField === `slide-${index}` ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-sm'}`}>
+                        {uploadingField === `slide-${index}` ? <><Loader2 size={14} className="animate-spin" /> Mengunggah...</> : <><UploadCloud size={14} /> Upload Foto Slide (PNG)</>}
+                        <input 
+                          type="file" accept="image/png" className="hidden" 
+                          onChange={(e) => handleSlideImageUpload(e, index)} 
+                          disabled={uploadingField === `slide-${index}`} 
+                        />
+                      </label>
+                      <input 
+                        type="text" value={slide.image || ""} 
+                        onChange={(e) => handleSlideChange(index, 'image', e.target.value)} 
+                        className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs font-mono bg-slate-50 text-slate-600" 
+                        placeholder="URL foto otomatis terisi..." 
+                        readOnly={uploadingField === `slide-${index}`}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -203,7 +323,6 @@ export default function AdminBerandaEditor() {
             <div><label className="text-xs font-bold text-slate-700 block mb-1">Isi Paragraf Penjelasan</label><textarea required rows="3" value={berandaConfig.sejarahDesc} onChange={(e) => setBerandaConfig({...berandaConfig, sejarahDesc: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm text-slate-600" /></div>
             <div><label className="text-xs font-bold text-slate-700 block mb-1">Kutipan / Quote Tri Motto</label><textarea required rows="2" value={berandaConfig.sejarahQuote} onChange={(e) => setBerandaConfig({...berandaConfig, sejarahQuote: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl text-sm italic" /></div>
             
-            {/* FITUR BARU: Upload Foto Sejarah Cloudinary */}
             <div className="pt-4 border-t border-slate-100">
               <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mb-2"><ImageIcon size={14} className="text-blue-500"/> Foto Dokumentasi Sejarah</label>
               <div className="flex flex-col sm:flex-row items-center gap-2">
