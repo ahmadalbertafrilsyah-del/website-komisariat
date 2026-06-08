@@ -5,15 +5,29 @@ import { doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc, updateDoc,
 import { Save, Link as LinkIcon, Newspaper, Plus, Trash2, Edit, Image as ImageIcon, Send, X, UploadCloud, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 
-// IMPORT REACT QUILL SECARA DINAMIS AGAR TIDAK ERROR DI NEXT.JS (SSR)
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+// IMPORT REACT QUILL DINAMIS DENGAN FALLBACK LOADING
+const ReactQuill = dynamic(() => import("react-quill-new"), { 
+  ssr: false,
+  loading: () => <div className="p-10 text-center text-sm text-slate-500 animate-pulse">Memuat Editor Berita...</div>
+});
 import "react-quill-new/dist/quill.snow.css"; 
+
+// 🔥 PERBAIKAN 1: Pindahkan quillModules ke luar komponen agar tidak re-render
+const quillModules = {
+  clipboard: { matchVisual: false },
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
+    ['link', 'image', 'video'],
+    [{ 'align': [] }, { 'color': [] }, { 'background': [] }],
+    ['clean']
+  ],
+};
 
 export default function AdminBerita() {
   const [loading, setLoading] = useState(true);
-  
   const [externalLink, setExternalLink] = useState("");
-
   const [newsList, setNewsList] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -23,7 +37,6 @@ export default function AdminBerita() {
   const [excerpt, setExcerpt] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [content, setContent] = useState("");
-
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -66,19 +79,14 @@ export default function AdminBerita() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Gagal mengunggah gambar ke server");
 
       const data = await res.json();
       setImageUrl(data.url); 
-      alert("Gambar cover berhasil diunggah!");
     } catch (error) {
       console.error("Error Upload:", error);
-      alert("Terjadi kesalahan saat mengunggah gambar. Pastikan API dan Env Cloudinary sudah benar.");
+      alert("Terjadi kesalahan saat mengunggah gambar. Pastikan API Cloudinary sudah benar.");
     } finally {
       setIsUploading(false);
       e.target.value = null; 
@@ -103,8 +111,6 @@ export default function AdminBerita() {
       return;
     }
 
-    // === PEMBERSIH OTOMATIS (AUTO-CLEANSER) ===
-    // Menghapus inline-style nakal dan karakter tak kasat mata bawaan copy-paste Word/PDF
     const cleanedContent = content
       .replace(/word-break:\s*[^;"]+;?/gi, '') 
       .replace(/overflow-wrap:\s*[^;"]+;?/gi, '') 
@@ -113,11 +119,8 @@ export default function AdminBerita() {
       .replace(/[\u200B-\u200D\uFEFF]/g, '');
 
     const payload = {
-      title,
-      kategori,
-      excerpt,
-      imageUrl,
-      content: cleanedContent, // Menyimpan konten yang sudah dibersihkan ke Firebase
+      title, kategori, excerpt, imageUrl,
+      content: cleanedContent, 
       updatedAt: serverTimestamp()
     };
 
@@ -157,104 +160,94 @@ export default function AdminBerita() {
     setExcerpt(article.excerpt);
     setImageUrl(article.imageUrl || "");
     setContent(article.content);
-    window.scrollTo({ top: 300, behavior: 'smooth' }); 
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
 
   const resetForm = () => {
-    setIsEditing(false);
-    setEditId(null);
-    setTitle("");
-    setKategori("Berita Utama");
-    setExcerpt("");
-    setImageUrl("");
-    setContent("");
+    setIsEditing(false); setEditId(null); setTitle("");
+    setKategori("Berita Utama"); setExcerpt(""); setImageUrl(""); setContent("");
   };
 
-  // Tambahan konfigurasi modul Quill agar lebih bersih saat di-paste
-  const quillModules = {
-    clipboard: {
-      matchVisual: false // Mencegah spasi berlebih saat copy-paste
-    },
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
-      ['link', 'image', 'video'],
-      [{ 'align': [] }, { 'color': [] }, { 'background': [] }],
-      ['clean']
-    ],
-  };
+  const inputClass = "w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm";
+  const labelClass = "text-sm font-medium text-slate-700 block mb-1.5";
 
-  if (loading) return <p className="text-slate-500 animate-pulse font-medium">Memuat modul berita...</p>;
+  if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 size={32} className="text-blue-600 animate-spin"/></div>;
 
   return (
     <div className="space-y-6 pb-12 w-full max-w-6xl mx-auto">
       
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col md:flex-row justify-between md:items-center gap-4">
+      {/* HEADER PAGE */}
+      <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Newspaper size={24} className="text-blue-600" /> Jurnalisme & Publikasi
+             Jurnalisme & Berita
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Tulis berita, opini, dan kelola tautan portal berita eksternal Anda.</p>
+          <p className="text-sm text-slate-500 mt-1">Tulis berita, rilis opini, dan kelola tautan portal berita eksternal komisariat.</p>
         </div>
-        <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 text-center shrink-0">
-           <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Total Artikel</p>
-           <p className="text-xl font-black text-blue-700 leading-none mt-0.5">{newsList.length}</p>
+        <div className="bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm flex items-center gap-3 shrink-0">
+           <Newspaper size={20} className="text-blue-600" />
+           <div>
+             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Artikel</p>
+             <p className="text-lg font-bold text-slate-800 leading-none">{newsList.length} <span className="text-sm font-medium text-slate-500">Post</span></p>
+           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden w-full">
-        <div className="bg-slate-50 p-4 border-b border-slate-200 flex items-center gap-2 font-bold text-slate-800 text-sm">
-           <LinkIcon size={16} className="text-blue-600" /> Portal Berita Eksternal
+      {/* SEKSI 1: PORTAL EKSTERNAL */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden w-full">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
+           <LinkIcon size={18} className="text-slate-500" />
+           <h2 className="text-base font-semibold text-slate-800">Portal Berita Eksternal</h2>
         </div>
-        <form onSubmit={handleSaveConfig} className="p-5 flex flex-col md:flex-row md:items-center gap-4">
+        <form onSubmit={handleSaveConfig} className="p-6 flex flex-col md:flex-row md:items-start gap-4">
           <div className="flex-1 w-full">
-            <label className="text-xs font-bold text-slate-700 block mb-1">Tautan Web Berita (Cth: Wordpress, Blogspot, dll)</label>
+            <label className={labelClass}>Tautan Web Berita (Opsional)</label>
             <input 
               type="url" 
               value={externalLink}
               onChange={(e) => setExternalLink(e.target.value)}
-              className="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
+              className={inputClass + " font-mono"}
               placeholder="https://beritapmii.com..."
             />
-            <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
-              Jika diisi, akan memunculkan tombol pengalih ke web berita utama Anda. Kosongkan jika ingin menyembunyikan tombol tersebut.
+            <p className="text-xs text-slate-500 mt-2">
+              Jika diisi, akan memunculkan tombol pengalih ke web/blog utama berita Anda. Kosongkan jika ingin menyembunyikan fitur tersebut.
             </p>
           </div>
-          <button type="submit" className="w-full md:w-auto bg-slate-900 hover:bg-blue-600 text-white font-bold py-3 px-6 md:px-8 rounded-xl transition flex items-center justify-center gap-2 shadow-sm text-xs shrink-0 self-start md:self-center mt-2 md:mt-0">
-            Simpan Tautan <Save size={14} />
+          <button type="submit" className="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 px-6 rounded-md transition flex items-center justify-center gap-2 shadow-sm text-sm shrink-0 md:mt-6">
+             <Save size={16} /> Simpan Tautan
           </button>
         </form>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden w-full">
-        <div className="bg-blue-600 p-4 border-b border-blue-700 flex items-center justify-between text-white">
-          <h2 className="font-bold text-sm flex items-center gap-2">
-             {isEditing ? <Edit size={16} /> : <Plus size={16} />}
-             {isEditing ? "Mode Edit Artikel" : "Tulis Artikel Baru"}
-          </h2>
+      {/* SEKSI 2: FORM EDITOR ARTIKEL */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden w-full" id="editor-section">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-2">
+             {isEditing ? <Edit size={18} className="text-amber-500" /> : <Plus size={18} className="text-blue-600" />}
+             <h2 className="text-base font-semibold text-slate-800">{isEditing ? "Mode Edit Artikel" : "Tulis Artikel Baru"}</h2>
+          </div>
           {isEditing && (
-             <button onClick={resetForm} className="text-blue-200 hover:text-white flex items-center gap-1 text-xs bg-blue-700 px-2 py-1 rounded-md">
-               <X size={12}/> Batal Edit
+             <button onClick={resetForm} className="text-slate-500 hover:text-red-600 bg-white border border-slate-300 hover:border-red-200 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium transition shadow-sm">
+               <X size={14}/> Batal Edit
              </button>
           )}
         </div>
         
-        <form onSubmit={handleSaveArticle} className="p-5 md:p-6 space-y-5">
-          <div className="grid md:grid-cols-3 gap-4">
+        <form onSubmit={handleSaveArticle} className="p-6 space-y-6">
+          <div className="grid md:grid-cols-3 gap-5">
             <div className="md:col-span-2">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Judul Artikel</label>
+              <label className={labelClass}>Judul Artikel</label>
               <input 
                 type="text" required value={title} onChange={(e) => setTitle(e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-bold text-slate-800"
+                className={`${inputClass} font-semibold text-slate-800`}
                 placeholder="Masukkan judul berita yang menarik..."
               />
             </div>
             <div>
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Kategori</label>
+              <label className={labelClass}>Kategori Publikasi</label>
               <select 
                 value={kategori} onChange={(e) => setKategori(e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-semibold text-slate-700 cursor-pointer appearance-none"
+                className={`${inputClass} bg-white cursor-pointer appearance-none`}
               >
                 <option value="Berita Utama">Berita Utama</option>
                 <option value="Opini Kader">Opini Kader</option>
@@ -264,23 +257,21 @@ export default function AdminBerita() {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-5">
              <div>
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Deskripsi Singkat (Excerpt)</label>
+                <label className={labelClass}>Deskripsi Singkat (Excerpt)</label>
                 <textarea 
-                  rows="2" required value={excerpt} onChange={(e) => setExcerpt(e.target.value)}
-                  className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs text-slate-600 leading-relaxed"
-                  placeholder="Satu atau dua kalimat pembuka untuk ditampilkan di kartu berita..."
+                  rows="3" required value={excerpt} onChange={(e) => setExcerpt(e.target.value)}
+                  className={`${inputClass} resize-none`}
+                  placeholder="Satu atau dua kalimat pembuka untuk ditampilkan di kartu berita depan..."
                 />
              </div>
              
              <div>
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 mb-1">
-                  <ImageIcon size={12}/> Cover Gambar Berita
-                </label>
-                <div className="flex flex-col sm:flex-row items-center gap-2">
-                  <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border shrink-0 ${isUploading ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-sm'}`}>
-                    {isUploading ? <><Loader2 size={14} className="animate-spin" /> Mengunggah...</> : <><UploadCloud size={14} /> Pilih Foto</>}
+                <label className={labelClass}>Cover Gambar Berita (Landscape)</label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-1">
+                  <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors border shrink-0 ${isUploading ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm'}`}>
+                    {isUploading ? <><Loader2 size={16} className="animate-spin" /> Mengunggah...</> : <><UploadCloud size={16} /> Pilih File Foto</>}
                     <input 
                       type="file" accept="image/*" 
                       className="hidden" 
@@ -290,36 +281,32 @@ export default function AdminBerita() {
                   </label>
                   <input 
                     type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs font-mono bg-slate-50 text-slate-600"
-                    placeholder="URL akan terisi otomatis..."
+                    className={`${inputClass} font-mono text-xs bg-slate-50 text-slate-500`}
+                    placeholder="URL otomatis terisi..."
                     readOnly={isUploading}
                   />
                 </div>
+                <p className="text-[10px] text-slate-400 mt-2">Gunakan gambar rasio 16:9 agar tampilan optimal.</p>
              </div>
           </div>
 
-          <div>
-            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Isi Konten Berita</label>
-            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+          <div className="pt-2 border-t border-slate-100">
+            <label className={labelClass}>Isi Konten Berita</label>
+            
+            {/* 🔥 PERBAIKAN 2: Mengganti <style jsx> dengan Tailwind Arbitrary Variants yang aman */}
+            <div className="border border-slate-300 rounded-md overflow-hidden bg-white shadow-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500 transition-shadow [&_.quill]:flex [&_.quill]:flex-col [&_.ql-toolbar]:border-none [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-slate-300 [&_.ql-toolbar]:bg-slate-50 [&_.ql-container]:border-none [&_.ql-container]:min-h-[400px] [&_.ql-container]:text-sm [&_.ql-container]:text-slate-700 [&_.ql-editor]:min-h-[400px] [&_.ql-editor]:break-words">
               <ReactQuill 
                 theme="snow"
                 value={content}
                 onChange={setContent}
                 modules={quillModules}
-                className="min-h-[300px]"
                 placeholder="Tulis isi berita Anda di sini. Anda bisa menebalkan teks, membuat list, atau menyisipkan foto..."
               />
             </div>
-            <style jsx global>{`
-              .quill { display: flex; flex-direction: column; }
-              .ql-toolbar { border: none !important; border-bottom: 1px solid #e2e8f0 !important; background-color: #f8fafc; border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; }
-              .ql-container { border: none !important; min-height: 300px; font-size: 15px; font-family: inherit; }
-              .ql-editor { min-height: 300px; word-break: normal !important; overflow-wrap: break-word !important; }
-            `}</style>
           </div>
 
-          <div className="flex justify-end pt-2">
-             <button type="submit" disabled={isUploading} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-3.5 px-10 rounded-xl transition flex items-center justify-center gap-2 shadow-md">
+          <div className="flex justify-end pt-4 border-t border-slate-100">
+             <button type="submit" disabled={isUploading} className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2.5 px-8 rounded-md transition flex items-center justify-center gap-2 shadow-sm text-sm">
                {isEditing ? "Simpan Perubahan Artikel" : "Publikasikan Artikel"} <Send size={16} />
              </button>
           </div>
@@ -327,49 +314,63 @@ export default function AdminBerita() {
         </form>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-         <div className="bg-slate-50 p-4 border-b border-slate-200 flex items-center gap-2 font-bold text-slate-800">
-             <Newspaper size={18} className="text-slate-600" /> Riwayat Publikasi Artikel
+      {/* SEKSI 3: TABEL RIWAYAT PUBLIKASI */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+         <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
+             <Newspaper size={18} className="text-slate-500" />
+             <h2 className="text-base font-semibold text-slate-800">Riwayat Publikasi Artikel</h2>
          </div>
-         <div className="overflow-x-auto">
+         <div className="overflow-x-auto max-h-[60vh] hide-scrollbar relative">
             <table className="w-full text-left border-collapse whitespace-nowrap min-w-[800px]">
-              <thead className="bg-[#1e293b] text-white">
+              <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider w-12 text-center">No</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-center">Judul Artikel</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider w-40 text-center">Kategori</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider w-32 text-center">Tanggal</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider w-24 text-center">Aksi</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-12 text-center">No</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Judul & Cover</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40">Kategori</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-32">Tanggal Tayang</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm bg-white">
                 {newsList.length > 0 ? newsList.map((item, index) => {
                   const date = item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' }) : "-";
                   return (
-                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3 px-4 text-center font-mono font-bold text-slate-400">{index + 1}</td>
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="py-3 px-4 text-center font-mono font-medium text-slate-400 text-xs">{index + 1}</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                            {item.imageUrl ? (
-                             <img src={item.imageUrl} alt="cover" className="w-10 h-10 rounded-md object-cover bg-slate-200 shrink-0" />
+                             <img src={item.imageUrl} alt="cover" className="w-10 h-10 rounded-md object-cover border border-slate-200 shrink-0 shadow-sm" />
                            ) : (
-                             <div className="w-10 h-10 rounded-md bg-slate-100 flex items-center justify-center shrink-0"><ImageIcon size={16} className="text-slate-400"/></div>
+                             <div className="w-10 h-10 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0"><ImageIcon size={16} className="text-slate-400"/></div>
                            )}
-                           <span className="font-bold text-slate-800 truncate max-w-[400px]">{item.title}</span>
+                           <span className="font-semibold text-slate-800 truncate max-w-[350px]">{item.title}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4"><span className="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider">{item.kategori}</span></td>
-                      <td className="py-3 px-4 text-slate-500 font-medium text-xs">{date}</td>
+                      <td className="py-3 px-4">
+                        <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-1 rounded text-[10px] font-medium tracking-wide">
+                          {item.kategori}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-500 text-xs font-medium">{date}</td>
                       <td className="py-3 px-4 text-center">
-                         <div className="flex items-center justify-center gap-2">
-                           <button onClick={() => handleEditClick(item)} className="bg-amber-100 hover:bg-amber-500 text-amber-600 hover:text-white p-1.5 rounded-lg transition" title="Edit Artikel"><Edit size={16}/></button>
-                           <button onClick={() => handleDeleteArticle(item.id)} className="bg-red-100 hover:bg-red-500 text-red-600 hover:text-white p-1.5 rounded-lg transition" title="Hapus Artikel"><Trash2 size={16}/></button>
+                         <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <button onClick={() => handleEditClick(item)} className="bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300 p-1.5 rounded-md shadow-sm transition" title="Edit Artikel"><Edit size={14}/></button>
+                           <button onClick={() => handleDeleteArticle(item.id)} className="bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300 p-1.5 rounded-md shadow-sm transition" title="Hapus Artikel"><Trash2 size={14}/></button>
                          </div>
                       </td>
                     </tr>
                   )
                 }) : (
-                  <tr><td colSpan="5" className="py-12 text-center text-slate-400">Belum ada artikel yang dipublikasikan. Mulai menulis di atas!</td></tr>
+                  <tr>
+                    <td colSpan="5" className="py-12 text-center">
+                       <div className="flex flex-col items-center justify-center text-slate-400">
+                         <Newspaper size={32} className="mb-3 opacity-30" />
+                         <p className="font-medium text-slate-600 text-sm">Belum ada artikel dipublikasikan.</p>
+                         <p className="text-xs mt-1">Mulai tulis karya jurnalistik Anda di form atas.</p>
+                       </div>
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

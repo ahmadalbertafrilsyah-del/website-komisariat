@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { Save, Plus, Trash2, GraduationCap, Search, Image as ImageIcon, UploadCloud, FileSpreadsheet, Download, Loader2, Info, Star, Briefcase } from "lucide-react";
+// 🔥 PERBAIKAN: Menambahkan 'Users' di daftar import ini
+import { Save, Plus, Trash2, GraduationCap, Search, Image as ImageIcon, UploadCloud, FileSpreadsheet, Download, Loader2, Info, Star, Briefcase, Users } from "lucide-react";
 import * as XLSX from "xlsx";
 
 const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
@@ -18,6 +19,7 @@ const RAYON_OPTIONS = [
   "PR. PMII Pencerahan Galileo"
 ];
 
+// Komponen Tag Editor
 const EditTags = ({ data, onChange, placeholderText, theme = "blue" }) => {
   const dataArray = Array.isArray(data) ? data : (typeof data === 'string' && data.trim() !== '' ? data.split(',').map(p => p.trim()) : []);
 
@@ -43,10 +45,10 @@ const EditTags = ({ data, onChange, placeholderText, theme = "blue" }) => {
   const { bg, text, btn } = getThemeClasses();
 
   return (
-    <div className="w-full flex flex-col gap-1 mt-1">
-      <div className="flex flex-wrap gap-1">
+    <div className="w-full flex flex-col gap-1.5 mt-1.5">
+      <div className="flex flex-wrap gap-1.5">
         {dataArray.map((p, idx) => (
-          <span key={idx} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border ${bg}`}>
+          <span key={idx} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${bg}`}>
             {p}
             <button type="button" onClick={() => removeTag(idx)} className={`font-bold ml-1 outline-none transition-colors ${btn}`}>&times;</button>
           </span>
@@ -54,7 +56,7 @@ const EditTags = ({ data, onChange, placeholderText, theme = "blue" }) => {
       </div>
       <input
         type="text" onKeyDown={handleKeyDown} placeholder={dataArray.length === 0 ? "+ Ketik (lalu Enter)" : placeholderText}
-        className={`w-full font-semibold bg-transparent border-b border-slate-200 text-xs outline-none transition pb-0.5 ${text}`}
+        className={`w-full font-medium bg-transparent border-b border-slate-200 hover:border-slate-300 text-xs outline-none transition-colors pb-1 ${text}`}
       />
     </div>
   );
@@ -139,7 +141,7 @@ export default function AdminAlumni() {
                updatedAlumni[index] = { ...updatedAlumni[index], tahunMapaba: row["Tahun Mapaba"] || updatedAlumni[index].tahunMapaba, asalRayon: row["Asal Rayon"] || updatedAlumni[index].asalRayon, profesi: profesiArray.length ? profesiArray : updatedAlumni[index].profesi, bidang: bidangArray.length ? bidangArray : updatedAlumni[index].bidang, foto: row["URL Foto Profil"] || updatedAlumni[index].foto, deskripsiProfesi: { ...(updatedAlumni[index].deskripsiProfesi || {}), ...deskripsiObj } };
            }
         });
-        setAlumniData(updatedAlumni); alert(`Berhasil mengimpor ${importedCount} data alumni dari Excel! Klik 'Simpan Perubahan' untuk mengunci data.`);
+        setAlumniData(updatedAlumni); alert(`Berhasil mengimpor ${importedCount} data alumni dari Excel! Klik 'Simpan Pembaruan Direktori' di bawah untuk mengunci data.`);
       } catch (error) { alert("Gagal membaca file Excel. Pastikan format tabel sudah sesuai template."); }
     };
     reader.readAsBinaryString(file); e.target.value = null; 
@@ -154,12 +156,12 @@ export default function AdminAlumni() {
     setNewNama(""); setNewTahun(""); setNewRayon(""); setNewProfesi([]); setInputProfesi(""); setNewDeskripsiProfesi({}); setNewBidang([]); setInputBidang(""); setNewFoto("");
   };
 
-  const handleDelete = (id) => { if (confirm("Hapus alumni ini?")) setAlumniData(alumniData.filter(item => item.id !== id)); };
+  const handleDelete = (id) => { if (confirm("Yakin ingin menghapus alumni ini?")) setAlumniData(alumniData.filter(item => item.id !== id)); };
   const handleInputChange = (id, field, value) => { setAlumniData(alumniData.map(item => item.id === id ? { ...item, [field]: value } : item)); };
 
   const handleSaveAll = async (e) => {
-    e.preventDefault();
-    try { await setDoc(doc(db, "website_config", "database_alumni"), { listAlumni: alumniData }); alert("Data Alumni berhasil diperbarui di server!"); } 
+    if(e) e.preventDefault();
+    try { await setDoc(doc(db, "website_config", "database_alumni"), { listAlumni: alumniData }); alert("Data Direktori Alumni berhasil diperbarui dan disimpan ke Server!"); } 
     catch (error) { alert("Gagal menyimpan: " + error.message); }
   };
 
@@ -172,73 +174,80 @@ export default function AdminAlumni() {
     return ((a.nama || "").toLowerCase().includes(searchLower) || profesiString.toLowerCase().includes(searchLower) || bidangString.toLowerCase().includes(searchLower) || deskripsiString.toLowerCase().includes(searchLower) || (a.asalRayon || "").toLowerCase().includes(searchLower));
   });
 
+  const inputStandardClass = "w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm";
+  const labelStandardClass = "text-xs font-semibold text-slate-700 block mb-1.5";
+
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 size={32} className="text-blue-600 animate-spin"/></div>;
 
   return (
-    <div className="space-y-4 md:space-y-6 pb-12 max-w-7xl mx-auto px-2 md:px-4 text-sm">
+    <div className="space-y-6 pb-12 w-full text-sm">
       
-      {/* HEADER PANEL (Dipadatkan di HP) */}
-      <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border border-slate-200/60 shadow-sm flex flex-col sm:flex-row justify-between gap-3">
+      {/* HEADER PANEL */}
+      <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-8">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 flex items-center gap-2"><GraduationCap size={24} className="text-blue-600"/> Direktori Alumni</h1>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            Direktori Alumni
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">Kelola data profil, profesi, dan keahlian jejaring alumni PMII Komisariat.</p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-           <button onClick={handleDownloadTemplate} type="button" className="flex-1 sm:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs md:text-sm font-bold px-3 py-2 rounded-lg flex justify-center items-center gap-1.5 shadow-sm">
-             <Download size={16}/> Template
+        <div className="flex gap-2 w-full md:w-auto">
+           <button onClick={handleDownloadTemplate} type="button" className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
+             <Download size={16}/> Unduh Template
            </button>
            <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={excelInputRef} onChange={handleImportExcel} />
-           <button onClick={() => excelInputRef.current.click()} type="button" className="flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs md:text-sm font-bold px-3 py-2 rounded-lg flex justify-center items-center gap-1.5">
-             <FileSpreadsheet size={16}/> Import
+           <button onClick={() => excelInputRef.current.click()} type="button" className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
+             <FileSpreadsheet size={16}/> Impor Data (Excel)
            </button>
         </div>
       </div>
 
-      {/* FORM TAMBAH ALUMNI (Grid dirapatkan) */}
-      <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border border-slate-200/60 shadow-sm">
-        <h2 className="text-sm md:text-base font-extrabold text-slate-800 mb-3 flex items-center gap-2"><Plus size={16} className="text-blue-600 bg-blue-100 p-0.5 rounded-full" /> Tambah Data Alumni</h2>
+      {/* FORM TAMBAH ALUMNI */}
+      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+        <h2 className="text-base font-semibold text-slate-800 mb-5 flex items-center gap-2 border-b border-slate-100 pb-3">
+          <Plus size={18} className="text-blue-600" /> Tambah Data Alumni
+        </h2>
         
-        {/* GRID UTAMA - Sangat dioptimalkan agar elemen sejajar di HP */}
-        <form onSubmit={handleAdd} className="grid grid-cols-12 gap-2.5 md:gap-4 items-start">
+        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
           
-          <div className="col-span-12 md:col-span-4 space-y-1">
-            <label className="text-[9px] font-bold text-slate-500 uppercase">Nama Lengkap</label>
-            <input type="text" required value={newNama} onChange={e => setNewNama(e.target.value)} className="w-full p-2 border border-slate-200 bg-slate-50 focus:bg-white rounded-lg outline-none focus:ring-1 focus:ring-blue-500" placeholder="Nama & Gelar"/>
+          <div className="md:col-span-4 space-y-1">
+            <label className={labelStandardClass}>Nama Lengkap</label>
+            <input type="text" required value={newNama} onChange={e => setNewNama(e.target.value)} className={inputStandardClass} placeholder="Nama & Gelar"/>
           </div>
           
-          {/* Di HP Mapaba & Rayon bersebelahan */}
-          <div className="col-span-4 md:col-span-2 space-y-1">
-            <label className="text-[9px] font-bold text-slate-500 uppercase">Mapaba</label>
-            <input type="text" value={newTahun} onChange={e => setNewTahun(e.target.value)} className="w-full p-2 border border-slate-200 bg-slate-50 focus:bg-white rounded-lg outline-none focus:ring-1 focus:ring-blue-500" placeholder="2015"/>
+          <div className="md:col-span-2 space-y-1">
+            <label className={labelStandardClass}>Tahun Mapaba</label>
+            <input type="text" value={newTahun} onChange={e => setNewTahun(e.target.value)} className={inputStandardClass} placeholder="Contoh: 2015"/>
           </div>
 
-          <div className="col-span-8 md:col-span-3 space-y-1">
-            <label className="text-[9px] font-bold text-slate-500 uppercase">Asal Rayon</label>
-            <select value={newRayon} onChange={e => setNewRayon(e.target.value)} className="w-full p-2 border border-slate-200 bg-slate-50 focus:bg-white rounded-lg outline-none focus:ring-1 focus:ring-blue-500 appearance-none text-xs md:text-sm">
+          <div className="md:col-span-3 space-y-1">
+            <label className={labelStandardClass}>Asal Rayon</label>
+            <select value={newRayon} onChange={e => setNewRayon(e.target.value)} className={`${inputStandardClass} bg-white appearance-none`}>
               <option value="">Pilih Rayon</option>
               {RAYON_OPTIONS.map(rayon => <option key={rayon} value={rayon}>{rayon}</option>)}
             </select>
           </div>
 
-          <div className="col-span-12 md:col-span-3 space-y-1">
-            <label className="text-[9px] font-bold text-slate-500 uppercase">URL Foto / Upload</label>
-            <div className="flex gap-1.5">
-               <input type="text" value={newFoto} onChange={e => setNewFoto(e.target.value)} className="w-full flex-1 p-2 border border-slate-200 bg-slate-50 rounded-lg outline-none focus:ring-1 focus:ring-blue-500 text-xs" placeholder="URL..."/>
-               <label className="bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer px-2.5 border border-slate-200 rounded-lg flex items-center justify-center">
-                  {uploadingImage ? <Loader2 size={14} className="animate-spin"/> : <UploadCloud size={14}/>}
+          <div className="md:col-span-3 space-y-1">
+            <label className={labelStandardClass}>Foto Profil</label>
+            <div className="flex gap-2">
+               <input type="text" value={newFoto} onChange={e => setNewFoto(e.target.value)} className={`${inputStandardClass} flex-1 font-mono text-xs`} placeholder="URL Gambar..."/>
+               <label className="bg-slate-50 hover:bg-slate-100 text-slate-600 cursor-pointer px-3 border border-slate-300 rounded-md flex items-center justify-center transition-colors shadow-sm">
+                  {uploadingImage ? <Loader2 size={16} className="animate-spin"/> : <UploadCloud size={16}/>}
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadCloudinary(e.target.files[0])} disabled={uploadingImage}/>
                </label>
             </div>
           </div>
 
-          <div className="col-span-12 md:col-span-6 space-y-1">
-            <label className="text-[9px] font-bold text-blue-600 uppercase flex items-center gap-1"><GraduationCap size={10}/> Profesi (Enter)</label>
-            <div className="w-full min-h-[36px] p-1.5 border border-slate-200 bg-slate-50 focus-within:bg-white rounded-lg flex flex-wrap gap-1 items-center">
+          {/* Tags Section */}
+          <div className="md:col-span-6 space-y-1 bg-slate-50 p-4 rounded-md border border-slate-200">
+            <label className="text-xs font-semibold text-blue-700 flex items-center gap-1.5 mb-2"><Briefcase size={14}/> Profesi & Karir Saat Ini</label>
+            <div className="w-full min-h-[42px] p-2 border border-slate-300 bg-white rounded-md flex flex-wrap gap-1.5 items-center shadow-sm">
                {newProfesi.map((p, i) => (
-                 <span key={i} className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded flex items-center gap-1 border border-blue-200">
-                    {p} <button type="button" onClick={() => setNewProfesi(newProfesi.filter((_, idx) => idx !== i))} className="hover:text-red-500">&times;</button>
+                 <span key={i} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded border border-blue-200 flex items-center gap-1.5">
+                    {p} <button type="button" onClick={() => setNewProfesi(newProfesi.filter((_, idx) => idx !== i))} className="hover:text-red-500 font-bold">&times;</button>
                  </span>
                ))}
-               <input type="text" value={inputProfesi} onChange={(e) => setInputProfesi(e.target.value)} className="bg-transparent border-none outline-none text-xs flex-1 min-w-[80px] px-1" placeholder={newProfesi.length === 0 ? "Ketik lalu Enter..." : "Tambah profesi..."}
+               <input type="text" value={inputProfesi} onChange={(e) => setInputProfesi(e.target.value)} className="bg-transparent border-none outline-none text-sm flex-1 min-w-[120px] px-1" placeholder={newProfesi.length === 0 ? "Ketik lalu Enter..." : "Tambah profesi..."}
                  onKeyDown={(e) => {
                    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); const val = inputProfesi.trim(); if (val && !newProfesi.includes(val)) { setNewProfesi([...newProfesi, val]); setInputProfesi(''); } } 
                    else if (e.key === 'Backspace' && inputProfesi === '' && newProfesi.length > 0) setNewProfesi(newProfesi.slice(0, -1));
@@ -247,15 +256,15 @@ export default function AdminAlumni() {
             </div>
           </div>
 
-          <div className="col-span-12 md:col-span-6 space-y-1">
-             <label className="text-[9px] font-bold text-violet-600 uppercase flex items-center gap-1"><Star size={10}/> Keahlian (Enter)</label>
-             <div className="w-full min-h-[36px] p-1.5 border border-slate-200 bg-slate-50 focus-within:bg-white rounded-lg flex flex-wrap gap-1 items-center">
+          <div className="md:col-span-6 space-y-1 bg-slate-50 p-4 rounded-md border border-slate-200">
+             <label className="text-xs font-semibold text-violet-700 flex items-center gap-1.5 mb-2"><Star size={14}/> Bidang Keahlian Spesifik</label>
+             <div className="w-full min-h-[42px] p-2 border border-slate-300 bg-white rounded-md flex flex-wrap gap-1.5 items-center shadow-sm">
                {newBidang.map((p, i) => (
-                 <span key={i} className="px-1.5 py-0.5 bg-violet-100 text-violet-700 text-[10px] font-bold rounded flex items-center gap-1 border border-violet-200">
-                    {p} <button type="button" onClick={() => setNewBidang(newBidang.filter((_, idx) => idx !== i))} className="hover:text-red-500">&times;</button>
+                 <span key={i} className="px-2 py-1 bg-violet-50 text-violet-700 text-xs font-medium rounded border border-violet-200 flex items-center gap-1.5">
+                    {p} <button type="button" onClick={() => setNewBidang(newBidang.filter((_, idx) => idx !== i))} className="hover:text-red-500 font-bold">&times;</button>
                  </span>
                ))}
-               <input type="text" value={inputBidang} onChange={(e) => setInputBidang(e.target.value)} className="bg-transparent border-none outline-none text-xs flex-1 min-w-[80px] px-1" placeholder={newBidang.length === 0 ? "Web Developer..." : "Tambah keahlian..."}
+               <input type="text" value={inputBidang} onChange={(e) => setInputBidang(e.target.value)} className="bg-transparent border-none outline-none text-sm flex-1 min-w-[120px] px-1" placeholder={newBidang.length === 0 ? "Web Developer, Penulis..." : "Tambah keahlian..."}
                  onKeyDown={(e) => {
                    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); const val = inputBidang.trim(); if (val && !newBidang.includes(val)) { setNewBidang([...newBidang, val]); setInputBidang(''); } } 
                    else if (e.key === 'Backspace' && inputBidang === '' && newBidang.length > 0) setNewBidang(newBidang.slice(0, -1));
@@ -265,98 +274,118 @@ export default function AdminAlumni() {
           </div>
 
           {newProfesi.length > 0 && (
-            <div className="col-span-12 space-y-1.5">
-              <label className="text-[9px] font-bold text-blue-600 uppercase flex items-center gap-1"><Info size={10}/> Deskripsi Profesi</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="md:col-span-12 space-y-2 mt-2">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5"><Info size={14} className="text-blue-500"/> Keterangan/Deskripsi Profesi</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                  {newProfesi.map((p, idx) => (
-                   <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-2">
-                      <span className="text-[10px] font-extrabold text-slate-600 flex items-center gap-1"><Briefcase size={10} className="text-blue-500"/> {p}</span>
-                      <input type="text" value={newDeskripsiProfesi[p] || ""} onChange={e => setNewDeskripsiProfesi({...newDeskripsiProfesi, [p]: e.target.value})} className="w-full bg-transparent border-b border-slate-300 text-xs outline-none focus:border-blue-500 py-0.5 mt-1" placeholder={`Instansi ${p}...`}/>
+                   <div key={idx} className="bg-slate-50 border border-slate-200 rounded-md p-3">
+                      <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2"><Briefcase size={12} className="text-blue-500"/> {p}</span>
+                      <input type="text" value={newDeskripsiProfesi[p] || ""} onChange={e => setNewDeskripsiProfesi({...newDeskripsiProfesi, [p]: e.target.value})} className={inputStandardClass} placeholder={`Detail / Instansi untuk ${p}...`}/>
                    </div>
                  ))}
               </div>
             </div>
           )}
 
-          <div className="col-span-12 mt-2">
-            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm">Simpan Alumni Baru</button>
+          <div className="md:col-span-12 mt-2">
+            <button type="submit" className="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 px-6 rounded-md text-sm transition shadow-sm flex items-center justify-center gap-2">
+              <Plus size={16} /> Simpan Data Alumni Baru
+            </button>
           </div>
         </form>
       </div>
 
       {/* DAFTAR KARTU ALUMNI (EDIT) */}
-      <form onSubmit={handleSaveAll} className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-slate-200 p-3 md:p-5">
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-3">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-4 md:p-6 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50">
+           <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+             <Users size={18} className="text-slate-500" /> Database Alumni Terdaftar
+           </h3>
            <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"/>
-              <input type="text" placeholder="Cari data..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500"/>
+              <input type="text" placeholder="Cari nama, rayon, profesi..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className={inputStandardClass + " pl-9"}/>
            </div>
-           {alumniData.length > 0 && (
-             <button type="submit" className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2">
-               <Save size={16}/> Simpan Perubahan
-             </button>
-           )}
         </div>
         
-        {/* GRID KARTU EDIT (Dipaksa Layout Flex Row agar irit tempat vertikal) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-          {filteredData.map(a => (
-            <div key={a.id} className="border border-slate-200 p-3 rounded-xl flex flex-row items-start gap-3 bg-white relative group">
-               
-               {/* FOTO (Dikecilkan di HP) */}
-               <label className="shrink-0 cursor-pointer w-14 h-14 md:w-20 md:h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center relative">
-                 {a.foto ? <img src={a.foto} alt="profil" className="w-full h-full object-cover"/> : <ImageIcon size={20} className="text-slate-300"/>}
-                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <UploadCloud size={16} className="text-white"/>
-                 </div>
-                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadCloudinary(e.target.files[0], a.id)}/>
-               </label>
-
-               <div className="flex-1 min-w-0 space-y-2">
-                  <div className="flex justify-between items-start gap-2">
-                    <input type="text" value={a.nama} onChange={e => handleInputChange(a.id, "nama", e.target.value)} className="w-full font-bold text-slate-800 bg-transparent border-b border-slate-200 text-sm md:text-base outline-none focus:border-blue-500 truncate" placeholder="Nama Lengkap"/>
-                    <button type="button" onClick={() => handleDelete(a.id)} className="text-slate-400 hover:text-red-500 bg-slate-50 p-1.5 rounded-md"><Trash2 size={14}/></button>
-                  </div>
-                  
-                  {/* EDIT PROFESI */}
-                  <div className="bg-slate-50/50 p-1.5 md:p-2 rounded-lg border border-slate-100">
-                     <span className="text-[8px] font-bold text-blue-500 uppercase"><GraduationCap size={8} className="inline mr-1"/>Profesi</span>
-                     <EditTags profesiData={a.profesi} data={a.profesi} onChange={(newArr) => handleInputChange(a.id, "profesi", newArr)} placeholderText="+ Profesi..." theme="blue" />
-                     {a.profesi && a.profesi.length > 0 && (
-                        <div className="mt-1 space-y-1 pt-1 border-t border-slate-200/50">
-                          {a.profesi.map((p, pIdx) => (
-                             <div key={pIdx} className="flex items-center gap-1.5">
-                               <span className="text-[8px] font-bold bg-blue-100 text-blue-700 px-1 py-0.5 rounded max-w-[60px] truncate">{p}</span>
-                               <input type="text" value={ (typeof a.deskripsiProfesi === 'object' && a.deskripsiProfesi !== null) ? (a.deskripsiProfesi[p] || "") : ""} onChange={(e) => { const updatedDesk = typeof a.deskripsiProfesi === 'object' && a.deskripsiProfesi !== null ? { ...a.deskripsiProfesi } : {}; updatedDesk[p] = e.target.value; handleInputChange(a.id, "deskripsiProfesi", updatedDesk); }} className="flex-1 bg-transparent border-b border-slate-200 text-[10px] md:text-xs outline-none focus:border-blue-500 pb-0.5 text-slate-600" placeholder={`Deskripsi ${p}...`}/>
-                             </div>
-                          ))}
-                        </div>
-                     )}
-                  </div>
-
-                  {/* EDIT BIDANG KEAHLIAN */}
-                  <div className="bg-slate-50/50 p-1.5 md:p-2 rounded-lg border border-slate-100">
-                     <span className="text-[8px] font-bold text-violet-500 uppercase"><Star size={8} className="inline mr-1"/>Keahlian</span>
-                     <EditTags data={a.bidang} onChange={(newArr) => handleInputChange(a.id, "bidang", newArr)} placeholderText="+ Keahlian..." theme="violet" />
-                  </div>
-                  
-                  {/* Mapaba & Rayon di Kartu Edit */}
-                  <div className="flex gap-2 pt-1">
-                     <div className="w-1/3">
-                        <input type="text" value={a.tahunMapaba} onChange={e => handleInputChange(a.id, "tahunMapaba", e.target.value)} className="w-full bg-transparent border-b border-slate-200 text-[10px] outline-none text-slate-600 focus:border-blue-500" placeholder="Mapaba"/>
+        {/* GRID KARTU EDIT */}
+        <div className="p-4 md:p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filteredData.length === 0 ? (
+              <div className="col-span-full py-10 text-center text-slate-500 font-medium">Data alumni tidak ditemukan.</div>
+            ) : (
+              filteredData.map(a => (
+                <div key={a.id} className="border border-slate-200 p-4 rounded-lg flex flex-row items-start gap-4 bg-white relative group hover:border-slate-300 transition-colors">
+                   
+                   {/* FOTO */}
+                   <label className="shrink-0 cursor-pointer w-16 h-16 md:w-20 md:h-20 rounded-md overflow-hidden bg-slate-50 border border-slate-200 flex items-center justify-center relative shadow-sm">
+                     {a.foto ? <img src={a.foto} alt="profil" className="w-full h-full object-cover"/> : <ImageIcon size={24} className="text-slate-300"/>}
+                     <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <UploadCloud size={18} className="text-white"/>
                      </div>
-                     <div className="w-2/3">
-                        <select value={a.asalRayon} onChange={e => handleInputChange(a.id, "asalRayon", e.target.value)} className="w-full bg-transparent border-b border-slate-200 text-[10px] outline-none text-slate-600 focus:border-blue-500 truncate">
-                           <option value="">Rayon</option>
-                           {RAYON_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
-                     </div>
-                  </div>
-               </div>
-            </div>
-          ))}
+                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadCloudinary(e.target.files[0], a.id)}/>
+                   </label>
+
+                   <div className="flex-1 min-w-0 space-y-3">
+                      
+                      <div className="flex justify-between items-start gap-3">
+                        <input type="text" value={a.nama} onChange={e => handleInputChange(a.id, "nama", e.target.value)} className="w-full font-bold text-slate-800 bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-sm md:text-base outline-none px-2 py-1 rounded transition-colors truncate -ml-2" placeholder="Nama Lengkap"/>
+                        <button type="button" onClick={() => handleDelete(a.id)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-colors border border-transparent hover:border-red-200" title="Hapus Alumni"><Trash2 size={16}/></button>
+                      </div>
+                      
+                      {/* EDIT PROFESI */}
+                      <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
+                         <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Profesi & Karir</span>
+                         <EditTags data={a.profesi} onChange={(newArr) => handleInputChange(a.id, "profesi", newArr)} placeholderText="+ Profesi..." theme="blue" />
+                         
+                         {a.profesi && a.profesi.length > 0 && (
+                            <div className="mt-2 space-y-1.5 pt-2 border-t border-slate-200/60">
+                              {a.profesi.map((p, pIdx) => (
+                                 <div key={pIdx} className="flex items-center gap-2">
+                                   <span className="text-[10px] font-medium bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md max-w-[80px] truncate shadow-sm">{p}</span>
+                                   <input type="text" value={ (typeof a.deskripsiProfesi === 'object' && a.deskripsiProfesi !== null) ? (a.deskripsiProfesi[p] || "") : ""} onChange={(e) => { const updatedDesk = typeof a.deskripsiProfesi === 'object' && a.deskripsiProfesi !== null ? { ...a.deskripsiProfesi } : {}; updatedDesk[p] = e.target.value; handleInputChange(a.id, "deskripsiProfesi", updatedDesk); }} className="flex-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-[11px] md:text-xs outline-none px-2 py-1 rounded transition-colors text-slate-700" placeholder={`Detail ${p}...`}/>
+                                 </div>
+                              ))}
+                            </div>
+                         )}
+                      </div>
+
+                      {/* EDIT BIDANG KEAHLIAN */}
+                      <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
+                         <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Bidang Keahlian</span>
+                         <EditTags data={a.bidang} onChange={(newArr) => handleInputChange(a.id, "bidang", newArr)} placeholderText="+ Keahlian..." theme="violet" />
+                      </div>
+                      
+                      {/* Mapaba & Rayon di Kartu Edit */}
+                      <div className="flex gap-3 pt-1">
+                         <div className="w-1/3">
+                            <input type="text" value={a.tahunMapaba} onChange={e => handleInputChange(a.id, "tahunMapaba", e.target.value)} className="w-full bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-xs outline-none text-slate-600 px-2 py-1.5 rounded transition-colors" placeholder="Thn Mapaba"/>
+                         </div>
+                         <div className="w-2/3">
+                            <select value={a.asalRayon} onChange={e => handleInputChange(a.id, "asalRayon", e.target.value)} className="w-full bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-xs outline-none text-slate-600 px-2 py-1.5 rounded transition-colors appearance-none truncate">
+                               <option value="">Pilih Rayon</option>
+                               {RAYON_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      </form>
+      </div>
+
+      {/* Floating Action Bar (Simpan) */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg border border-slate-200 sticky bottom-6 z-40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+         <div className="flex items-start gap-2.5 text-sm text-slate-600 max-w-2xl">
+           <Info size={18} className="shrink-0 mt-0.5 text-blue-500" />
+           <p>Semua perubahan pada kartu alumni (termasuk tag profesi dan keahlian) baru akan diperbarui ke sistem publik setelah Anda menekan tombol simpan.</p>
+         </div>
+         <button onClick={handleSaveAll} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap shrink-0 text-sm">
+            <Save size={16} /> Simpan Perubahan Direktori
+          </button>
+      </div>
+
     </div>
   );
 }

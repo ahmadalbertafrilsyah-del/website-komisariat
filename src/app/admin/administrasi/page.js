@@ -3,708 +3,551 @@ import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import * as XLSX from "xlsx";
-import { Save, Plus, Trash2, Info, Hash, Mail, FileSpreadsheet, UploadCloud, Briefcase, Scale, FileCheck, Image as ImageIcon, FileText, Loader2, Inbox, Send, Download, Building, Settings, X } from "lucide-react";
+import { 
+  FolderArchive, Mail, Briefcase, Scale, FileCheck, Inbox, Send, Search, 
+  Download, Plus, Trash2, Edit, Save, FileSpreadsheet, Building2, 
+  Loader2, Sparkles, X, ExternalLink, UploadCloud
+} from "lucide-react";
 
-export default function AdminAdministrasiEditor() {
+export default function AdminAdministrasi() {
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("persuratan");
-  const [activeSuratTab, setActiveSuratTab] = useState("masuk");
-
-  // ================= STATE RUANG KERJA (LEMBAGA) =================
   const [activeLembaga, setActiveLembaga] = useState("Komisariat"); 
   const [listLSO, setListLSO] = useState([]); 
-  const [showLSOModal, setShowLSOModal] = useState(false);
-  const [newLSO, setNewLSO] = useState("");
+  
+  // State Data Master
+  const [masterSuratMasuk, setMasterSuratMasuk] = useState([]); 
+  const [masterSuratKeluar, setMasterSuratKeluar] = useState([]); 
+  const [masterProker, setMasterProker] = useState([]);
+  const [masterProdukHukum, setMasterProdukHukum] = useState([]);
+  const [masterLpj, setMasterLpj] = useState([]); 
+  
+  // State Navigasi
+  const [activeTab, setActiveTab] = useState("persuratan"); 
+  const [activeSuratTab, setActiveSuratTab] = useState("masuk"); 
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // ================= STATE DATABASE =================
-  const [suratMasukData, setSuratMasukData] = useState([]);
-  const [suratKeluarData, setSuratKeluarData] = useState([]);
-  const [prokerData, setProkerData] = useState([]);
-  const [hukumData, setHukumData] = useState([]);
-  const [lpjData, setLpjData] = useState([]);
+  // State Modal & Form
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editDataId, setEditDataId] = useState(null);
+  const [formData, setFormData] = useState({});
+  const [expandedRowId, setExpandedRowId] = useState(null);
+  
+  const excelInputRef = useRef(null);
 
-  // State Upload Cloudinary
-  const [uploadingField, setUploadingField] = useState(null);
-  const [urls, setUrls] = useState({
-    suratFile: "", prokerFile: "", hukumThumb: "", hukumFile: "", lpjThumb: "", lpjFile: ""
-  });
-
-  const fileInputSuratMasukRef = useRef(null);
-  const fileInputSuratKeluarRef = useRef(null);
-  const fileInputProkerRef = useRef(null);
+  // Styling Standar Enterprise
+  const inputStandardClass = "w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white";
+  const labelStandardClass = "text-xs font-semibold text-slate-700 block mb-1.5";
 
   useEffect(() => {
-    async function loadSemuaData() {
-      try {
-        const docRef = doc(db, "website_config", "database_administrasi");
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setSuratMasukData(data.listSuratMasuk || []);
-          setSuratKeluarData(data.listSuratKeluar || data.listDokumen || []);
-          setProkerData(data.listProker || []);
-          setHukumData(data.listProdukHukum || []);
-          setLpjData(data.listLpj || []);
-          setListLSO(data.listLSO || []); 
-        }
-      } catch (error) {
-        console.error("Gagal mengambil data administrasi:", error);
-      } finally {
-        setLoading(false);
+    fetchAdministrasiData();
+  }, []); 
+
+  async function fetchAdministrasiData() {
+    try {
+      const docRef = doc(db, "website_config", "database_administrasi");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setMasterSuratMasuk(data.listSuratMasuk || []); 
+        setMasterSuratKeluar(data.listSuratKeluar || data.listDokumen || []); 
+        setMasterProker(data.listProker || []);   
+        setMasterProdukHukum(data.listProdukHukum || []); 
+        setMasterLpj(data.listLpj || []); 
+        setListLSO(data.listLSO || []);
       }
+    } catch (error) {
+      console.error("Gagal menarik database:", error);
+    } finally {
+      setLoading(false);
     }
-    loadSemuaData();
-  }, []);
+  }
 
-  const filteredSuratMasuk = suratMasukData.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  const filteredSuratKeluar = suratKeluarData.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  const filteredProker = prokerData.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  const filteredHukum = hukumData.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  const filteredLpj = lpjData.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-
-  const handleAddLSO = async () => {
-    if(!newLSO.trim() || listLSO.includes(newLSO.trim())) return;
-    const updated = [...listLSO, newLSO.trim()];
-    setListLSO(updated); setNewLSO("");
-    await setDoc(doc(db, "website_config", "database_administrasi"), { listLSO: updated }, { merge: true });
+  // ================= HELPER & FILTERING =================
+  const formatDisplayDate = (dateVal) => {
+    if (!dateVal) return "-";
+    if (!isNaN(dateVal) && Number(dateVal) > 20000) {
+      const date = new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000));
+      return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    }
+    if (typeof dateVal === 'string' && dateVal.includes('T') && !isNaN(new Date(dateVal))) {
+      const d = new Date(dateVal);
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    }
+    return dateVal;
   };
 
-  const handleDeleteLSO = async (lsoName) => {
-    if(!confirm(`Hapus ruang kerja ${lsoName}? Arsip tidak hilang, hanya label lembaganya yang tersembunyi.`)) return;
-    const updated = listLSO.filter(l => l !== lsoName);
-    setListLSO(updated);
-    if(activeLembaga === lsoName) setActiveLembaga("Komisariat");
-    await setDoc(doc(db, "website_config", "database_administrasi"), { listLSO: updated }, { merge: true });
+  const currentSuratMasuk = masterSuratMasuk.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
+  const currentSuratKeluar = masterSuratKeluar.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
+  const currentProker = masterProker.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
+  const currentProdukHukum = masterProdukHukum.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
+  const currentLpj = masterLpj.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
+
+  const getFilteredData = () => {
+    const q = searchQuery.toLowerCase();
+    if (activeTab === "persuratan") {
+      const targetData = activeSuratTab === "masuk" ? currentSuratMasuk : currentSuratKeluar;
+      return targetData.filter(i => (i.nomorSurat||"").toLowerCase().includes(q) || (i.hal||i.perihalSurat||"").toLowerCase().includes(q) || (i.asalSurat||i.tujuanSurat||"").toLowerCase().includes(q));
+    } else if (activeTab === "proker") {
+      return currentProker.filter(i => (i.namaProker||"").toLowerCase().includes(q) || (i.pelaksanaProker||"").toLowerCase().includes(q));
+    } else if (activeTab === "produkhukum") {
+      return currentProdukHukum.filter(i => (i.nomorSK||"").toLowerCase().includes(q) || (i.tentangHukum||"").toLowerCase().includes(q));
+    } else {
+      return currentLpj.filter(i => (i.namaLaporan||"").toLowerCase().includes(q) || (i.periode||"").toLowerCase().includes(q));
+    }
+  };
+  const currentListData = getFilteredData();
+
+  // ================= MANAJEMEN DATA =================
+  const handleOpenModal = (data = null) => {
+    if (data) {
+      setEditDataId(data.id || data.nomorSurat || data.nomorSK || data.namaProker || Math.random());
+      setFormData(data);
+    } else {
+      setEditDataId(null);
+      setFormData({ lembaga: activeLembaga });
+    }
+    setIsModalOpen(true);
   };
 
-  const handleFileUpload = async (e, fieldKey) => {
+  const handleSaveData = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = { ...formData, id: editDataId || Date.now().toString(), lembaga: activeLembaga };
+      let newMaster;
+
+      if (activeTab === "persuratan") {
+        if (activeSuratTab === "masuk") {
+          newMaster = editDataId ? masterSuratMasuk.map(i => i.id === editDataId ? payload : i) : [payload, ...masterSuratMasuk];
+          setMasterSuratMasuk(newMaster);
+        } else {
+          newMaster = editDataId ? masterSuratKeluar.map(i => i.id === editDataId ? payload : i) : [payload, ...masterSuratKeluar];
+          setMasterSuratKeluar(newMaster);
+        }
+      } else if (activeTab === "proker") {
+        newMaster = editDataId ? masterProker.map(i => i.id === editDataId ? payload : i) : [payload, ...masterProker];
+        setMasterProker(newMaster);
+      } else if (activeTab === "produkhukum") {
+        newMaster = editDataId ? masterProdukHukum.map(i => i.id === editDataId ? payload : i) : [payload, ...masterProdukHukum];
+        setMasterProdukHukum(newMaster);
+      } else if (activeTab === "laporan") {
+        newMaster = editDataId ? masterLpj.map(i => i.id === editDataId ? payload : i) : [payload, ...masterLpj];
+        setMasterLpj(newMaster);
+      }
+
+      await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
+      alert("Data berhasil disimpan!");
+      setIsModalOpen(false);
+    } catch (error) {
+      alert("Gagal menyimpan data: " + error.message);
+    }
+  };
+
+  const handleDeleteData = async (idToDelete) => {
+    if (!confirm("Hapus arsip ini secara permanen?")) return;
+    try {
+      let newMaster;
+      if (activeTab === "persuratan") {
+        if (activeSuratTab === "masuk") { newMaster = masterSuratMasuk.filter(i => i.id !== idToDelete); setMasterSuratMasuk(newMaster); } 
+        else { newMaster = masterSuratKeluar.filter(i => i.id !== idToDelete); setMasterSuratKeluar(newMaster); }
+      } else if (activeTab === "proker") { newMaster = masterProker.filter(i => i.id !== idToDelete); setMasterProker(newMaster);
+      } else if (activeTab === "produkhukum") { newMaster = masterProdukHukum.filter(i => i.id !== idToDelete); setMasterProdukHukum(newMaster);
+      } else if (activeTab === "laporan") { newMaster = masterLpj.filter(i => i.id !== idToDelete); setMasterLpj(newMaster); }
+
+      await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
+    } catch (error) { alert("Gagal menghapus: " + error.message); }
+  };
+
+  const saveDataToFirebase = async (tab, suratTab, newMasterData) => {
+    const docRef = doc(db, "website_config", "database_administrasi");
+    let updateField = {};
+    if (tab === "persuratan") updateField = suratTab === "masuk" ? { listSuratMasuk: newMasterData } : { listSuratKeluar: newMasterData };
+    else if (tab === "proker") updateField = { listProker: newMasterData };
+    else if (tab === "produkhukum") updateField = { listProdukHukum: newMasterData };
+    else if (tab === "laporan") updateField = { listLpj: newMasterData };
+    await setDoc(docRef, updateField, { merge: true });
+  };
+
+  // ================= IMPORT & EXPORT EXCEL =================
+  const handleDownloadTemplate = () => {
+    let templateData = [];
+    if (activeTab === "persuratan") {
+      templateData = [{
+        "Nomor Surat": "001/PMII/2026",
+        "Asal/Tujuan Surat": "PC PMII Kota Malang",
+        "Tanggal Buat (YYYY-MM-DD)": "2026-06-01",
+        "Tanggal Terima/Kirim (YYYY-MM-DD)": "2026-06-02",
+        "Perihal": "Undangan Kegiatan",
+        "Link Berkas": "https://drive.google.com/..."
+      }];
+    } else if (activeTab === "proker") {
+      templateData = [{
+        "Nama Program Kerja": "Pelatihan Jurnalistik",
+        "Biro / Pelaksana": "Biro Media",
+        "Waktu Pelaksanaan (YYYY-MM-DD)": "2026-07-15",
+        "Tujuan Kegiatan": "Meningkatkan kemampuan menulis"
+      }];
+    } else if (activeTab === "produkhukum") {
+      templateData = [{
+        "Nomor SK / Ketetapan": "01/SK/PMII/2026",
+        "Tentang": "Pengesahan Pengurus Rayon",
+        "Link Berkas": ""
+      }];
+    } else if (activeTab === "laporan") {
+      templateData = [{
+        "Nama Laporan": "LPJ Panitia RTK",
+        "Periode": "2026",
+        "Link Berkas": ""
+      }];
+    }
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `Template_${activeTab}`);
+    XLSX.writeFile(wb, `Template_Impor_${activeTab.toUpperCase()}.xlsx`);
+  };
+
+  const handleImportExcel = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (fieldKey.includes("Thumb") && !file.type.startsWith("image/")) {
-      alert("Harap pilih file berupa gambar (JPG/PNG) untuk Cover/Thumbnail!");
-      e.target.value = null; return;
-    }
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws);
 
-    setUploadingField(fieldKey);
-    const formData = new FormData(); formData.append("file", file);
+        let updatedData = [];
+        if (activeTab === "persuratan") {
+          const isMasuk = activeSuratTab === "masuk";
+          updatedData = data.map(row => ({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+            lembaga: activeLembaga,
+            nomorSurat: row["Nomor Surat"] || "",
+            hal: row["Perihal"] || "",
+            tglBuat: row["Tanggal Buat (YYYY-MM-DD)"] || "",
+            linkFile: row["Link Berkas"] || "",
+            ...(isMasuk 
+              ? { asalSurat: row["Asal/Tujuan Surat"] || "", tglDatang: row["Tanggal Terima/Kirim (YYYY-MM-DD)"] || "" } 
+              : { tujuanSurat: row["Asal/Tujuan Surat"] || "", tglKirim: row["Tanggal Terima/Kirim (YYYY-MM-DD)"] || "" })
+          }));
+          const newMaster = [...updatedData, ...(isMasuk ? masterSuratMasuk : masterSuratKeluar)];
+          if (isMasuk) setMasterSuratMasuk(newMaster); else setMasterSuratKeluar(newMaster);
+          await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
+        } else if (activeTab === "proker") {
+          updatedData = data.map(row => ({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+            lembaga: activeLembaga,
+            namaProker: row["Nama Program Kerja"] || "",
+            pelaksanaProker: row["Biro / Pelaksana"] || "",
+            waktuPelaksanaan: row["Waktu Pelaksanaan (YYYY-MM-DD)"] || "",
+            tujuan: row["Tujuan Kegiatan"] || "",
+            linkFile: row["Link Berkas"] || ""
+          }));
+          const newMaster = [...updatedData, ...masterProker];
+          setMasterProker(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
+        } else if (activeTab === "produkhukum") {
+          updatedData = data.map(row => ({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+            lembaga: activeLembaga,
+            nomorSK: row["Nomor SK / Ketetapan"] || "",
+            tentangHukum: row["Tentang"] || "",
+            linkFile: row["Link Berkas"] || ""
+          }));
+          const newMaster = [...updatedData, ...masterProdukHukum];
+          setMasterProdukHukum(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
+        } else if (activeTab === "laporan") {
+          updatedData = data.map(row => ({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+            lembaga: activeLembaga,
+            namaLaporan: row["Nama Laporan"] || "",
+            periode: row["Periode"] || "",
+            linkFile: row["Link Berkas"] || ""
+          }));
+          const newMaster = [...updatedData, ...masterLpj];
+          setMasterLpj(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
+        }
 
-    try {
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload gagal");
-      const data = await res.json();
-      setUrls(prev => ({ ...prev, [fieldKey]: data.url }));
-      alert("Berkas berhasil diunggah ke server!");
-    } catch (error) {
-      alert("Gagal mengunggah file. Pastikan API & Kredensial sudah benar.");
-    } finally {
-      setUploadingField(null); e.target.value = null;
-    }
-  };
-
-  const handleDelete = async (type, id) => {
-    if (!confirm("Hapus berkas ini secara permanen?")) return;
-    const docRef = doc(db, "website_config", "database_administrasi");
-    try {
-      if (type === "suratMasuk") {
-        const updated = suratMasukData.filter(item => item.id !== id);
-        setSuratMasukData(updated); await setDoc(docRef, { listSuratMasuk: updated }, { merge: true });
-      } else if (type === "suratKeluar") {
-        const updated = suratKeluarData.filter(item => item.id !== id);
-        setSuratKeluarData(updated); await setDoc(docRef, { listSuratKeluar: updated }, { merge: true });
-      } else if (type === "proker") {
-        const updated = prokerData.filter(item => item.id !== id);
-        setProkerData(updated); await setDoc(docRef, { listProker: updated }, { merge: true });
-      } else if (type === "hukum") {
-        const updated = hukumData.filter(item => item.id !== id);
-        setHukumData(updated); await setDoc(docRef, { listProdukHukum: updated }, { merge: true });
-      } else if (type === "lpj") {
-        const updated = lpjData.filter(item => item.id !== id);
-        setLpjData(updated); await setDoc(docRef, { listLpj: updated }, { merge: true });
+        alert(`Berhasil mengimpor ${updatedData.length} data ke arsip ${activeTab.toUpperCase()} (${activeLembaga})!`);
+      } catch (error) {
+        alert("Gagal membaca file Excel. Pastikan format tabel sesuai dengan Template Unduhan.");
       }
-    } catch (error) { alert("Gagal menghapus data: " + error.message); }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = null;
   };
 
-  const handleUpdate = (type, id, field, value) => {
-    if (type === "suratMasuk") setSuratMasukData(suratMasukData.map(item => item.id === id ? { ...item, [field]: value } : item));
-    if (type === "suratKeluar") setSuratKeluarData(suratKeluarData.map(item => item.id === id ? { ...item, [field]: value } : item));
-    if (type === "proker") setProkerData(prokerData.map(item => item.id === id ? { ...item, [field]: value } : item));
-    if (type === "hukum") setHukumData(hukumData.map(item => item.id === id ? { ...item, [field]: value } : item));
-    if (type === "lpj") setLpjData(lpjData.map(item => item.id === id ? { ...item, [field]: value } : item));
-  };
-
-  const handleSaveAll = async (e) => {
-    if (e) e.preventDefault();
-    try {
-      await setDoc(doc(db, "website_config", "database_administrasi"), {
-        listSuratMasuk: suratMasukData, listSuratKeluar: suratKeluarData,
-        listProker: prokerData, listProdukHukum: hukumData, listLpj: lpjData, listLSO: listLSO
-      }, { merge: true });
-      alert("Seluruh Perubahan di Tabel Berhasil Disimpan secara Permanen!");
-    } catch (error) { alert("Gagal menyimpan: " + error.message); }
-  };
-
-  const handleAddSuratMasuk = async (e) => {
-    e.preventDefault(); const fd = new FormData(e.target);
-    const newItem = { id: Date.now(), lembaga: activeLembaga, nomorSurat: fd.get("nomorSurat"), asalSurat: fd.get("asalSurat"), tglBuat: fd.get("tglBuat"), tglDatang: fd.get("tglDatang"), hal: fd.get("hal"), ket: fd.get("ket"), linkFile: urls.suratFile };
-    const updated = [...suratMasukData, newItem]; 
-    setSuratMasukData(updated); e.target.reset(); setUrls(prev => ({ ...prev, suratFile: "" }));
-    try { await setDoc(doc(db, "website_config", "database_administrasi"), { listSuratMasuk: updated }, { merge: true }); } catch (err) { console.error(err); }
-  };
-
-  const handleAddSuratKeluar = async (e) => {
-    e.preventDefault(); const fd = new FormData(e.target);
-    const newItem = { id: Date.now(), lembaga: activeLembaga, nomorSurat: fd.get("nomorSurat"), tujuanSurat: fd.get("tujuanSurat"), tglBuat: fd.get("tglBuat"), tglKirim: fd.get("tglKirim"), hal: fd.get("hal"), ket: fd.get("ket"), linkFile: urls.suratFile };
-    const updated = [...suratKeluarData, newItem]; 
-    setSuratKeluarData(updated); e.target.reset(); setUrls(prev => ({ ...prev, suratFile: "" }));
-    try { await setDoc(doc(db, "website_config", "database_administrasi"), { listSuratKeluar: updated }, { merge: true }); } catch (err) { console.error(err); }
-  };
-
-  const handleAddProker = async (e) => {
-    e.preventDefault(); const fd = new FormData(e.target);
-    const newItem = { id: Date.now(), lembaga: activeLembaga, pelaksanaProker: fd.get("pelaksana"), namaProker: fd.get("namaProker"), tujuan: fd.get("tujuan"), indikator: fd.get("indikator"), sasaran: fd.get("sasaran"), waktuPelaksanaan: fd.get("waktu"), penanggungJawab: fd.get("pj"), estimasiDana: fd.get("dana"), linkFile: urls.prokerFile };
-    const updated = [...prokerData, newItem]; setProkerData(updated); e.target.reset(); setUrls(prev => ({ ...prev, prokerFile: "" }));
-    try { await setDoc(doc(db, "website_config", "database_administrasi"), { listProker: updated }, { merge: true }); } catch (err) { console.error(err); }
-  };
-
-  const handleAddHukum = async (e) => {
-    e.preventDefault(); const fd = new FormData(e.target);
-    const newItem = { id: Date.now(), lembaga: activeLembaga, nomorSK: fd.get("nomorSK"), tentangHukum: fd.get("tentang"), deskripsiHukum: fd.get("deskripsi"), linkFile: urls.hukumFile, thumbnailUrl: urls.hukumThumb };
-    const updated = [...hukumData, newItem]; setHukumData(updated); e.target.reset(); setUrls(prev => ({ ...prev, hukumFile: "", hukumThumb: "" }));
-    try { await setDoc(doc(db, "website_config", "database_administrasi"), { listProdukHukum: updated }, { merge: true }); } catch (err) { console.error(err); }
-  };
-
-  const handleAddLpj = async (e) => {
-    e.preventDefault(); const fd = new FormData(e.target);
-    const newItem = { id: Date.now(), lembaga: activeLembaga, namaLaporan: fd.get("namaLaporan"), periode: fd.get("periode"), deskripsiLaporan: fd.get("deskripsi"), linkFile: urls.lpjFile, thumbnailUrl: urls.lpjThumb };
-    const updated = [...lpjData, newItem]; setLpjData(updated); e.target.reset(); setUrls(prev => ({ ...prev, lpjFile: "", lpjThumb: "" }));
-    try { await setDoc(doc(db, "website_config", "database_administrasi"), { listLpj: updated }, { merge: true }); } catch (err) { console.error(err); }
-  };
-
-  const downloadTemplateSuratMasuk = () => {
-    const ws = XLSX.utils.json_to_sheet([{ "No Surat": "001/Masuk/2026", "Asal Surat": "BEM", "Tgl Buat": "12/01/2026", "Tgl Datang": "14/01/2026", "Hal": "Undangan", "Ket": "Segera", "Link File": "https://..." }]);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template"); XLSX.writeFile(wb, "Template_Surat_Masuk.xlsx");
-  };
-
-  const downloadTemplateSuratKeluar = () => {
-    const ws = XLSX.utils.json_to_sheet([{ "No Surat": "001/Keluar/2026", "Tujuan Surat": "Rektorat", "Tgl Buat": "10/01/2026", "Tgl Kirim": "11/01/2026", "Hal": "Peminjaman Tempat", "Ket": "ACC", "Link File": "https://..." }]);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template"); XLSX.writeFile(wb, "Template_Surat_Keluar.xlsx");
-  };
-
-  const downloadTemplateProker = () => {
-    const ws = XLSX.utils.json_to_sheet([{ "Pelaksana": "Kaderisasi", "Nama Kegiatan": "Mapaba", "Tujuan": "Rekrutmen", "Indikator": "50 Peserta", "Sasaran": "Maba", "Waktu Pelaksanaan": "Agustus 2026", "Penanggung Jawab": "Ahmad", "Estimasi Dana": "Rp 5.000.000", "Link File": "https://..." }]);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template"); XLSX.writeFile(wb, "Template_Program_Kerja.xlsx");
-  };
-
-  // Helper untuk mengubah Excel Date serial number ke DD/MM/YYYY string
-  const formatExcelDate = (excelDate) => {
-    if (!excelDate) return "";
-    if (typeof excelDate === 'string') return excelDate;
-    if (excelDate instanceof Date) {
-       const day = String(excelDate.getDate()).padStart(2, '0');
-       const month = String(excelDate.getMonth() + 1).padStart(2, '0');
-       const year = excelDate.getFullYear();
-       return `${day}/${month}/${year}`;
+  const handleExportExcel = () => {
+    if (currentListData.length === 0) return alert("Tidak ada data untuk diekspor!");
+    let formattedData = [];
+    if (activeTab === "persuratan") {
+      formattedData = currentListData.map((i, idx) => ({ "No": idx + 1, "Nomor Surat": i.nomorSurat, "Perihal": i.hal, "Tujuan/Asal": i.tujuanSurat||i.asalSurat, "Tgl Buat": i.tglBuat, "Link": i.linkFile }));
+    } else if (activeTab === "proker") {
+      formattedData = currentListData.map((i, idx) => ({ "No": idx + 1, "Kegiatan": i.namaProker, "Pelaksana": i.pelaksanaProker, "Tujuan": i.tujuan, "Indikator": i.indikator }));
+    } else {
+      formattedData = currentListData.map((i, idx) => ({ "No": idx + 1, "Judul/No SK": i.tentangHukum||i.namaLaporan||i.nomorSK, "Deskripsi": i.deskripsiHukum||i.deskripsiLaporan }));
     }
-    return String(excelDate);
+    const ws = XLSX.utils.json_to_sheet(formattedData); const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Arsip"); XLSX.writeFile(wb, `Rekap_${activeTab}_${Date.now()}.xlsx`);
   };
 
-  // ================= 7. FUNGSI IMPORT EXCEL (DENGAN SMART COLUMN DETECTOR) =================
-  const handleExcelSuratMasuk = (e) => {
-    const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const workbook = XLSX.read(evt.target.result, { type: "binary", cellDates: true });
-        const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-        
-        const validData = data.map(row => {
-          // Normalize Keys: Menghilangkan spasi berlebih dan merubah ke huruf kecil
-          const lRow = Object.keys(row).reduce((acc, key) => { acc[key.toLowerCase().trim()] = row[key]; return acc; }, {});
-          return {
-            id: Date.now() + Math.random(), 
-            lembaga: activeLembaga,
-            nomorSurat: String(lRow["no surat"] || lRow["nomor surat"] || lRow["nomor"] || ""), 
-            asalSurat: String(lRow["asal surat"] || lRow["asal"] || ""),
-            tglBuat: formatExcelDate(lRow["tgl buat"] || lRow["tanggal buat"] || lRow["waktu buat"]), 
-            tglDatang: formatExcelDate(lRow["tgl datang"] || lRow["tanggal datang"] || lRow["waktu datang"]),
-            hal: String(lRow["hal"] || lRow["perihal"] || ""), 
-            ket: String(lRow["ket"] || lRow["keterangan"] || ""), 
-            // Cerdas mencari kolom URL/Link
-            linkFile: String(lRow["link file"] || lRow["link file surat"] || lRow["link"] || lRow["link berkas"] || lRow["url"] || "")
-          };
-        }).filter(i => i.nomorSurat || i.hal);
-        
-        setSuratMasukData(prev => { const updated = [...prev, ...validData]; setDoc(doc(db, "website_config", "database_administrasi"), { listSuratMasuk: updated }, { merge: true }); return updated; });
-        alert(`Berhasil mengimpor ${validData.length} data Surat Masuk ke Ruang Kerja ${activeLembaga}!`);
-      } catch (error) { alert("Format excel salah."); }
-    }; reader.readAsBinaryString(file); e.target.value = null;
-  };
-
-  const handleExcelSuratKeluar = (e) => {
-    const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const workbook = XLSX.read(evt.target.result, { type: "binary", cellDates: true });
-        const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-
-        const validData = data.map(row => {
-          const lRow = Object.keys(row).reduce((acc, key) => { acc[key.toLowerCase().trim()] = row[key]; return acc; }, {});
-          return {
-            id: Date.now() + Math.random(), 
-            lembaga: activeLembaga,
-            nomorSurat: String(lRow["no surat"] || lRow["nomor surat"] || lRow["nomor"] || ""), 
-            tujuanSurat: String(lRow["tujuan surat"] || lRow["tujuan"] || ""),
-            tglBuat: formatExcelDate(lRow["tgl buat"] || lRow["tanggal buat"] || lRow["waktu buat"]), 
-            tglKirim: formatExcelDate(lRow["tgl kirim"] || lRow["tanggal kirim"] || lRow["waktu kirim"]),
-            hal: String(lRow["hal"] || lRow["perihal"] || ""), 
-            ket: String(lRow["ket"] || lRow["keterangan"] || ""), 
-            linkFile: String(lRow["link file"] || lRow["link file surat"] || lRow["link"] || lRow["link berkas"] || lRow["url"] || "")
-          };
-        }).filter(i => i.nomorSurat || i.hal);
-        
-        setSuratKeluarData(prev => { const updated = [...prev, ...validData]; setDoc(doc(db, "website_config", "database_administrasi"), { listSuratKeluar: updated }, { merge: true }); return updated; });
-        alert(`Berhasil mengimpor ${validData.length} data Surat Keluar ke Ruang Kerja ${activeLembaga}!`);
-      } catch (error) { alert("Format excel salah."); }
-    }; reader.readAsBinaryString(file); e.target.value = null;
-  };
-
-  const handleExcelProker = (e) => {
-    const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const workbook = XLSX.read(evt.target.result, { type: "binary", cellDates: true });
-        const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-
-        const validData = data.map(row => {
-          const lRow = Object.keys(row).reduce((acc, key) => { acc[key.toLowerCase().trim()] = row[key]; return acc; }, {});
-          return {
-            id: Date.now() + Math.random(), 
-            lembaga: activeLembaga,
-            pelaksanaProker: String(lRow["pelaksana"] || lRow["biro"] || lRow["divisi"] || ""), 
-            namaProker: String(lRow["nama kegiatan"] || lRow["nama proker"] || lRow["kegiatan"] || ""),
-            tujuan: String(lRow["tujuan"] || ""), 
-            indikator: String(lRow["indikator"] || ""), 
-            sasaran: String(lRow["sasaran"] || ""),
-            waktuPelaksanaan: formatExcelDate(lRow["waktu pelaksanaan"] || lRow["waktu"] || lRow["tanggal"]), 
-            penanggungJawab: String(lRow["penanggung jawab"] || lRow["pj"] || ""),
-            estimasiDana: String(lRow["estimasi dana"] || lRow["dana"] || lRow["anggaran"] || ""), 
-            linkFile: String(lRow["link file"] || lRow["link"] || lRow["link berkas"] || lRow["url"] || "")
-          };
-        }).filter(i => i.namaProker);
-        
-        setProkerData(prev => { const updated = [...prev, ...validData]; setDoc(doc(db, "website_config", "database_administrasi"), { listProker: updated }, { merge: true }); return updated; });
-        alert(`Berhasil mengimpor ${validData.length} data Proker ke Ruang Kerja ${activeLembaga}!`);
-      } catch (error) { alert("Format excel salah."); }
-    }; reader.readAsBinaryString(file); e.target.value = null;
-  };
-
-  if (loading) return <p className="text-slate-500 animate-pulse font-medium">Memuat database administrasi...</p>;
+  if (loading) return <div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 size={32} className="text-blue-600 animate-spin"/></div>;
 
   return (
-    <div className="space-y-6 pb-12 w-full max-w-7xl mx-auto relative">
-      
-      {/* HEADER UTAMA */}
-      <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col md:flex-row justify-between md:items-center gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Mail size={24} className="text-blue-600" /> Pusat Kelola Administrasi
-          </h1>
-          <p className="text-xs md:text-sm text-slate-500 mt-1">Kelola arsip surat, program kerja divisi, produk hukum, dan laporan lembaga.</p>
+    <div className="min-h-screen bg-[#F8FAFC] py-8 px-4 sm:px-8 font-sans">
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        {/* HEADER PANEL */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Sistem Administrasi</h1>
+            <p className="text-sm text-slate-500 mt-1">Kelola arsip surat, program kerja, produk hukum, dan laporan lembaga.</p>
+          </div>
+          <div className="bg-white p-2 rounded-lg border border-slate-200 flex items-center gap-2 shadow-sm min-w-[250px]">
+             <Building2 size={18} className="text-blue-600 ml-2" />
+             <select value={activeLembaga} onChange={e => {setActiveLembaga(e.target.value); setSearchQuery("");}} className="w-full text-sm font-bold text-slate-800 bg-transparent border-none focus:ring-0 outline-none cursor-pointer">
+                <option value="Komisariat">Administrasi Komisariat</option>
+                <option value="KOPRI">Administrasi KOPRI</option>
+                {listLSO.map(lso => <option key={lso} value={lso}>Administrasi {lso}</option>)}
+             </select>
+          </div>
         </div>
-      </div>
 
-      <div className="bg-white p-3 md:px-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center gap-4">
-         <div className="flex items-center gap-2 text-slate-600 font-bold text-sm shrink-0">
-            <Building size={16} className="text-blue-600"/> Ruang Kerja:
-         </div>
-         <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none flex-grow">
-            <button onClick={() => setActiveLembaga("Komisariat")} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeLembaga === "Komisariat" ? "bg-slate-900 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>Komisariat</button>
-            <button onClick={() => setActiveLembaga("KOPRI")} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeLembaga === "KOPRI" ? "bg-slate-900 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>KOPRI</button>
-            
-            {listLSO.map(lso => (
-               <button key={lso} onClick={() => setActiveLembaga(lso)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeLembaga === lso ? "bg-slate-900 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>{lso}</button>
-            ))}
-         </div>
-         <button onClick={() => setShowLSOModal(true)} className="shrink-0 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm">
-            <Settings size={14}/> Kelola LSO
-         </button>
-      </div>
+        {/* TABS MENU STANDAR */}
+        <div className="flex overflow-x-auto gap-2 border-b border-slate-200 pb-px scrollbar-none">
+          <button onClick={() => {setActiveTab("persuratan"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "persuratan" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-lg" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><Mail size={16} /> Arsip Persuratan</button>
+          <button onClick={() => {setActiveTab("proker"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "proker" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-lg" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><Briefcase size={16} /> Program Kerja</button>
+          <button onClick={() => {setActiveTab("produkhukum"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "produkhukum" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-lg" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><Scale size={16} /> Produk Hukum</button>
+          <button onClick={() => {setActiveTab("laporan"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "laporan" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-lg" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><FileCheck size={16} /> Laporan (LPJ)</button>
+        </div>
 
-      <div className="bg-blue-50/50 p-2 rounded-2xl flex overflow-x-auto whitespace-nowrap scrollbar-none gap-2 border border-blue-100">
-        <button onClick={() => setActiveTab("persuratan")} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === "persuratan" ? "bg-blue-600 text-white shadow-sm" : "text-blue-700 hover:bg-blue-100"}`}><Mail size={16} /> Arsip Surat</button>
-        <button onClick={() => setActiveTab("proker")} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === "proker" ? "bg-blue-600 text-white shadow-sm" : "text-blue-700 hover:bg-blue-100"}`}><Briefcase size={16} /> Program Kerja</button>
-        <button onClick={() => setActiveTab("hukum")} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === "hukum" ? "bg-blue-600 text-white shadow-sm" : "text-blue-700 hover:bg-blue-100"}`}><Scale size={16} /> Produk Hukum</button>
-        <button onClick={() => setActiveTab("lpj")} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === "lpj" ? "bg-blue-600 text-white shadow-sm" : "text-blue-700 hover:bg-blue-100"}`}><FileCheck size={16} /> Laporan</button>
-      </div>
-
-      <div className="text-xs font-bold text-slate-400 pl-2">
-         Menampilkan & Mengedit Data Arsip: <span className="text-blue-600 uppercase tracking-widest">{activeLembaga}</span>
-      </div>
-
-      <div className="space-y-6">
-
-        {/* ======================= TAB 1: PERSURATAN ======================= */}
-        {activeTab === "persuratan" && (
-          <div className="space-y-4 animate-in fade-in zoom-in duration-300">
-            
-            <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 w-max">
-              <button onClick={() => setActiveSuratTab("masuk")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeSuratTab === "masuk" ? "bg-amber-500 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}><Inbox size={14} /> Surat Masuk</button>
-              <button onClick={() => setActiveSuratTab("keluar")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeSuratTab === "keluar" ? "bg-amber-500 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}><Send size={14} /> Surat Keluar</button>
-            </div>
-
-            {activeSuratTab === "masuk" ? (
-              // SURAT MASUK
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm md:col-span-2">
-                  <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-1.5"><Inbox size={16} className="text-amber-600" /> Input Surat Masuk ({activeLembaga})</h2>
-                  <form onSubmit={handleAddSuratMasuk} className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
-                    <div className="col-span-2 sm:col-span-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Nomor Surat</label><input type="text" name="nomorSurat" required className="w-full p-2 border rounded-xl text-sm font-mono" /></div>
-                    <div className="col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase">Asal Surat</label><input type="text" name="asalSurat" required className="w-full p-2 border rounded-xl text-sm" /></div>
-                    <div><label className="text-[10px] font-bold text-slate-400 uppercase">Tgl Buat</label><input type="text" name="tglBuat" className="w-full p-2 border rounded-xl text-sm font-mono" placeholder="DD/MM/YYYY"/></div>
-                    <div><label className="text-[10px] font-bold text-slate-400 uppercase">Tgl Datang</label><input type="text" name="tglDatang" className="w-full p-2 border rounded-xl text-sm font-mono" placeholder="DD/MM/YYYY"/></div>
-                    <div><label className="text-[10px] font-bold text-slate-400 uppercase">Hal / Perihal</label><input type="text" name="hal" required className="w-full p-2 border rounded-xl text-sm" /></div>
-                    <div className="col-span-2 sm:col-span-3"><label className="text-[10px] font-bold text-slate-400 uppercase">Keterangan Singkat</label><input type="text" name="ket" className="w-full p-2 border rounded-xl text-sm" /></div>
-                    
-                    <div className="col-span-2 sm:col-span-3">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-1"><UploadCloud size={12}/> File (PDF/Word)</label>
-                      <div className="flex flex-col sm:flex-row items-center gap-2">
-                        <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition border shrink-0 ${uploadingField === 'suratFile' ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'}`}>
-                          {uploadingField === 'suratFile' ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><UploadCloud size={14} /> Pilih Berkas</>}
-                          <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'suratFile')} disabled={uploadingField !== null} />
-                        </label>
-                        <input type="text" value={urls.suratFile} onChange={(e) => setUrls({...urls, suratFile: e.target.value})} className="w-full p-2.5 border rounded-xl text-xs bg-white text-slate-600 focus:ring-2 focus:ring-amber-500 font-mono outline-none" placeholder="Paste Link GDrive..." />
-                      </div>
-                    </div>
-                    <button type="submit" className="col-span-2 sm:col-span-3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl text-sm mt-2 transition shadow-md">Simpan Surat Masuk</button>
-                  </form>
-                </div>
-                
-                <div className="bg-amber-50 border border-amber-200 p-5 rounded-2xl flex flex-col justify-center text-center">
-                  <FileSpreadsheet className="text-amber-500 mx-auto mb-2" size={32}/>
-                  <h3 className="font-bold text-amber-800 text-sm mb-1">Import ke {activeLembaga}</h3>
-                  <p className="text-[10px] text-amber-600 mb-4">Upload rekap surat Excel sekaligus.</p>
-                  <button type="button" onClick={() => fileInputSuratMasukRef.current.click()} className="bg-amber-500 text-white font-bold py-2.5 rounded-xl text-sm shadow-md">Pilih Excel</button>
-                  <input type="file" accept=".xlsx, .xls" ref={fileInputSuratMasukRef} onChange={handleExcelSuratMasuk} className="hidden" />
-                  <button type="button" onClick={downloadTemplateSuratMasuk} className="text-[11px] text-amber-700 hover:text-amber-900 font-bold mt-4 flex items-center justify-center gap-1.5 hover:underline"><Download size={14}/> Unduh Template Format</button>
-                </div>
-
-                <div className="md:col-span-3 bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-x-auto">
-                  <table className="w-full text-left whitespace-nowrap min-w-[1100px]">
-                    <thead className="bg-amber-500 text-white text-xs uppercase tracking-wider">
-                      <tr><th className="py-2 px-3 w-10 text-center">No</th><th className="py-2 px-3 w-32 text-center">No Surat</th><th className="py-2 px-3 w-40 text-center">Asal Surat</th><th className="py-2 px-3 w-28 text-center">Tgl Buat</th><th className="py-2 px-3 w-28 text-center">Tgl Datang</th><th className="py-2 px-3 w-40 text-center">Hal</th><th className="py-2 px-3 text-center">Keterangan</th><th className="py-2 px-3 w-32 text-center">Link File</th><th className="py-2 px-3 w-12 text-center">Aksi</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs">
-                      {filteredSuratMasuk.map((item, index) => (
-                        <tr key={item.id} className="hover:bg-amber-50/50">
-                          <td className="py-1.5 px-3 text-center font-bold text-slate-400">{index+1}</td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.nomorSurat} onChange={e => handleUpdate('suratMasuk', item.id, 'nomorSurat', e.target.value)} className="w-full bg-transparent outline-none font-mono font-bold text-blue-600" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.asalSurat} onChange={e => handleUpdate('suratMasuk', item.id, 'asalSurat', e.target.value)} className="w-full bg-transparent outline-none font-bold" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.tglBuat || ""} onChange={e => handleUpdate('suratMasuk', item.id, 'tglBuat', e.target.value)} className="w-full bg-transparent outline-none font-mono text-slate-500" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.tglDatang || ""} onChange={e => handleUpdate('suratMasuk', item.id, 'tglDatang', e.target.value)} className="w-full bg-transparent outline-none font-mono text-slate-500" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.hal || ""} onChange={e => handleUpdate('suratMasuk', item.id, 'hal', e.target.value)} className="w-full bg-transparent outline-none font-semibold text-slate-700" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.ket || ""} onChange={e => handleUpdate('suratMasuk', item.id, 'ket', e.target.value)} className="w-full bg-transparent outline-none text-slate-500" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.linkFile || ""} onChange={e => handleUpdate('suratMasuk', item.id, 'linkFile', e.target.value)} className="w-full bg-transparent outline-none text-[10px] font-mono text-blue-500" /></td>
-                          <td className="py-1.5 px-3 text-center"><button type="button" onClick={() => handleDelete('suratMasuk', item.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button></td>
-                        </tr>
-                      ))}
-                      {filteredSuratMasuk.length === 0 && <tr><td colSpan="9" className="py-8 text-center text-slate-400">Kosong</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              // SURAT KELUAR
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm md:col-span-2">
-                  <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-1.5"><Send size={16} className="text-blue-600" /> Input Surat Keluar ({activeLembaga})</h2>
-                  <form onSubmit={handleAddSuratKeluar} className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
-                    <div className="col-span-2 sm:col-span-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Nomor Surat</label><input type="text" name="nomorSurat" required className="w-full p-2 border rounded-xl text-sm font-mono" /></div>
-                    <div className="col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase">Tujuan Surat</label><input type="text" name="tujuanSurat" required className="w-full p-2 border rounded-xl text-sm" /></div>
-                    <div><label className="text-[10px] font-bold text-slate-400 uppercase">Tgl Buat</label><input type="text" name="tglBuat" className="w-full p-2 border rounded-xl text-sm font-mono" placeholder="DD/MM/YYYY"/></div>
-                    <div><label className="text-[10px] font-bold text-slate-400 uppercase">Tgl Kirim</label><input type="text" name="tglKirim" className="w-full p-2 border rounded-xl text-sm font-mono" placeholder="DD/MM/YYYY"/></div>
-                    <div><label className="text-[10px] font-bold text-slate-400 uppercase">Hal / Perihal</label><input type="text" name="hal" required className="w-full p-2 border rounded-xl text-sm" /></div>
-                    <div className="col-span-2 sm:col-span-3"><label className="text-[10px] font-bold text-slate-400 uppercase">Keterangan Singkat</label><input type="text" name="ket" className="w-full p-2 border rounded-xl text-sm" /></div>
-                    
-                    <div className="col-span-2 sm:col-span-3">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-1"><UploadCloud size={12}/> File (PDF/Word)</label>
-                      <div className="flex flex-col sm:flex-row items-center gap-2">
-                        <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition border shrink-0 ${uploadingField === 'suratFile' ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200'}`}>
-                          {uploadingField === 'suratFile' ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><UploadCloud size={14} /> Pilih Berkas</>}
-                          <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'suratFile')} disabled={uploadingField !== null} />
-                        </label>
-                        <input type="text" value={urls.suratFile} onChange={(e) => setUrls({...urls, suratFile: e.target.value})} className="w-full p-2.5 border rounded-xl text-xs bg-white text-slate-600 focus:ring-2 focus:ring-blue-500 font-mono outline-none" placeholder="Paste Link GDrive..." />
-                      </div>
-                    </div>
-                    <button type="submit" className="col-span-2 sm:col-span-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm mt-2 transition shadow-md">Simpan Surat Keluar</button>
-                  </form>
-                </div>
-                
-                <div className="bg-blue-50 border border-blue-200 p-5 rounded-2xl flex flex-col justify-center text-center">
-                  <FileSpreadsheet className="text-blue-500 mx-auto mb-2" size={32}/>
-                  <h3 className="font-bold text-blue-800 text-sm mb-1">Import ke {activeLembaga}</h3>
-                  <p className="text-[10px] text-blue-600 mb-4">Upload rekap surat Excel sekaligus.</p>
-                  <button type="button" onClick={() => fileInputSuratKeluarRef.current.click()} className="bg-blue-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md">Pilih Excel</button>
-                  <input type="file" accept=".xlsx, .xls" ref={fileInputSuratKeluarRef} onChange={handleExcelSuratKeluar} className="hidden" />
-                  <button type="button" onClick={downloadTemplateSuratKeluar} className="text-[11px] text-blue-700 hover:text-blue-900 font-bold mt-4 flex items-center justify-center gap-1.5 hover:underline"><Download size={14}/> Unduh Template Format</button>
-                </div>
-
-                <div className="md:col-span-3 bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-x-auto">
-                  <table className="w-full text-left whitespace-nowrap min-w-[1100px]">
-                    <thead className="bg-[#1e293b] text-white text-xs uppercase tracking-wider">
-                      <tr><th className="py-2 px-3 w-10 text-center">No</th><th className="py-2 px-3 w-32 text-center">No Surat</th><th className="py-2 px-3 w-40 text-center">Tujuan Surat</th><th className="py-2 px-3 w-28 text-center">Tgl Buat</th><th className="py-2 px-3 w-28 text-center">Tgl Kirim</th><th className="py-2 px-3 w-40 text-center">Hal</th><th className="py-2 px-3 text-center">Keterangan</th><th className="py-2 px-3 w-32 text-center">Link File</th><th className="py-2 px-3 w-12 text-center">Aksi</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs">
-                      {filteredSuratKeluar.map((item, index) => (
-                        <tr key={item.id} className="hover:bg-blue-50/50">
-                          <td className="py-1.5 px-3 text-center font-bold text-slate-400">{index+1}</td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.nomorSurat} onChange={e => handleUpdate('suratKeluar', item.id, 'nomorSurat', e.target.value)} className="w-full bg-transparent outline-none font-mono font-bold text-blue-600" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.tujuanSurat} onChange={e => handleUpdate('suratKeluar', item.id, 'tujuanSurat', e.target.value)} className="w-full bg-transparent outline-none font-bold" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.tglBuat || ""} onChange={e => handleUpdate('suratKeluar', item.id, 'tglBuat', e.target.value)} className="w-full bg-transparent outline-none font-mono text-slate-500" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.tglKirim || ""} onChange={e => handleUpdate('suratKeluar', item.id, 'tglKirim', e.target.value)} className="w-full bg-transparent outline-none font-mono text-slate-500" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.hal || item.perihalSurat || ""} onChange={e => handleUpdate('suratKeluar', item.id, 'hal', e.target.value)} className="w-full bg-transparent outline-none font-semibold text-slate-700" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.ket || item.deskripsiSurat || ""} onChange={e => handleUpdate('suratKeluar', item.id, 'ket', e.target.value)} className="w-full bg-transparent outline-none text-slate-500" /></td>
-                          <td className="py-1.5 px-3"><input type="text" value={item.linkFile || ""} onChange={e => handleUpdate('suratKeluar', item.id, 'linkFile', e.target.value)} className="w-full bg-transparent outline-none text-[10px] font-mono text-blue-500" /></td>
-                          <td className="py-1.5 px-3 text-center"><button type="button" onClick={() => handleDelete('suratKeluar', item.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button></td>
-                        </tr>
-                      ))}
-                      {filteredSuratKeluar.length === 0 && <tr><td colSpan="9" className="py-8 text-center text-slate-400">Kosong</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ======================= TAB 2: PROGRAM KERJA ======================= */}
-        {activeTab === "proker" && (
-          <div className="space-y-6 animate-in fade-in zoom-in duration-300">
-            <div className="grid lg:grid-cols-3 gap-6">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm lg:col-span-2">
-                <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-1.5"><Plus size={16} className="text-emerald-600" /> Input Proker {activeLembaga}</h2>
-                <form onSubmit={handleAddProker} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase">Pelaksana/Biro</label><input type="text" name="pelaksana" required className="w-full p-2 border rounded-lg text-xs" placeholder="Biro Kaderisasi"/></div>
-                  <div className="sm:col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase">Nama Kegiatan</label><input type="text" name="namaProker" required className="w-full p-2 border rounded-lg text-xs" /></div>
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase">Tujuan</label><input type="text" name="tujuan" className="w-full p-2 border rounded-lg text-xs" /></div>
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase">Indikator</label><input type="text" name="indikator" className="w-full p-2 border rounded-lg text-xs" /></div>
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase">Sasaran</label><input type="text" name="sasaran" className="w-full p-2 border rounded-lg text-xs" /></div>
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase">Waktu</label><input type="text" name="waktu" className="w-full p-2 border rounded-lg text-xs" placeholder="Misal: Juni 2026"/></div>
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase">Penanggung Jawab</label><input type="text" name="pj" className="w-full p-2 border rounded-lg text-xs" /></div>
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase">Estimasi Dana</label><input type="text" name="dana" className="w-full p-2 border rounded-lg text-xs font-mono" placeholder="Rp 0"/></div>
-                  
-                  <div className="col-span-2 sm:col-span-3">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-1"><UploadCloud size={12}/> File Pendukung (Proposal / LPJ)</label>
-                    <div className="flex flex-col sm:flex-row items-center gap-2">
-                      <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold transition border shrink-0 ${uploadingField === 'prokerFile' ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 shadow-sm'}`}>
-                        {uploadingField === 'prokerFile' ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><UploadCloud size={14} /> Pilih File</>}
-                        <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'prokerFile')} disabled={uploadingField !== null} />
-                      </label>
-                      <input type="text" value={urls.prokerFile} onChange={(e) => setUrls({...urls, prokerFile: e.target.value})} className="w-full p-2.5 border rounded-lg text-xs bg-white text-slate-600 focus:ring-2 focus:ring-emerald-500 font-mono outline-none" placeholder="Paste Link GDrive..." />
-                    </div>
-                  </div>
-
-                  <button type="submit" className="col-span-2 sm:col-span-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm mt-2 transition shadow-md">Tambah ke Tabel Proker</button>
-                </form>
-              </div>
-              
-              <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl flex flex-col justify-center text-center">
-                <FileSpreadsheet className="text-emerald-500 mx-auto mb-2" size={32}/>
-                <h3 className="font-bold text-emerald-800 text-sm mb-1">Import ke {activeLembaga}</h3>
-                <p className="text-[10px] text-emerald-600 mb-4">Upload master plan program kerja pengurus sekaligus.</p>
-                <button type="button" onClick={() => fileInputProkerRef.current.click()} className="bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md">Pilih File Excel</button>
-                <input type="file" accept=".xlsx, .xls" ref={fileInputProkerRef} onChange={handleExcelProker} className="hidden" />
-                <button type="button" onClick={downloadTemplateProker} className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold mt-4 flex items-center justify-center gap-1.5 hover:underline"><Download size={14}/> Unduh Template Format Excel</button>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-x-auto min-h-[300px]">
-              <table className="w-full text-left whitespace-nowrap min-w-[1300px]">
-                <thead className="bg-emerald-900 text-white text-xs uppercase tracking-wider">
-                  <tr><th className="py-3 px-3 w-12 text-center">No</th><th className="py-3 px-3 w-40 text-center">Biro/Pelaksana</th><th className="py-3 px-3 w-48 text-center">Kegiatan</th><th className="py-3 px-3 text-center">Tujuan</th><th className="py-3 px-3 text-center">Indikator</th><th className="py-3 px-3 w-32 text-center">Sasaran</th><th className="py-3 px-3 w-32 text-center">Waktu</th><th className="py-3 px-3 w-32 text-center">PJ</th><th className="py-3 px-3 w-32 text-center">Dana</th><th className="py-3 px-3 w-32 text-center">Link File</th><th className="py-3 px-3 w-12 text-center">Aksi</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {filteredProker.map((item, index) => (
-                    <tr key={item.id} className="hover:bg-emerald-50/40">
-                      <td className="py-1 px-3 text-center text-slate-400 font-bold">{index+1}</td>
-                      <td className="py-1 px-3"><input type="text" value={item.pelaksanaProker} onChange={e => handleUpdate('proker', item.id, 'pelaksanaProker', e.target.value)} className="w-full bg-transparent outline-none font-bold text-emerald-700 text-xs uppercase" /></td>
-                      <td className="py-1 px-3"><input type="text" value={item.namaProker} onChange={e => handleUpdate('proker', item.id, 'namaProker', e.target.value)} className="w-full bg-transparent outline-none font-bold text-xs" /></td>
-                      <td className="py-1 px-3"><input type="text" value={item.tujuan || ""} onChange={e => handleUpdate('proker', item.id, 'tujuan', e.target.value)} className="w-full bg-transparent outline-none text-[11px]" /></td>
-                      <td className="py-1 px-3"><input type="text" value={item.indikator || ""} onChange={e => handleUpdate('proker', item.id, 'indikator', e.target.value)} className="w-full bg-transparent outline-none text-[11px]" /></td>
-                      <td className="py-1 px-3"><input type="text" value={item.sasaran || ""} onChange={e => handleUpdate('proker', item.id, 'sasaran', e.target.value)} className="w-full bg-transparent outline-none text-[11px]" /></td>
-                      <td className="py-1 px-3"><input type="text" value={item.waktuPelaksanaan || ""} onChange={e => handleUpdate('proker', item.id, 'waktuPelaksanaan', e.target.value)} className="w-full bg-transparent outline-none text-[11px]" /></td>
-                      <td className="py-1 px-3"><input type="text" value={item.penanggungJawab || ""} onChange={e => handleUpdate('proker', item.id, 'penanggungJawab', e.target.value)} className="w-full bg-transparent outline-none text-[11px] text-emerald-600" /></td>
-                      <td className="py-1 px-3"><input type="text" value={item.estimasiDana || ""} onChange={e => handleUpdate('proker', item.id, 'estimasiDana', e.target.value)} className="w-full bg-transparent outline-none font-mono text-[11px]" /></td>
-                      <td className="py-1 px-3"><input type="text" value={item.linkFile || ""} onChange={e => handleUpdate('proker', item.id, 'linkFile', e.target.value)} className="w-full bg-transparent outline-none text-[10px] text-blue-500 font-mono" /></td>
-                      <td className="py-1 px-3 text-center"><button type="button" onClick={() => handleDelete('proker', item.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button></td>
-                    </tr>
-                  ))}
-                  {filteredProker.length === 0 && <tr><td colSpan="11" className="py-8 text-center text-slate-400">Kosong</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ======================= TAB 3: PRODUK HUKUM ======================= */}
-        {activeTab === "hukum" && (
-          <div className="space-y-6 animate-in fade-in zoom-in duration-300">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm">
-              <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-1.5"><Plus size={16} className="text-purple-600" /> Input Produk Hukum / SK ({activeLembaga})</h2>
-              <form onSubmit={handleAddHukum} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-                <div><label className="text-[10px] font-bold text-slate-400 uppercase">Nomor SK / Ketetapan</label><input type="text" name="nomorSK" required className="w-full p-2.5 border rounded-xl text-sm font-mono" /></div>
-                <div><label className="text-[10px] font-bold text-slate-400 uppercase">Tentang / Regulasi</label><input type="text" name="tentang" required className="w-full p-2.5 border rounded-xl text-sm" /></div>
-                <div><label className="text-[10px] font-bold text-slate-400 uppercase">Keterangan Singkat</label><input type="text" name="deskripsi" className="w-full p-2.5 border rounded-xl text-sm" /></div>
-                
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-1"><ImageIcon size={12}/> Gambar Cover Dokumen</label>
-                  <div className="flex flex-col xl:flex-row items-center gap-2">
-                    <label className={`w-full xl:w-auto cursor-pointer flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold transition border shrink-0 ${uploadingField === 'hukumThumb' ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200 shadow-sm'}`}>
-                      {uploadingField === 'hukumThumb' ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'hukumThumb')} disabled={uploadingField !== null} />
-                    </label>
-                    <input type="text" value={urls.hukumThumb} onChange={(e) => setUrls({...urls, hukumThumb: e.target.value})} className="w-full p-2.5 border rounded-xl text-xs bg-white focus:ring-2 focus:ring-purple-500 text-slate-600 font-mono outline-none" placeholder="Paste GDrive..." />
-                  </div>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-1"><FileText size={12}/> File Dokumen SK / Ketetapan (PDF)</label>
-                  <div className="flex flex-col sm:flex-row items-center gap-2">
-                    <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition border shrink-0 ${uploadingField === 'hukumFile' ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200 shadow-sm'}`}>
-                      {uploadingField === 'hukumFile' ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><UploadCloud size={14} /> Pilih File PDF</>}
-                      <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'hukumFile')} disabled={uploadingField !== null} />
-                    </label>
-                    <input type="text" value={urls.hukumFile} onChange={(e) => setUrls({...urls, hukumFile: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-600 focus:ring-2 focus:ring-purple-500 font-mono outline-none transition-all" placeholder="Upload PDF atau Paste Link Google Drive..." />
-                  </div>
-                </div>
-
-                <button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl text-sm w-full md:col-span-3 transition shadow-md">Simpan Produk Hukum Baru</button>
-              </form>
-            </div>
-            
-            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-x-auto min-h-[300px]">
-              <table className="w-full text-left whitespace-nowrap min-w-[1000px]">
-                <thead className="bg-[#2e1065] text-white text-xs uppercase tracking-wider">
-                  <tr><th className="py-3 px-4 w-12 text-center">No</th><th className="py-3 px-4 w-1/4 text-center">Nomor SK</th><th className="py-3 px-4 w-1/4 text-center">Tentang</th><th className="py-3 px-4 text-center">Deskripsi</th><th className="py-3 px-4 w-32 text-center">Cover URL</th><th className="py-3 px-4 w-40 text-center">Link PDF</th><th className="py-3 px-4 w-16 text-center">Aksi</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {filteredHukum.map((item, index) => (
-                    <tr key={item.id} className="hover:bg-purple-50/30">
-                      <td className="py-2 px-4 text-center text-slate-400 font-bold">{index+1}</td>
-                      <td className="py-2 px-4"><input type="text" value={item.nomorSK} onChange={e => handleUpdate('hukum', item.id, 'nomorSK', e.target.value)} className="w-full bg-transparent outline-none font-mono text-xs font-bold text-purple-700" /></td>
-                      <td className="py-2 px-4"><input type="text" value={item.tentangHukum} onChange={e => handleUpdate('hukum', item.id, 'tentangHukum', e.target.value)} className="w-full bg-transparent outline-none font-bold text-xs" /></td>
-                      <td className="py-2 px-4"><input type="text" value={item.deskripsiHukum || ""} onChange={e => handleUpdate('hukum', item.id, 'deskripsiHukum', e.target.value)} className="w-full bg-transparent outline-none text-xs text-slate-500" /></td>
-                      <td className="py-2 px-4"><input type="text" value={item.thumbnailUrl || ""} onChange={e => handleUpdate('hukum', item.id, 'thumbnailUrl', e.target.value)} className="w-full bg-transparent outline-none text-[10px] text-blue-500 font-mono" /></td>
-                      <td className="py-2 px-4"><input type="text" value={item.linkFile || ""} onChange={e => handleUpdate('hukum', item.id, 'linkFile', e.target.value)} className="w-full bg-transparent outline-none text-[10px] text-blue-500 font-mono" /></td>
-                      <td className="py-2 px-4 text-center"><button type="button" onClick={() => handleDelete('hukum', item.id)} className="text-red-400 hover:text-red-600"><Trash2 size={16}/></button></td>
-                    </tr>
-                  ))}
-                  {filteredHukum.length === 0 && <tr><td colSpan="7" className="py-8 text-center text-slate-400">Kosong</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ======================= TAB 4: LAPORAN KEPENGURUSAN ======================= */}
-        {activeTab === "lpj" && (
-          <div className="space-y-6 animate-in fade-in zoom-in duration-300">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm">
-              <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-1.5"><Plus size={16} className="text-amber-600" /> Input LPJ ({activeLembaga})</h2>
-              <form onSubmit={handleAddLpj} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-                <div><label className="text-[10px] font-bold text-slate-400 uppercase">Nama Laporan</label><input type="text" name="namaLaporan" required className="w-full p-2.5 border rounded-xl text-sm font-bold" /></div>
-                <div><label className="text-[10px] font-bold text-slate-400 uppercase">Periode Kepengurusan</label><input type="text" name="periode" required className="w-full p-2.5 border rounded-xl text-sm" placeholder="2026-2027"/></div>
-                <div><label className="text-[10px] font-bold text-slate-400 uppercase">Keterangan Singkat</label><input type="text" name="deskripsi" className="w-full p-2.5 border rounded-xl text-sm" /></div>
-                
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-1"><ImageIcon size={12}/> Gambar Cover Dokumen</label>
-                  <div className="flex flex-col xl:flex-row items-center gap-2">
-                    <label className={`w-full xl:w-auto cursor-pointer flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold transition border shrink-0 ${uploadingField === 'lpjThumb' ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 shadow-sm'}`}>
-                      {uploadingField === 'lpjThumb' ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'lpjThumb')} disabled={uploadingField !== null} />
-                    </label>
-                    <input type="text" value={urls.lpjThumb} onChange={(e) => setUrls({...urls, lpjThumb: e.target.value})} className="w-full p-2.5 border rounded-xl text-xs bg-white focus:ring-2 focus:ring-amber-500 text-slate-600 font-mono outline-none" placeholder="Paste GDrive..." />
-                  </div>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-1"><FileText size={12}/> File Dokumen Laporan (PDF)</label>
-                  <div className="flex flex-col sm:flex-row items-center gap-2">
-                    <label className={`w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition border shrink-0 ${uploadingField === 'lpjFile' ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 shadow-sm'}`}>
-                      {uploadingField === 'lpjFile' ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><UploadCloud size={14} /> Pilih File PDF</>}
-                      <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'lpjFile')} disabled={uploadingField !== null} />
-                    </label>
-                    <input type="text" value={urls.lpjFile} onChange={(e) => setUrls({...urls, lpjFile: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-600 focus:ring-2 focus:ring-amber-500 font-mono outline-none transition-all" placeholder="Upload PDF atau Paste Link Google Drive..." />
-                  </div>
-                </div>
-
-                <button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl text-sm w-full md:col-span-3 transition shadow-md">Simpan Laporan Baru</button>
-              </form>
-            </div>
-            
-            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-x-auto min-h-[300px]">
-              <table className="w-full text-left whitespace-nowrap min-w-[1000px]">
-                <thead className="bg-[#78350f] text-white text-xs uppercase tracking-wider">
-                  <tr><th className="py-3 px-4 w-12 text-center">No</th><th className="py-3 px-4 w-1/4 text-center">Nama Laporan</th><th className="py-3 px-4 w-1/6 text-center">Periode</th><th className="py-3 px-4 text-center">Deskripsi</th><th className="py-3 px-4 w-32 text-center">Cover URL</th><th className="py-3 px-4 w-40 text-center">Link PDF</th><th className="py-3 px-4 w-16 text-center">Aksi</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {filteredLpj.map((item, index) => (
-                    <tr key={item.id} className="hover:bg-amber-50/30">
-                      <td className="py-2 px-4 text-center text-slate-400 font-bold">{index+1}</td>
-                      <td className="py-2 px-4"><input type="text" value={item.namaLaporan} onChange={e => handleUpdate('lpj', item.id, 'namaLaporan', e.target.value)} className="w-full bg-transparent outline-none font-bold text-xs" /></td>
-                      <td className="py-2 px-4"><input type="text" value={item.periode} onChange={e => handleUpdate('lpj', item.id, 'periode', e.target.value)} className="w-full bg-transparent outline-none font-mono font-bold text-amber-700 text-xs" /></td>
-                      <td className="py-2 px-4"><input type="text" value={item.deskripsiLaporan || ""} onChange={e => handleUpdate('lpj', item.id, 'deskripsiLaporan', e.target.value)} className="w-full bg-transparent outline-none text-xs text-slate-500" /></td>
-                      <td className="py-2 px-4"><input type="text" value={item.thumbnailUrl || ""} onChange={e => handleUpdate('lpj', item.id, 'thumbnailUrl', e.target.value)} className="w-full bg-transparent outline-none text-[10px] text-blue-500 font-mono" /></td>
-                      <td className="py-2 px-4"><input type="text" value={item.linkFile || ""} onChange={e => handleUpdate('lpj', item.id, 'linkFile', e.target.value)} className="w-full bg-transparent outline-none text-[10px] text-blue-500 font-mono" /></td>
-                      <td className="py-2 px-4 text-center"><button type="button" onClick={() => handleDelete('lpj', item.id)} className="text-red-400 hover:text-red-600"><Trash2 size={16}/></button></td>
-                    </tr>
-                  ))}
-                  {filteredLpj.length === 0 && <tr><td colSpan="7" className="py-8 text-center text-slate-400">Kosong</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ================= TOMBOL SIMPAN GLOBAL ================= */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-blue-50 p-4 rounded-xl border border-blue-100 sticky bottom-4 z-40 shadow-xl shadow-blue-500/5">
-           <div className="flex items-center gap-2 text-xs text-blue-700">
-             <Info size={16} className="shrink-0 text-blue-600" />
-             <p>Pastikan Anda mengklik tombol "Simpan Sistem Arsip" setiap kali selesai menambah/mengedit data.</p>
+        {/* FILTER & AKSI */}
+        <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col xl:flex-row justify-between gap-4 items-center">
+           <div className="flex w-full xl:w-auto gap-3 items-center">
+             {activeTab === "persuratan" && (
+               <div className="flex bg-slate-100 p-1 rounded-md border border-slate-200 items-center shrink-0">
+                 <button onClick={() => setActiveSuratTab("masuk")} className={`px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition ${activeSuratTab === "masuk" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}><Inbox size={14}/> S. Masuk</button>
+                 <button onClick={() => setActiveSuratTab("keluar")} className={`px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition ${activeSuratTab === "keluar" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}><Send size={14}/> S. Keluar</button>
+               </div>
+             )}
+             <div className="relative flex-1 xl:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"/>
+                <input type="text" placeholder="Cari arsip..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className={`${inputStandardClass} pl-9`} />
+             </div>
            </div>
            
-           <button type="button" onClick={handleSaveAll} disabled={uploadingField !== null} className="w-full sm:w-auto bg-blue-600 disabled:bg-blue-400 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition flex items-center justify-center gap-2 shadow-md text-sm shrink-0">
-              Simpan Sistem Arsip <Save size={16} />
-            </button>
+           <div className="flex w-full xl:w-auto flex-wrap gap-2 justify-end">
+             <button onClick={handleDownloadTemplate} className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium py-2 px-3 rounded-md transition flex items-center justify-center gap-1.5 shadow-sm text-xs sm:text-sm">
+                <Download size={14} /> <span className="hidden sm:inline">Template</span>
+             </button>
+             <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={excelInputRef} onChange={handleImportExcel} />
+             <button onClick={() => excelInputRef.current.click()} className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium py-2 px-3 rounded-md transition flex items-center justify-center gap-1.5 shadow-sm text-xs sm:text-sm">
+                <UploadCloud size={14} /> <span className="hidden sm:inline">Impor</span>
+             </button>
+             <button onClick={handleExportExcel} className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium py-2 px-3 rounded-md transition flex items-center justify-center gap-1.5 shadow-sm text-xs sm:text-sm">
+                <FileSpreadsheet size={14} /> <span className="hidden sm:inline">Ekspor</span>
+             </button>
+             <button onClick={() => handleOpenModal()} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition flex items-center justify-center gap-1.5 shadow-sm text-xs sm:text-sm whitespace-nowrap">
+                <Plus size={16} /> Tambah Data
+             </button>
+           </div>
         </div>
 
-      </div>
+        {/* TABEL DATA STANDAR */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto min-h-[400px]">
+            <table className="w-full text-left whitespace-nowrap">
+              <thead className="bg-slate-50 text-slate-600 text-xs uppercase font-semibold tracking-wider border-b border-slate-200">
+                <tr>
+                  <th className="py-4 px-4 w-12 text-center">No</th>
+                  <th className="py-4 px-4">{activeTab === "persuratan" ? "Nomor Surat" : activeTab === "proker" ? "Nama Program" : "Judul Dokumen"}</th>
+                  <th className="py-4 px-4">{activeTab === "persuratan" ? "Perihal" : activeTab === "proker" ? "Tujuan" : "Keterangan"}</th>
+                  <th className="py-4 px-4 text-center">Berkas</th>
+                  <th className="py-4 px-4 w-24 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                {currentListData.length === 0 ? (
+                  <tr><td colSpan="5" className="py-16 text-center text-slate-500 font-medium">Belum ada data pada kategori ini.</td></tr>
+                ) : (
+                  currentListData.map((item, index) => {
+                    const title = item.nomorSurat || item.namaProker || item.nomorSK || item.namaLaporan || "Tanpa Judul";
+                    const desc = item.hal || item.perihalSurat || item.tujuan || item.tentangHukum || item.deskripsiLaporan || "-";
+                    const isExpanded = expandedRowId === index;
 
-      {/* ================= MODAL KELOLA LSO ================= */}
-      {showLSOModal && (
-        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl relative">
-             <button onClick={() => setShowLSOModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X size={20}/></button>
-             <h2 className="font-extrabold text-xl mb-1 text-slate-800">Manajemen Ruang Kerja</h2>
-             <p className="text-xs text-slate-500 mb-6">Tambah atau hapus Lembaga Semi Otonom (LSO) untuk memisahkan laci arsip.</p>
-             
-             <div className="space-y-3 mb-6 max-h-60 overflow-y-auto pr-2">
-               {listLSO.map(lso => (
-                 <div key={lso} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
-                   <span className="text-sm font-bold text-slate-700 flex items-center gap-2"><Building size={14} className="text-slate-400"/> {lso}</span>
-                   <button onClick={() => handleDeleteLSO(lso)} className="text-red-400 hover:text-red-600 bg-red-50 p-1.5 rounded-lg"><Trash2 size={16}/></button>
-                 </div>
-               ))}
-               {listLSO.length === 0 && <p className="text-xs text-slate-400 text-center py-4">Belum ada LSO kustom yang ditambahkan.</p>}
-             </div>
-             
-             <div className="flex gap-2 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-               <input type="text" value={newLSO} onChange={e => setNewLSO(e.target.value)} placeholder="Nama LSO baru (Misal: LSO Jurnalistik)" className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-lg text-sm outline-none focus:border-blue-500" />
-               <button onClick={handleAddLSO} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors">Tambah</button>
-             </div>
+                    return (
+                      <React.Fragment key={index}>
+                        <tr className={`transition-colors hover:bg-slate-50 cursor-pointer ${isExpanded ? 'bg-slate-50' : ''}`} onClick={() => setExpandedRowId(isExpanded ? null : index)}>
+                          <td className="py-3 px-4 text-center font-medium text-slate-400">{index + 1}</td>
+                          <td className="py-3 px-4">
+                             <p className="font-semibold text-slate-900 text-sm">{title}</p>
+                             {activeTab === "persuratan" && <p className="text-[11px] text-slate-500 mt-0.5">{activeSuratTab === "masuk" ? item.asalSurat : item.tujuanSurat}</p>}
+                          </td>
+                          <td className="py-3 px-4"><p className="text-slate-600 text-sm truncate max-w-xs">{desc}</p></td>
+                          <td className="py-3 px-4 text-center">
+                            {item.linkFile ? (
+                               <a href={item.linkFile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-semibold bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200"><Download size={14}/> Buka</a>
+                            ) : <span className="text-slate-400 text-xs bg-slate-100 px-2 py-1 rounded-md">Kosong</span>}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex gap-2 justify-center" onClick={(e) => e.stopPropagation()}>
+                              <button onClick={() => handleOpenModal(item)} className="text-amber-500 hover:text-amber-700 p-1.5 bg-white border border-slate-200 rounded-md shadow-sm"><Edit size={14}/></button>
+                              <button onClick={() => handleDeleteData(item.id)} className="text-red-500 hover:text-red-700 p-1.5 bg-white border border-slate-200 rounded-md shadow-sm"><Trash2 size={14}/></button>
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-slate-50 border-b border-slate-200">
+                             <td colSpan="5" className="py-4 px-8 text-sm">
+                                <div className="grid grid-cols-2 gap-4 text-slate-600">
+                                   {Object.entries(item).filter(([key]) => !['id', 'lembaga', 'linkFile', 'thumbnailUrl'].includes(key)).map(([key, value]) => (
+                                      <div key={key}>
+                                        <span className="font-semibold text-slate-800 capitalize block mb-0.5">{key.replace(/([A-Z])/g, ' $1').trim()}:</span> 
+                                        {value || "-"}
+                                      </div>
+                                   ))}
+                                </div>
+                             </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
 
+        {/* MODAL FORM TAMBAH/EDIT */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6">
+            <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+              
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center shrink-0">
+                 <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    {editDataId ? <Edit size={18} className="text-amber-500"/> : <Plus size={18} className="text-blue-600"/>}
+                    {editDataId ? "Edit Arsip" : "Tambah Arsip Baru"}
+                 </h2>
+                 <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-200 rounded-md transition"><X size={18}/></button>
+              </div>
+
+              <div className="p-6 overflow-y-auto bg-white flex-1">
+                 
+                 {/* TOMBOL LINK BANTUAN AI */}
+                 {activeTab === "persuratan" && !editDataId && (
+                    <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex flex-col sm:flex-row items-center gap-4">
+                      <div className="flex-1">
+                         <h4 className="text-sm font-bold text-indigo-900 flex items-center gap-1.5 mb-1"><Sparkles size={16} className="text-indigo-600"/> Ekstrak Teks Surat via AI</h4>
+                         <p className="text-xs text-indigo-700">Gunakan asisten AI eksternal untuk mengekstrak teks dari foto/scan surat Anda, lalu salin hasilnya ke form ini.</p>
+                      </div>
+                      <a href="https://gemini.google.com/share/37c53e940950" target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-300 text-xs font-semibold px-4 py-2 rounded-md shadow-sm transition flex items-center gap-2 shrink-0">
+                         <ExternalLink size={14}/> Buka Asisten AI
+                      </a>
+                    </div>
+                 )}
+
+                 <form id="arsipForm" onSubmit={handleSaveData} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* INPUT PERSURATAN */}
+                    {activeTab === "persuratan" && (
+                      <>
+                        <div className="md:col-span-2">
+                          <label className={labelStandardClass}>Nomor Surat</label>
+                          <input type="text" required value={formData.nomorSurat || ''} onChange={e => setFormData({...formData, nomorSurat: e.target.value})} className={inputStandardClass} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className={labelStandardClass}>{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</label>
+                          <input type="text" required value={activeSuratTab === "masuk" ? formData.asalSurat || '' : formData.tujuanSurat || ''} onChange={e => setFormData({...formData, [activeSuratTab === "masuk" ? "asalSurat" : "tujuanSurat"]: e.target.value})} className={inputStandardClass} />
+                        </div>
+                        <div>
+                          <label className={labelStandardClass}>Tanggal Pembuatan</label>
+                          <input type="date" value={formData.tglBuat || ''} onChange={e => setFormData({...formData, tglBuat: e.target.value})} className={inputStandardClass} />
+                        </div>
+                        <div>
+                          <label className={labelStandardClass}>{activeSuratTab === "masuk" ? "Tanggal Diterima" : "Tanggal Dikirim"}</label>
+                          <input type="date" value={activeSuratTab === "masuk" ? formData.tglDatang || '' : formData.tglKirim || ''} onChange={e => setFormData({...formData, [activeSuratTab === "masuk" ? "tglDatang" : "tglKirim"]: e.target.value})} className={inputStandardClass} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className={labelStandardClass}>Perihal / Hal</label>
+                          <input type="text" value={formData.hal || ''} onChange={e => setFormData({...formData, hal: e.target.value})} className={inputStandardClass} />
+                        </div>
+                      </>
+                    )}
+
+                    {/* INPUT PROGRAM KERJA */}
+                    {activeTab === "proker" && (
+                      <>
+                        <div className="md:col-span-2">
+                          <label className={labelStandardClass}>Nama Program Kerja</label>
+                          <input type="text" required value={formData.namaProker || ''} onChange={e => setFormData({...formData, namaProker: e.target.value})} className={inputStandardClass} />
+                        </div>
+                        <div>
+                          <label className={labelStandardClass}>Biro / Pelaksana</label>
+                          <input type="text" required value={formData.pelaksanaProker || ''} onChange={e => setFormData({...formData, pelaksanaProker: e.target.value})} className={inputStandardClass} />
+                        </div>
+                        <div>
+                          <label className={labelStandardClass}>Waktu Pelaksanaan</label>
+                          <input type="date" value={formData.waktuPelaksanaan || ''} onChange={e => setFormData({...formData, waktuPelaksanaan: e.target.value})} className={inputStandardClass} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className={labelStandardClass}>Tujuan Kegiatan</label>
+                          <textarea rows="2" value={formData.tujuan || ''} onChange={e => setFormData({...formData, tujuan: e.target.value})} className={inputStandardClass} />
+                        </div>
+                      </>
+                    )}
+
+                    {/* INPUT PRODUK HUKUM */}
+                    {activeTab === "produkhukum" && (
+                      <>
+                        <div className="md:col-span-2">
+                          <label className={labelStandardClass}>Nomor SK / Ketetapan</label>
+                          <input type="text" required value={formData.nomorSK || ''} onChange={e => setFormData({...formData, nomorSK: e.target.value})} className={inputStandardClass} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className={labelStandardClass}>Tentang</label>
+                          <textarea rows="2" required value={formData.tentangHukum || ''} onChange={e => setFormData({...formData, tentangHukum: e.target.value})} className={inputStandardClass} />
+                        </div>
+                      </>
+                    )}
+
+                    {/* INPUT LPJ */}
+                    {activeTab === "laporan" && (
+                      <>
+                        <div className="md:col-span-2">
+                          <label className={labelStandardClass}>Nama / Judul Laporan</label>
+                          <input type="text" required value={formData.namaLaporan || ''} onChange={e => setFormData({...formData, namaLaporan: e.target.value})} className={inputStandardClass} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className={labelStandardClass}>Periode Laporan</label>
+                          <input type="text" value={formData.periode || ''} onChange={e => setFormData({...formData, periode: e.target.value})} className={inputStandardClass} placeholder="Misal: Tahun 2024" />
+                        </div>
+                      </>
+                    )}
+
+                    {/* INPUT GLOBAL (LINK) */}
+                    <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                      <label className={labelStandardClass}>Link File Arsip (G-Drive / PDF)</label>
+                      <input type="url" value={formData.linkFile || ''} onChange={e => setFormData({...formData, linkFile: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="https://drive.google.com/..." />
+                    </div>
+                 </form>
+              </div>
+              
+              <div className="bg-slate-50 border-t border-slate-200 p-4 flex justify-end gap-3 shrink-0">
+                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-md transition">Batal</button>
+                 <button type="submit" form="arsipForm" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2 rounded-md shadow-sm transition flex items-center gap-2">
+                    <Save size={16}/> Simpan Data
+                 </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
