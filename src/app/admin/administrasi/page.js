@@ -6,7 +6,7 @@ import * as XLSX from "xlsx";
 import { 
   FolderArchive, Mail, Briefcase, Scale, FileCheck, Inbox, Send, Search, 
   Download, Plus, Trash2, Edit, Save, FileSpreadsheet, Building2, 
-  Loader2, Sparkles, X, ExternalLink, UploadCloud
+  Loader2, Sparkles, X, ExternalLink, UploadCloud, MonitorPlay // 🔥 Ditambahkan Icon MonitorPlay
 } from "lucide-react";
 
 export default function AdminAdministrasi() {
@@ -20,6 +20,8 @@ export default function AdminAdministrasi() {
   const [masterProker, setMasterProker] = useState([]);
   const [masterProdukHukum, setMasterProdukHukum] = useState([]);
   const [masterLpj, setMasterLpj] = useState([]); 
+  // 🔥 STATE BARU UNTUK PRESENTASI & DOKUMEN 🔥
+  const [masterPresentasi, setMasterPresentasi] = useState([]); 
   
   // State Navigasi
   const [activeTab, setActiveTab] = useState("persuratan"); 
@@ -53,6 +55,8 @@ export default function AdminAdministrasi() {
         setMasterProker(data.listProker || []);   
         setMasterProdukHukum(data.listProdukHukum || []); 
         setMasterLpj(data.listLpj || []); 
+        // 🔥 AMBIL DATA PRESENTASI 🔥
+        setMasterPresentasi(data.listPresentasi || []); 
         setListLSO(data.listLSO || []);
       }
     } catch (error) {
@@ -81,6 +85,8 @@ export default function AdminAdministrasi() {
   const currentProker = masterProker.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   const currentProdukHukum = masterProdukHukum.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   const currentLpj = masterLpj.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
+  // 🔥 FILTER PRESENTASI 🔥
+  const currentPresentasi = masterPresentasi.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
 
   const getFilteredData = () => {
     const q = searchQuery.toLowerCase();
@@ -91,8 +97,11 @@ export default function AdminAdministrasi() {
       return currentProker.filter(i => (i.namaProker||"").toLowerCase().includes(q) || (i.pelaksanaProker||"").toLowerCase().includes(q) || (i.penanggungJawab||"").toLowerCase().includes(q));
     } else if (activeTab === "produkhukum") {
       return currentProdukHukum.filter(i => (i.nomorSK||"").toLowerCase().includes(q) || (i.tentangHukum||"").toLowerCase().includes(q));
-    } else {
+    } else if (activeTab === "laporan") {
       return currentLpj.filter(i => (i.namaLaporan||"").toLowerCase().includes(q) || (i.periode||"").toLowerCase().includes(q));
+    } else if (activeTab === "presentasi") {
+      // 🔥 PENCARIAN PRESENTASI 🔥
+      return currentPresentasi.filter(i => (i.judul||"").toLowerCase().includes(q) || (i.tipeDokumen||"").toLowerCase().includes(q) || (i.deskripsi||"").toLowerCase().includes(q));
     }
   };
   const currentListData = getFilteredData();
@@ -100,7 +109,7 @@ export default function AdminAdministrasi() {
   // ================= MANAJEMEN DATA =================
   const handleOpenModal = (data = null) => {
     if (data) {
-      setEditDataId(data.id || data.nomorSurat || data.nomorSK || data.namaProker || Math.random());
+      setEditDataId(data.id || data.nomorSurat || data.nomorSK || data.namaProker || data.judul || Math.random());
       setFormData(data);
     } else {
       setEditDataId(null);
@@ -132,6 +141,12 @@ export default function AdminAdministrasi() {
       } else if (activeTab === "laporan") {
         newMaster = editDataId ? masterLpj.map(i => i.id === editDataId ? payload : i) : [payload, ...masterLpj];
         setMasterLpj(newMaster);
+      } else if (activeTab === "presentasi") {
+        // 🔥 SAVE LOGIC PRESENTASI 🔥
+        newMaster = editDataId ? masterPresentasi.map(i => i.id === editDataId ? payload : i) : [payload, ...masterPresentasi];
+        setMasterPresentasi(newMaster);
+        // Tambah Timestamp otomatis
+        if (!payload.createdAt) payload.createdAt = new Date().toISOString();
       }
 
       await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
@@ -151,7 +166,9 @@ export default function AdminAdministrasi() {
         else { newMaster = masterSuratKeluar.filter(i => i.id !== idToDelete); setMasterSuratKeluar(newMaster); }
       } else if (activeTab === "proker") { newMaster = masterProker.filter(i => i.id !== idToDelete); setMasterProker(newMaster);
       } else if (activeTab === "produkhukum") { newMaster = masterProdukHukum.filter(i => i.id !== idToDelete); setMasterProdukHukum(newMaster);
-      } else if (activeTab === "laporan") { newMaster = masterLpj.filter(i => i.id !== idToDelete); setMasterLpj(newMaster); }
+      } else if (activeTab === "laporan") { newMaster = masterLpj.filter(i => i.id !== idToDelete); setMasterLpj(newMaster); 
+      // 🔥 DELETE LOGIC PRESENTASI 🔥
+      } else if (activeTab === "presentasi") { newMaster = masterPresentasi.filter(i => i.id !== idToDelete); setMasterPresentasi(newMaster); }
 
       await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
     } catch (error) { alert("Gagal menghapus: " + error.message); }
@@ -164,6 +181,7 @@ export default function AdminAdministrasi() {
     else if (tab === "proker") updateField = { listProker: newMasterData };
     else if (tab === "produkhukum") updateField = { listProdukHukum: newMasterData };
     else if (tab === "laporan") updateField = { listLpj: newMasterData };
+    else if (tab === "presentasi") updateField = { listPresentasi: newMasterData }; // 🔥 UPDATE FIREBASE PRESENTASI 🔥
     await setDoc(docRef, updateField, { merge: true });
   };
 
@@ -205,6 +223,15 @@ export default function AdminAdministrasi() {
         "Periode": "Tahun 2026",
         "Deskripsi Singkat": "Laporan akhir panitia Rapat Tahunan",
         "Link Berkas": ""
+      }];
+    } else if (activeTab === "presentasi") {
+      // 🔥 TEMPLATE EXCEL PRESENTASI 🔥
+      templateData = [{
+        "Judul Dokumen": "Materi Kaderisasi PMII",
+        "Tipe Dokumen (Canva/Google Docs/Google Sheets/Google Slides)": "Canva",
+        "Deskripsi Singkat": "Materi wajib anggota baru",
+        "Link Sematkan (Embed)": "https://www.canva.com/design/.../view?embed",
+        "Link Unduh (PDF/PPTX)": "https://firebasestorage.googleapis.com/..."
       }];
     }
 
@@ -285,6 +312,21 @@ export default function AdminAdministrasi() {
           const newMaster = [...updatedData, ...masterLpj];
           setMasterLpj(newMaster);
           await saveDataToFirebase(activeTab, null, newMaster);
+        } else if (activeTab === "presentasi") {
+          // 🔥 IMPORT EXCEL PRESENTASI 🔥
+          updatedData = data.map(row => ({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+            lembaga: activeLembaga,
+            judul: row["Judul Dokumen"] || "",
+            tipeDokumen: row["Tipe Dokumen (Canva/Google Docs/Google Sheets/Google Slides)"] || "Canva",
+            deskripsi: row["Deskripsi Singkat"] || "",
+            embedUrl: row["Link Sematkan (Embed)"] || "",
+            downloadUrl: row["Link Unduh (PDF/PPTX)"] || "",
+            createdAt: new Date().toISOString()
+          }));
+          const newMaster = [...updatedData, ...masterPresentasi];
+          setMasterPresentasi(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
         }
 
         alert(`Berhasil mengimpor ${updatedData.length} data ke arsip ${activeTab.toUpperCase()} (${activeLembaga})!`);
@@ -315,6 +357,11 @@ export default function AdminAdministrasi() {
       formattedData = currentListData.map((i, idx) => ({
         "No": idx + 1, "Nama Laporan": i.namaLaporan, "Periode": i.periode, "Deskripsi Laporan": i.deskripsiLaporan, "Link Berkas": i.linkFile
       }));
+    } else if (activeTab === "presentasi") {
+      // 🔥 EXPORT EXCEL PRESENTASI 🔥
+      formattedData = currentListData.map((i, idx) => ({
+        "No": idx + 1, "Judul Dokumen": i.judul, "Tipe Dokumen": i.tipeDokumen, "Deskripsi": i.deskripsi, "Link Sematkan (Embed)": i.embedUrl, "Link Unduh": i.downloadUrl
+      }));
     }
     const ws = XLSX.utils.json_to_sheet(formattedData); const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Arsip"); XLSX.writeFile(wb, `Rekap_${activeTab}_${Date.now()}.xlsx`);
@@ -331,7 +378,7 @@ export default function AdminAdministrasi() {
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             Sistem Administrasi
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Kelola arsip surat, program kerja, produk hukum, dan laporan lembaga.</p>
+          <p className="text-sm text-slate-500 mt-1">Kelola arsip surat, program kerja, produk hukum, laporan, dan presentasi lembaga.</p>
         </div>
         <div className="bg-white p-2 rounded-md border border-slate-300 flex items-center gap-2 shadow-sm min-w-[250px]">
            <Building2 size={18} className="text-blue-600 ml-2" />
@@ -349,6 +396,8 @@ export default function AdminAdministrasi() {
         <button onClick={() => {setActiveTab("proker"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "proker" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><Briefcase size={16} /> Program Kerja</button>
         <button onClick={() => {setActiveTab("produkhukum"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "produkhukum" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><Scale size={16} /> Produk Hukum</button>
         <button onClick={() => {setActiveTab("laporan"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "laporan" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><FileCheck size={16} /> Laporan (LPJ)</button>
+        {/* 🔥 TAB BARU: PRESENTASI & DOKUMEN 🔥 */}
+        <button onClick={() => {setActiveTab("presentasi"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "presentasi" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><MonitorPlay size={16} /> Presentasi & Dok</button>
       </div>
 
       {/* FILTER & AKSI */}
@@ -362,7 +411,7 @@ export default function AdminAdministrasi() {
            )}
            <div className="relative flex-1 xl:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"/>
-              <input type="text" placeholder="Cari arsip..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className={`${inputStandardClass} pl-9`} />
+              <input type="text" placeholder={activeTab === "presentasi" ? "Cari judul atau tipe dokumen..." : "Cari arsip..."} value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className={`${inputStandardClass} pl-9`} />
            </div>
          </div>
          
@@ -423,6 +472,15 @@ export default function AdminAdministrasi() {
                   </>
                 )}
 
+                {/* 🔥 HEADER PRESENTASI 🔥 */}
+                {activeTab === "presentasi" && (
+                  <>
+                    <th className="py-4 px-4">Judul Dokumen</th>
+                    <th className="py-4 px-4">Tipe</th>
+                    <th className="py-4 px-4 max-w-[300px]">Deskripsi Singkat</th>
+                  </>
+                )}
+
                 <th className="py-4 px-4 text-center">Berkas</th>
                 <th className="py-4 px-4 w-24 text-center">Aksi</th>
               </tr>
@@ -475,10 +533,27 @@ export default function AdminAdministrasi() {
                           </>
                         )}
 
+                        {/* 🔥 ROW PRESENTASI 🔥 */}
+                        {activeTab === "presentasi" && (
+                          <>
+                            <td className="py-3 px-4 font-semibold text-slate-900 truncate max-w-[200px]">{item.judul || "-"}</td>
+                            <td className="py-3 px-4 text-slate-600"><span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">{item.tipeDokumen || "Presentasi"}</span></td>
+                            <td className="py-3 px-4 text-slate-500 truncate max-w-[250px]">{item.deskripsi || "-"}</td>
+                          </>
+                        )}
+
                         <td className="py-3 px-4 text-center">
-                          {item.linkFile ? (
-                             <a href={item.linkFile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-semibold bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-md border border-blue-200 transition"><Download size={14}/> Buka</a>
-                          ) : <span className="text-slate-400 text-xs bg-slate-100 px-2 py-1.5 rounded-md">Kosong</span>}
+                          {activeTab === "presentasi" ? (
+                             <div className="flex flex-col gap-1.5 items-center justify-center">
+                               {item.embedUrl && <a href={item.embedUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-[10px] font-semibold bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 transition">Lihat Embed</a>}
+                               {item.downloadUrl && <a href={item.downloadUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-emerald-600 hover:text-emerald-800 text-[10px] font-semibold bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded border border-emerald-200 transition"><Download size={12}/> Unduh</a>}
+                               {!item.embedUrl && !item.downloadUrl && <span className="text-slate-400 text-[10px] bg-slate-100 px-2 py-1 rounded">Kosong</span>}
+                             </div>
+                          ) : (
+                              item.linkFile ? (
+                                 <a href={item.linkFile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-semibold bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-md border border-blue-200 transition"><Download size={14}/> Buka</a>
+                              ) : <span className="text-slate-400 text-xs bg-slate-100 px-2 py-1.5 rounded-md">Kosong</span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <div className="flex gap-2 justify-center" onClick={(e) => e.stopPropagation()}>
@@ -504,7 +579,7 @@ export default function AdminAdministrasi() {
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center shrink-0">
                <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                   {editDataId ? <Edit size={18} className="text-amber-500"/> : <Plus size={18} className="text-blue-600"/>}
-                  {editDataId ? "Edit Arsip" : "Tambah Arsip Baru"}
+                  {editDataId ? "Edit Data" : "Tambah Data Baru"}
                </h2>
                <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-200 rounded-md transition"><X size={18}/></button>
             </div>
@@ -629,11 +704,46 @@ export default function AdminAdministrasi() {
                     </>
                   )}
 
-                  {/* INPUT GLOBAL (LINK) */}
-                  <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
-                    <label className={labelStandardClass}>Link File Arsip (G-Drive / PDF)</label>
-                    <input type="url" value={formData.linkFile || ''} onChange={e => setFormData({...formData, linkFile: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="https://drive.google.com/..." />
-                  </div>
+                  {/* 🔥 INPUT PRESENTASI & DOKUMEN 🔥 */}
+                  {activeTab === "presentasi" && (
+                    <>
+                      <div className="md:col-span-2">
+                        <label className={labelStandardClass}>Judul Presentasi / Dokumen</label>
+                        <input type="text" required value={formData.judul || ''} onChange={e => setFormData({...formData, judul: e.target.value})} className={inputStandardClass} placeholder="Contoh: Materi Kaderisasi Dasar" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={labelStandardClass}>Tipe Dokumen</label>
+                        <select value={formData.tipeDokumen || 'Canva'} onChange={e => setFormData({...formData, tipeDokumen: e.target.value})} className={inputStandardClass}>
+                          <option value="Canva">Presentasi Canva</option>
+                          <option value="Google Docs">Google Docs (Word)</option>
+                          <option value="Google Sheets">Google Sheets (Excel)</option>
+                          <option value="Google Slides">Google Slides (PPT)</option>
+                          <option value="Lainnya">Lainnya</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={labelStandardClass}>Deskripsi Singkat</label>
+                        <textarea rows="2" value={formData.deskripsi || ''} onChange={e => setFormData({...formData, deskripsi: e.target.value})} className={inputStandardClass} placeholder="Bahas tentang materi apa dokumen ini..." />
+                      </div>
+                      <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                        <label className={labelStandardClass}>Link Sematkan (Embed URL) - Wajib Untuk View Interaktif</label>
+                        <input type="url" value={formData.embedUrl || ''} onChange={e => setFormData({...formData, embedUrl: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="Masukkan link dari Bagikan > Sematkan (Embed)..." />
+                        <p className="text-[10px] text-amber-600 font-semibold mt-1">Pastikan menggunakan fitur "Sematkan (Embed)" dari Canva/Google agar animasi berjalan lancar.</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={labelStandardClass}>Link File Unduhan (Opsional)</label>
+                        <input type="url" value={formData.downloadUrl || ''} onChange={e => setFormData({...formData, downloadUrl: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="Link Google Drive, Firebase Storage, dsb..." />
+                      </div>
+                    </>
+                  )}
+
+                  {/* INPUT GLOBAL (LINK) KHUSUS SELAIN PRESENTASI */}
+                  {activeTab !== "presentasi" && (
+                    <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                      <label className={labelStandardClass}>Link File Arsip (G-Drive / PDF)</label>
+                      <input type="url" value={formData.linkFile || ''} onChange={e => setFormData({...formData, linkFile: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="https://drive.google.com/..." />
+                    </div>
+                  )}
                </form>
             </div>
             

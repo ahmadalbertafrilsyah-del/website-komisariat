@@ -1,9 +1,11 @@
+// app/administrasi/page.js
 "use client";
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2 } from "lucide-react";
+// 🔥 IMPORT BARU: MonitorPlay untuk icon Presentasi & Dokumen
+import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, MonitorPlay, Share2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +24,8 @@ export default function AdministrasiPage() {
   const [masterProker, setMasterProker] = useState([]);
   const [masterProdukHukum, setMasterProdukHukum] = useState([]);
   const [masterLpj, setMasterLpj] = useState([]); 
+  // 🔥 STATE BARU UNTUK PRESENTASI & DOKUMEN
+  const [masterPresentasi, setMasterPresentasi] = useState([]); 
   
   // State Navigasi & Filter
   const [activeTab, setActiveTab] = useState("persuratan"); 
@@ -46,6 +50,8 @@ export default function AdministrasiPage() {
           setMasterProker(data.listProker || []);   
           setMasterProdukHukum(data.listProdukHukum || []); 
           setMasterLpj(data.listLpj || []); 
+          // 🔥 AMBIL DATA PRESENTASI
+          setMasterPresentasi(data.listPresentasi || []); 
           setListLSO(data.listLSO || []);
         }
       } catch (error) {
@@ -83,6 +89,8 @@ export default function AdministrasiPage() {
   const currentProker = filterByLembaga(masterProker);
   const currentProdukHukum = filterByLembaga(masterProdukHukum);
   const currentLpj = filterByLembaga(masterLpj);
+  // 🔥 FILTER DATA PRESENTASI
+  const currentPresentasi = filterByLembaga(masterPresentasi);
 
   // Logika Filter Pencarian Cerdas
   const getFilteredData = () => {
@@ -113,6 +121,13 @@ export default function AdministrasiPage() {
         (item.namaLaporan || "").toLowerCase().includes(q) ||
         (item.periode || "").toLowerCase().includes(q) ||
         (item.deskripsiLaporan || "").toLowerCase().includes(q)
+      );
+    } else if (activeTab === "presentasi") {
+      // 🔥 PENCARIAN UNTUK PRESENTASI & DOKUMEN
+      return currentPresentasi.filter(item => 
+        (item.judul || "").toLowerCase().includes(q) ||
+        (item.deskripsi || "").toLowerCase().includes(q) ||
+        (item.tipeDokumen || "").toLowerCase().includes(q)
       );
     }
     return [];
@@ -164,6 +179,14 @@ export default function AdministrasiPage() {
         "Penanggung Jawab": item.penanggungJawab || "-",
         "Estimasi Dana": item.estimasiDana || "-"
       }));
+    } else if (activeTab === "presentasi") {
+      formattedData = currentListData.map((item, idx) => ({
+        "No": idx + 1,
+        "Judul Dokumen": item.judul || "-",
+        "Tipe Dokumen": item.tipeDokumen || "Presentasi",
+        "Deskripsi": item.deskripsi || "-",
+        "Link Unduh": item.downloadUrl || "Tidak Ada"
+      }));
     } else {
       formattedData = currentListData.map((item, idx) => ({
         "No": idx + 1,
@@ -213,7 +236,7 @@ export default function AdministrasiPage() {
         <div className="relative z-10 max-w-3xl mx-auto">
           <motion.span initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-purple-400 bg-white/10 border border-white/20 px-4 py-1.5 rounded-full mb-5 inline-flex items-center justify-center gap-2 w-max mx-auto backdrop-blur-sm"><FolderArchive size={14} /></motion.span>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tight leading-tight">Pusat <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">Administrasi</span></motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-300 text-sm md:text-lg font-light max-w-2xl mx-auto leading-relaxed">Satu pintu untuk mengakses arsip persuratan, transparansi program kerja divisi, produk hukum, hingga rekapitulasi laporan pertanggungjawaban.</motion.p>
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-300 text-sm md:text-lg font-light max-w-2xl mx-auto leading-relaxed">Satu pintu untuk mengakses arsip persuratan, transparansi program kerja, produk hukum, hingga presentasi interaktif dan dokumen.</motion.p>
         </div>
       </section>
 
@@ -244,12 +267,14 @@ export default function AdministrasiPage() {
         <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-2xl flex flex-row gap-1 shadow-xl backdrop-blur-md overflow-x-auto whitespace-nowrap scrollbar-none w-full">
           <button onClick={() => handleTabChange("persuratan")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "persuratan" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Mail size={16} /> Arsip Persuratan</button>
           <button onClick={() => handleTabChange("proker")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "proker" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Briefcase size={16} /> Program Kerja</button>
-          <button onClick={() => handleTabChange("produkhukum")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "produkhukum" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Scale size={16} /> Produk Hukum / SK</button>
+          <button onClick={() => handleTabChange("produkhukum")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "produkhukum" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Scale size={16} /> Produk Hukum</button>
           <button onClick={() => handleTabChange("laporan")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "laporan" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><FileCheck size={16} /> Laporan Kepengurusan</button>
+          {/* 🔥 TOMBOL BARU: PRESENTASI & DOKUMEN */}
+          <button onClick={() => handleTabChange("presentasi")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "presentasi" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><MonitorPlay size={16} /> Presentasi & Dokumen</button>
         </div>
 
         <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100 flex items-center relative">
-          <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={activeTab === "persuratan" ? "Cari nomor surat, perihal, atau tujuan/asal..." : activeTab === "proker" ? "Cari nama program kerja atau divisi pelaksana..." : activeTab === "produkhukum" ? "Cari nomor SK atau tentang ketetapan..." : "Cari judul laporan atau periode..."} className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium" />
+          <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={activeTab === "persuratan" ? "Cari nomor surat, perihal, atau tujuan/asal..." : activeTab === "proker" ? "Cari nama program kerja atau divisi pelaksana..." : activeTab === "presentasi" ? "Cari judul presentasi atau tipe dokumen..." : activeTab === "produkhukum" ? "Cari nomor SK atau tentang ketetapan..." : "Cari judul laporan atau periode..."} className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium" />
           <Search className="absolute left-7 h-5 w-5 text-slate-400" />
         </div>
       </section>
@@ -322,7 +347,6 @@ export default function AdministrasiPage() {
                             <tr key={index} className="hover:bg-amber-50 transition-colors">
                               <td className="py-1.5 px-3 text-center border-r border-amber-200 font-bold text-slate-500">{realNumber}</td>
                               
-                              {/* PERUBAHAN UTAMA: Dibungkus dengan Div khusus yang memiliki Scroll Horizontal dan Scrollbar kustom tipis */}
                               <td className="py-1.5 px-4 border-r border-amber-200 max-w-[160px] md:max-w-[220px]">
                                 <div className="w-full overflow-x-auto whitespace-nowrap pb-1.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-amber-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-amber-400">
                                   <span className="font-mono text-[11px] md:text-xs font-bold text-slate-800 px-1">
@@ -449,6 +473,55 @@ export default function AdministrasiPage() {
               {activeTab === "laporan" && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
                    {currentListData.map((doc, index) => <DocumentCard key={index} item={doc} isHukum={false} />)}
+                </div>
+              )}
+
+              {/* 🔥 ================= SUB 5: PRESENTASI & DOKUMEN (KARTU LINK) ================= 🔥 */}
+              {activeTab === "presentasi" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {currentListData.map((docItem, index) => (
+                    <div key={index} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col group">
+                      
+                      {/* BINGKAI KARTU (BUKAN IFRAME LAGI) */}
+                      <a href={`/administrasi/dokumen/${docItem.id}`} className="relative w-full pt-[56.25%] bg-slate-50 border-b border-slate-200 flex items-center justify-center overflow-hidden cursor-pointer">
+                        {/* Icon Latar Belakang */}
+                        <MonitorPlay className="w-16 h-16 text-slate-300 group-hover:scale-110 group-hover:text-blue-500 transition-all duration-500" />
+                        
+                        {/* Efek Hover */}
+                        <div className="absolute inset-0 bg-blue-900/0 group-hover:bg-blue-900/5 transition-colors duration-300"></div>
+                        
+                        <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm text-[11px] font-bold text-blue-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                           <ExternalLink size={12} /> Buka Presentasi
+                        </div>
+                      </a>
+
+                      {/* INFO DOKUMEN BAWAH */}
+                      <div className="p-5 flex flex-col flex-1">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-2 bg-blue-50 w-max px-2.5 py-1 rounded-md">
+                          {docItem.tipeDokumen || "Presentasi Canva"}
+                        </span>
+                        <h3 className="text-base font-bold text-slate-800 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                          <a href={`/administrasi/dokumen/${docItem.id}`}>{docItem.judul}</a>
+                        </h3>
+                        <p className="text-slate-500 text-sm line-clamp-3 flex-1 mb-4">{docItem.deskripsi}</p>
+                        
+                        <div className="flex items-center gap-3 mt-auto pt-4 border-t border-slate-100">
+                           <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('Lihat Dokumen PMII: ' + docItem.judul + '\n' + window.location.origin + '/administrasi/dokumen/' + docItem.id)}`, '_blank')} className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold text-xs py-2 rounded-md transition-colors flex items-center justify-center gap-2">
+                             <Share2 size={14}/> Bagikan
+                           </button>
+                           {docItem.downloadUrl ? (
+                             <a href={docItem.downloadUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-slate-50 text-slate-700 hover:bg-blue-600 hover:text-white border border-slate-200 hover:border-blue-600 font-bold text-xs py-2 rounded-md transition-colors flex items-center justify-center gap-2">
+                               <Download size={14}/> Unduh
+                             </a>
+                           ) : (
+                             <span className="flex-1 bg-slate-50 text-slate-400 font-bold text-xs py-2 rounded-md flex items-center justify-center gap-2 cursor-not-allowed border border-slate-100">
+                               File Kosong
+                             </span>
+                           )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
