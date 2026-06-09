@@ -122,7 +122,7 @@ export default function Berita() {
               Berita & <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">Artikel</span>
             </h1>
             <p className="text-slate-300 max-w-2xl mx-auto text-lg font-light leading-relaxed mb-8">
-              Kumpulan rekam jejak intelektual, dokumentasi pergerakan, dan ruang gagasan para kader PMII Komisariat.
+              "Menanam Gagasan, Menuai Perubahan" Ini adalah ruang dialektika kader—tempat gagasan dirawat, suara disuarakan, dan perubahan dirancang. Kami menulis bukan hanya untuk mengabarkan, tetapi untuk menggerakkan. Sebab perubahan tidak lahir dari diam, melainkan dari kesadaran yang diorganisir dalam semangat hablumminannas, hablumminalalam, dan hablumminallah.
             </p>
 
             {/* TOMBOL LINK PORTAL BERITA UTAMA (MUNCUL JIKA DIISI DI ADMIN) */}
