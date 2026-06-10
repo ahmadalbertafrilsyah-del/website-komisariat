@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-// 🔥 IMPORT BARU: MonitorPlay untuk icon Presentasi & Dokumen
-import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, MonitorPlay, Share2 } from "lucide-react";
+// 🔥 IMPORT BARU: Package, Camera, dan CalendarDays untuk Inventaris
+import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, MonitorPlay, Share2, Package, Camera, CalendarDays } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,8 +24,9 @@ export default function AdministrasiPage() {
   const [masterProker, setMasterProker] = useState([]);
   const [masterProdukHukum, setMasterProdukHukum] = useState([]);
   const [masterLpj, setMasterLpj] = useState([]); 
-  // 🔥 STATE BARU UNTUK PRESENTASI & DOKUMEN
   const [masterPresentasi, setMasterPresentasi] = useState([]); 
+  // 🔥 STATE BARU UNTUK INVENTARIS
+  const [masterInventaris, setMasterInventaris] = useState([]); 
   
   // State Navigasi & Filter
   const [activeTab, setActiveTab] = useState("persuratan"); 
@@ -50,8 +51,9 @@ export default function AdministrasiPage() {
           setMasterProker(data.listProker || []);   
           setMasterProdukHukum(data.listProdukHukum || []); 
           setMasterLpj(data.listLpj || []); 
-          // 🔥 AMBIL DATA PRESENTASI
           setMasterPresentasi(data.listPresentasi || []); 
+          // 🔥 AMBIL DATA INVENTARIS
+          setMasterInventaris(data.listInventaris || []); 
           setListLSO(data.listLSO || []);
         }
       } catch (error) {
@@ -89,8 +91,9 @@ export default function AdministrasiPage() {
   const currentProker = filterByLembaga(masterProker);
   const currentProdukHukum = filterByLembaga(masterProdukHukum);
   const currentLpj = filterByLembaga(masterLpj);
-  // 🔥 FILTER DATA PRESENTASI
   const currentPresentasi = filterByLembaga(masterPresentasi);
+  // 🔥 FILTER DATA INVENTARIS
+  const currentInventaris = filterByLembaga(masterInventaris);
 
   // Logika Filter Pencarian Cerdas
   const getFilteredData = () => {
@@ -123,11 +126,17 @@ export default function AdministrasiPage() {
         (item.deskripsiLaporan || "").toLowerCase().includes(q)
       );
     } else if (activeTab === "presentasi") {
-      // 🔥 PENCARIAN UNTUK PRESENTASI & DOKUMEN
       return currentPresentasi.filter(item => 
         (item.judul || "").toLowerCase().includes(q) ||
         (item.deskripsi || "").toLowerCase().includes(q) ||
         (item.tipeDokumen || "").toLowerCase().includes(q)
+      );
+    } else if (activeTab === "inventaris") {
+      // 🔥 PENCARIAN UNTUK INVENTARIS
+      return currentInventaris.filter(item => 
+        (item.namaBarang || "").toLowerCase().includes(q) ||
+        (item.kondisi || "").toLowerCase().includes(q) ||
+        (item.deskripsi || "").toLowerCase().includes(q)
       );
     }
     return [];
@@ -187,6 +196,15 @@ export default function AdministrasiPage() {
         "Deskripsi": item.deskripsi || "-",
         "Link Unduh": item.downloadUrl || "Tidak Ada"
       }));
+    } else if (activeTab === "inventaris") {
+      // 🔥 EXPORT EXCEL UNTUK INVENTARIS
+      formattedData = currentListData.map((item, idx) => ({
+        "No": idx + 1,
+        "Nama Barang": item.namaBarang || "-",
+        "Jumlah": item.jumlah || "0",
+        "Kondisi": item.kondisi || "-",
+        "Deskripsi": item.deskripsi || "-"
+      }));
     } else {
       formattedData = currentListData.map((item, idx) => ({
         "No": idx + 1,
@@ -236,7 +254,7 @@ export default function AdministrasiPage() {
         <div className="relative z-10 max-w-3xl mx-auto">
           <motion.span initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-purple-400 bg-white/10 border border-white/20 px-4 py-1.5 rounded-full mb-5 inline-flex items-center justify-center gap-2 w-max mx-auto backdrop-blur-sm"><FolderArchive size={14} /></motion.span>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tight leading-tight">Pusat <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">Administrasi</span></motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-300 text-sm md:text-lg font-light max-w-2xl mx-auto leading-relaxed">Satu pintu untuk mengakses arsip persuratan, transparansi program kerja, produk hukum, hingga presentasi interaktif dan dokumen.</motion.p>
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-300 text-sm md:text-lg font-light max-w-2xl mx-auto leading-relaxed">Satu pintu untuk mengakses arsip persuratan, program kerja, produk hukum, presentasi interaktif, hingga inventaris & peminjaman barang.</motion.p>
         </div>
       </section>
 
@@ -268,13 +286,14 @@ export default function AdministrasiPage() {
           <button onClick={() => handleTabChange("persuratan")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "persuratan" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Mail size={16} /> Arsip Persuratan</button>
           <button onClick={() => handleTabChange("proker")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "proker" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Briefcase size={16} /> Program Kerja</button>
           <button onClick={() => handleTabChange("produkhukum")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "produkhukum" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Scale size={16} /> Produk Hukum</button>
-          <button onClick={() => handleTabChange("laporan")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "laporan" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><FileCheck size={16} /> Laporan Kepengurusan</button>
-          {/* 🔥 TOMBOL BARU: PRESENTASI & DOKUMEN */}
-          <button onClick={() => handleTabChange("presentasi")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "presentasi" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><MonitorPlay size={16} /> Presentasi & Dokumen</button>
+          <button onClick={() => handleTabChange("laporan")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "laporan" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><FileCheck size={16} /> Laporan (LPJ)</button>
+          <button onClick={() => handleTabChange("presentasi")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "presentasi" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><MonitorPlay size={16} /> Presentasi & Dok</button>
+          {/* 🔥 TOMBOL BARU: INVENTARIS */}
+          <button onClick={() => handleTabChange("inventaris")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "inventaris" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Package size={16} /> Inventaris Barang</button>
         </div>
 
         <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100 flex items-center relative">
-          <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={activeTab === "persuratan" ? "Cari nomor surat, perihal, atau tujuan/asal..." : activeTab === "proker" ? "Cari nama program kerja atau divisi pelaksana..." : activeTab === "presentasi" ? "Cari judul presentasi atau tipe dokumen..." : activeTab === "produkhukum" ? "Cari nomor SK atau tentang ketetapan..." : "Cari judul laporan atau periode..."} className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium" />
+          <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={activeTab === "persuratan" ? "Cari nomor surat, perihal, atau tujuan/asal..." : activeTab === "proker" ? "Cari nama program kerja atau divisi pelaksana..." : activeTab === "presentasi" ? "Cari judul presentasi atau tipe dokumen..." : activeTab === "inventaris" ? "Cari nama barang atau kondisinya..." : activeTab === "produkhukum" ? "Cari nomor SK atau tentang ketetapan..." : "Cari judul laporan atau periode..."} className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium" />
           <Search className="absolute left-7 h-5 w-5 text-slate-400" />
         </div>
       </section>
@@ -304,8 +323,8 @@ export default function AdministrasiPage() {
         {currentListData.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center shadow-sm mt-4">
              <FileText className="w-14 h-14 text-slate-300 mx-auto mb-3" />
-             <h3 className="font-bold text-slate-700 text-lg">Dokumen Belum Tersedia</h3>
-             <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">Admin belum mengunggah berkas untuk kategori ini di ruang kerja <b>{activeLembaga}</b>, atau kata kunci pencarian Anda tidak ditemukan.</p>
+             <h3 className="font-bold text-slate-700 text-lg">Data Belum Tersedia</h3>
+             <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">Admin belum menginput data untuk kategori ini di ruang kerja <b>{activeLembaga}</b>, atau kata kunci pencarian Anda tidak ditemukan.</p>
           </div>
         ) : (
           <AnimatePresence mode="wait">
@@ -476,26 +495,18 @@ export default function AdministrasiPage() {
                 </div>
               )}
 
-              {/* 🔥 ================= SUB 5: PRESENTASI & DOKUMEN (KARTU LINK) ================= 🔥 */}
+              {/* ================= SUB 5: PRESENTASI & DOKUMEN ================= */}
               {activeTab === "presentasi" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {currentListData.map((docItem, index) => (
                     <div key={index} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col group">
-                      
-                      {/* BINGKAI KARTU (BUKAN IFRAME LAGI) */}
                       <a href={`/administrasi/dokumen/${docItem.id}`} className="relative w-full pt-[56.25%] bg-slate-50 border-b border-slate-200 flex items-center justify-center overflow-hidden cursor-pointer">
-                        {/* Icon Latar Belakang */}
                         <MonitorPlay className="w-16 h-16 text-slate-300 group-hover:scale-110 group-hover:text-blue-500 transition-all duration-500" />
-                        
-                        {/* Efek Hover */}
                         <div className="absolute inset-0 bg-blue-900/0 group-hover:bg-blue-900/5 transition-colors duration-300"></div>
-                        
                         <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm text-[11px] font-bold text-blue-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
                            <ExternalLink size={12} /> Buka Presentasi
                         </div>
                       </a>
-
-                      {/* INFO DOKUMEN BAWAH */}
                       <div className="p-5 flex flex-col flex-1">
                         <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-2 bg-blue-50 w-max px-2.5 py-1 rounded-md">
                           {docItem.tipeDokumen || "Presentasi Canva"}
@@ -504,7 +515,6 @@ export default function AdministrasiPage() {
                           <a href={`/administrasi/dokumen/${docItem.id}`}>{docItem.judul}</a>
                         </h3>
                         <p className="text-slate-500 text-sm line-clamp-3 flex-1 mb-4">{docItem.deskripsi}</p>
-                        
                         <div className="flex items-center gap-3 mt-auto pt-4 border-t border-slate-100">
                            <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('Lihat Dokumen PMII: ' + docItem.judul + '\n' + window.location.origin + '/administrasi/dokumen/' + docItem.id)}`, '_blank')} className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold text-xs py-2 rounded-md transition-colors flex items-center justify-center gap-2">
                              <Share2 size={14}/> Bagikan
@@ -518,6 +528,43 @@ export default function AdministrasiPage() {
                                File Kosong
                              </span>
                            )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 🔥 ================= SUB 6: INVENTARIS ================= 🔥 */}
+              {activeTab === "inventaris" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {currentListData.map((item, index) => (
+                    <div key={index} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col group">
+                      <div className="p-5 flex flex-col flex-1">
+                        <div className="flex justify-between items-start mb-3 gap-3">
+                          <h3 className="text-lg font-bold text-slate-800 line-clamp-2">{item.namaBarang}</h3>
+                          <span className={`shrink-0 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${item.kondisi === 'Baik' ? 'bg-emerald-50 text-emerald-600' : item.kondisi === 'Rusak Ringan' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>
+                            {item.kondisi || "Baik"}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 mb-4">
+                           <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">
+                             Stok Tersedia: {item.jumlah}
+                           </span>
+                        </div>
+                        
+                        <p className="text-slate-500 text-sm line-clamp-3 flex-1 mb-6">
+                          {item.deskripsi || "Tidak ada detail tambahan untuk barang ini."}
+                        </p>
+
+                        <div className="flex items-center gap-3 mt-auto pt-4 border-t border-slate-100">
+                           <a href={`/administrasi/inventaris/${item.id}?tab=foto`} className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-bold text-xs py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 border border-blue-100 hover:border-blue-600">
+                             <Camera size={14}/> Lihat Barang
+                           </a>
+                           <a href={`/administrasi/inventaris/${item.id}?tab=kalender`} className="flex-1 bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white font-bold text-xs py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 border border-purple-100 hover:border-purple-600">
+                             <CalendarDays size={14}/> Peminjaman
+                           </a>
                         </div>
                       </div>
                     </div>

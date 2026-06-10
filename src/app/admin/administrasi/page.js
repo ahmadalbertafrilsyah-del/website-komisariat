@@ -1,3 +1,4 @@
+// app/admin/administrasi/page.js
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
@@ -6,7 +7,7 @@ import * as XLSX from "xlsx";
 import { 
   FolderArchive, Mail, Briefcase, Scale, FileCheck, Inbox, Send, Search, 
   Download, Plus, Trash2, Edit, Save, FileSpreadsheet, Building2, 
-  Loader2, Sparkles, X, ExternalLink, UploadCloud, MonitorPlay // 🔥 Ditambahkan Icon MonitorPlay
+  Loader2, Sparkles, X, ExternalLink, UploadCloud, MonitorPlay, Package, Camera, CalendarDays
 } from "lucide-react";
 
 export default function AdminAdministrasi() {
@@ -20,8 +21,10 @@ export default function AdminAdministrasi() {
   const [masterProker, setMasterProker] = useState([]);
   const [masterProdukHukum, setMasterProdukHukum] = useState([]);
   const [masterLpj, setMasterLpj] = useState([]); 
-  // 🔥 STATE BARU UNTUK PRESENTASI & DOKUMEN 🔥
   const [masterPresentasi, setMasterPresentasi] = useState([]); 
+  const [masterInventaris, setMasterInventaris] = useState([]); 
+  
+  const [globalCalendarUrl, setGlobalCalendarUrl] = useState("");
   
   // State Navigasi
   const [activeTab, setActiveTab] = useState("persuratan"); 
@@ -34,9 +37,13 @@ export default function AdminAdministrasi() {
   const [formData, setFormData] = useState({});
   const [expandedRowId, setExpandedRowId] = useState(null);
   
+  // 🔥 STATE BARU UNTUK FOTO CLOUDINARY 🔥
+  const [fotoUrls, setFotoUrls] = useState([]); 
+  const [isUploadingFoto, setIsUploadingFoto] = useState(false);
+  
   const excelInputRef = useRef(null);
 
-  // Styling Standar Enterprise (Sesuai Alumni)
+  // Styling Standar
   const inputStandardClass = "w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white";
   const labelStandardClass = "text-xs font-semibold text-slate-700 block mb-1.5";
 
@@ -55,9 +62,11 @@ export default function AdminAdministrasi() {
         setMasterProker(data.listProker || []);   
         setMasterProdukHukum(data.listProdukHukum || []); 
         setMasterLpj(data.listLpj || []); 
-        // 🔥 AMBIL DATA PRESENTASI 🔥
         setMasterPresentasi(data.listPresentasi || []); 
+        setMasterInventaris(data.listInventaris || []); 
         setListLSO(data.listLSO || []);
+        
+        setGlobalCalendarUrl(data.globalCalendarUrl || "");
       }
     } catch (error) {
       console.error("Gagal menarik database:", error);
@@ -66,7 +75,66 @@ export default function AdminAdministrasi() {
     }
   }
 
-  // ================= HELPER & FILTERING =================
+  const handleSaveGlobalCalendar = async () => {
+    try {
+      const docRef = doc(db, "website_config", "database_administrasi");
+      await setDoc(docRef, { globalCalendarUrl: globalCalendarUrl }, { merge: true });
+      alert("Link Kalender Global untuk Inventaris berhasil disimpan!");
+    } catch (error) {
+      alert("Gagal menyimpan link kalender: " + error.message);
+    }
+  };
+
+  // 🔥 FUNGSI UPLOAD CLOUDINARY TERHUBUNG DENGAN .ENV 🔥
+  const uploadToCloudinary = async (files) => {
+    if (!files || files.length === 0) return;
+    
+    // Memanggil API dari .env
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME; 
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET; 
+
+    if (!cloudName || !uploadPreset) {
+      alert("Error: Konfigurasi Cloudinary di file .env belum lengkap!");
+      return;
+    }
+
+    setIsUploadingFoto(true);
+    const uploadedUrls = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", uploadPreset);
+
+      try {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        
+        if (data.secure_url) {
+          // AUTO KOMPRES: Menambahkan parameter q_auto,f_auto ke URL agar ukuran MB jadi sangat kecil!
+          const compressedUrl = data.secure_url.replace("/upload/", "/upload/q_auto,f_auto/");
+          uploadedUrls.push(compressedUrl);
+        }
+      } catch (err) {
+        console.error("Gagal upload foto ke Cloudinary:", err);
+        alert(`Gagal mengunggah ${file.name}. Cek koneksi atau konfigurasi Cloudinary Anda.`);
+      }
+    }
+
+    // Gabungkan foto lama dengan foto yang baru diupload
+    setFotoUrls((prev) => [...prev, ...uploadedUrls]);
+    setIsUploadingFoto(false);
+  };
+
+  const removeFoto = (indexToRemove) => {
+    setFotoUrls((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  // ================= FILTERING =================
   const formatDisplayDate = (dateVal) => {
     if (!dateVal) return "-";
     if (!isNaN(dateVal) && Number(dateVal) > 20000) {
@@ -85,8 +153,8 @@ export default function AdminAdministrasi() {
   const currentProker = masterProker.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   const currentProdukHukum = masterProdukHukum.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   const currentLpj = masterLpj.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  // 🔥 FILTER PRESENTASI 🔥
   const currentPresentasi = masterPresentasi.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
+  const currentInventaris = masterInventaris.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
 
   const getFilteredData = () => {
     const q = searchQuery.toLowerCase();
@@ -100,9 +168,11 @@ export default function AdminAdministrasi() {
     } else if (activeTab === "laporan") {
       return currentLpj.filter(i => (i.namaLaporan||"").toLowerCase().includes(q) || (i.periode||"").toLowerCase().includes(q));
     } else if (activeTab === "presentasi") {
-      // 🔥 PENCARIAN PRESENTASI 🔥
       return currentPresentasi.filter(i => (i.judul||"").toLowerCase().includes(q) || (i.tipeDokumen||"").toLowerCase().includes(q) || (i.deskripsi||"").toLowerCase().includes(q));
+    } else if (activeTab === "inventaris") {
+      return currentInventaris.filter(i => (i.namaBarang||"").toLowerCase().includes(q) || (i.kondisi||"").toLowerCase().includes(q) || (i.deskripsi||"").toLowerCase().includes(q));
     }
+    return [];
   };
   const currentListData = getFilteredData();
 
@@ -111,42 +181,60 @@ export default function AdminAdministrasi() {
     if (data) {
       setEditDataId(data.id || data.nomorSurat || data.nomorSK || data.namaProker || data.judul || Math.random());
       setFormData(data);
+      if (activeTab === "inventaris" && data.fotoGroup) {
+        setFotoUrls(data.fotoGroup); // Set sebagai array
+      } else {
+        setFotoUrls([]);
+      }
     } else {
       setEditDataId(null);
       setFormData({ lembaga: activeLembaga });
+      setFotoUrls([]);
     }
     setIsModalOpen(true);
   };
 
   const handleSaveData = async (e) => {
     e.preventDefault();
+    if (isUploadingFoto) {
+      alert("Harap tunggu, foto sedang diunggah ke Cloudinary...");
+      return;
+    }
+
     try {
-      const payload = { ...formData, id: editDataId || Date.now().toString(), lembaga: activeLembaga };
+      let finalPayload = { ...formData, id: editDataId || Date.now().toString(), lembaga: activeLembaga };
       let newMaster;
+
+      // Masukkan array foto ke payload
+      if (activeTab === "inventaris") {
+        finalPayload = { ...finalPayload, fotoGroup: fotoUrls };
+      }
 
       if (activeTab === "persuratan") {
         if (activeSuratTab === "masuk") {
-          newMaster = editDataId ? masterSuratMasuk.map(i => i.id === editDataId ? payload : i) : [payload, ...masterSuratMasuk];
+          newMaster = editDataId ? masterSuratMasuk.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterSuratMasuk];
           setMasterSuratMasuk(newMaster);
         } else {
-          newMaster = editDataId ? masterSuratKeluar.map(i => i.id === editDataId ? payload : i) : [payload, ...masterSuratKeluar];
+          newMaster = editDataId ? masterSuratKeluar.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterSuratKeluar];
           setMasterSuratKeluar(newMaster);
         }
       } else if (activeTab === "proker") {
-        newMaster = editDataId ? masterProker.map(i => i.id === editDataId ? payload : i) : [payload, ...masterProker];
+        newMaster = editDataId ? masterProker.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterProker];
         setMasterProker(newMaster);
       } else if (activeTab === "produkhukum") {
-        newMaster = editDataId ? masterProdukHukum.map(i => i.id === editDataId ? payload : i) : [payload, ...masterProdukHukum];
+        newMaster = editDataId ? masterProdukHukum.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterProdukHukum];
         setMasterProdukHukum(newMaster);
       } else if (activeTab === "laporan") {
-        newMaster = editDataId ? masterLpj.map(i => i.id === editDataId ? payload : i) : [payload, ...masterLpj];
+        newMaster = editDataId ? masterLpj.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterLpj];
         setMasterLpj(newMaster);
       } else if (activeTab === "presentasi") {
-        // 🔥 SAVE LOGIC PRESENTASI 🔥
-        newMaster = editDataId ? masterPresentasi.map(i => i.id === editDataId ? payload : i) : [payload, ...masterPresentasi];
+        newMaster = editDataId ? masterPresentasi.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterPresentasi];
         setMasterPresentasi(newMaster);
-        // Tambah Timestamp otomatis
-        if (!payload.createdAt) payload.createdAt = new Date().toISOString();
+        if (!finalPayload.createdAt) finalPayload.createdAt = new Date().toISOString();
+      } else if (activeTab === "inventaris") {
+        newMaster = editDataId ? masterInventaris.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterInventaris];
+        setMasterInventaris(newMaster);
+        if (!finalPayload.createdAt) finalPayload.createdAt = new Date().toISOString();
       }
 
       await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
@@ -167,8 +255,8 @@ export default function AdminAdministrasi() {
       } else if (activeTab === "proker") { newMaster = masterProker.filter(i => i.id !== idToDelete); setMasterProker(newMaster);
       } else if (activeTab === "produkhukum") { newMaster = masterProdukHukum.filter(i => i.id !== idToDelete); setMasterProdukHukum(newMaster);
       } else if (activeTab === "laporan") { newMaster = masterLpj.filter(i => i.id !== idToDelete); setMasterLpj(newMaster); 
-      // 🔥 DELETE LOGIC PRESENTASI 🔥
-      } else if (activeTab === "presentasi") { newMaster = masterPresentasi.filter(i => i.id !== idToDelete); setMasterPresentasi(newMaster); }
+      } else if (activeTab === "presentasi") { newMaster = masterPresentasi.filter(i => i.id !== idToDelete); setMasterPresentasi(newMaster); 
+      } else if (activeTab === "inventaris") { newMaster = masterInventaris.filter(i => i.id !== idToDelete); setMasterInventaris(newMaster); }
 
       await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
     } catch (error) { alert("Gagal menghapus: " + error.message); }
@@ -181,11 +269,12 @@ export default function AdminAdministrasi() {
     else if (tab === "proker") updateField = { listProker: newMasterData };
     else if (tab === "produkhukum") updateField = { listProdukHukum: newMasterData };
     else if (tab === "laporan") updateField = { listLpj: newMasterData };
-    else if (tab === "presentasi") updateField = { listPresentasi: newMasterData }; // 🔥 UPDATE FIREBASE PRESENTASI 🔥
+    else if (tab === "presentasi") updateField = { listPresentasi: newMasterData }; 
+    else if (tab === "inventaris") updateField = { listInventaris: newMasterData }; 
     await setDoc(docRef, updateField, { merge: true });
   };
 
-  // ================= IMPORT & EXPORT EXCEL SESUAI AWAL =================
+  // ================= IMPORT & EXPORT EXCEL =================
   const handleDownloadTemplate = () => {
     let templateData = [];
     if (activeTab === "persuratan") {
@@ -225,13 +314,20 @@ export default function AdminAdministrasi() {
         "Link Berkas": ""
       }];
     } else if (activeTab === "presentasi") {
-      // 🔥 TEMPLATE EXCEL PRESENTASI 🔥
       templateData = [{
         "Judul Dokumen": "Materi Kaderisasi PMII",
         "Tipe Dokumen (Canva/Google Docs/Google Sheets/Google Slides)": "Canva",
         "Deskripsi Singkat": "Materi wajib anggota baru",
         "Link Sematkan (Embed)": "https://www.canva.com/design/.../view?embed",
         "Link Unduh (PDF/PPTX)": "https://firebasestorage.googleapis.com/..."
+      }];
+    } else if (activeTab === "inventaris") {
+      templateData = [{
+        "Nama Barang": "Proyektor Epson XY-100",
+        "Jumlah": "2",
+        "Kondisi (Baik/Rusak Ringan/Rusak Berat)": "Baik",
+        "Deskripsi": "Lengkap dengan tas dan kabel HDMI",
+        "Link Foto 1 (Pisahkan dgn koma jika banyak)": "https://res.cloudinary.com/..."
       }];
     }
 
@@ -313,7 +409,6 @@ export default function AdminAdministrasi() {
           setMasterLpj(newMaster);
           await saveDataToFirebase(activeTab, null, newMaster);
         } else if (activeTab === "presentasi") {
-          // 🔥 IMPORT EXCEL PRESENTASI 🔥
           updatedData = data.map(row => ({
             id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
             lembaga: activeLembaga,
@@ -326,6 +421,25 @@ export default function AdminAdministrasi() {
           }));
           const newMaster = [...updatedData, ...masterPresentasi];
           setMasterPresentasi(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
+        } else if (activeTab === "inventaris") {
+          updatedData = data.map(row => {
+            const fotosText = row["Link Foto 1 (Pisahkan dgn koma jika banyak)"] || "";
+            const fotoGroup = fotosText ? fotosText.split(',').map(u => u.trim()) : [];
+            
+            return {
+              id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+              lembaga: activeLembaga,
+              namaBarang: row["Nama Barang"] || "",
+              jumlah: row["Jumlah"] || "1",
+              kondisi: row["Kondisi (Baik/Rusak Ringan/Rusak Berat)"] || "Baik",
+              deskripsi: row["Deskripsi"] || "",
+              fotoGroup: fotoGroup,
+              createdAt: new Date().toISOString()
+            }
+          });
+          const newMaster = [...updatedData, ...masterInventaris];
+          setMasterInventaris(newMaster);
           await saveDataToFirebase(activeTab, null, newMaster);
         }
 
@@ -358,9 +472,12 @@ export default function AdminAdministrasi() {
         "No": idx + 1, "Nama Laporan": i.namaLaporan, "Periode": i.periode, "Deskripsi Laporan": i.deskripsiLaporan, "Link Berkas": i.linkFile
       }));
     } else if (activeTab === "presentasi") {
-      // 🔥 EXPORT EXCEL PRESENTASI 🔥
       formattedData = currentListData.map((i, idx) => ({
         "No": idx + 1, "Judul Dokumen": i.judul, "Tipe Dokumen": i.tipeDokumen, "Deskripsi": i.deskripsi, "Link Sematkan (Embed)": i.embedUrl, "Link Unduh": i.downloadUrl
+      }));
+    } else if (activeTab === "inventaris") {
+      formattedData = currentListData.map((i, idx) => ({
+        "No": idx + 1, "Nama Barang": i.namaBarang, "Jumlah": i.jumlah, "Kondisi": i.kondisi, "Deskripsi": i.deskripsi
       }));
     }
     const ws = XLSX.utils.json_to_sheet(formattedData); const wb = XLSX.utils.book_new();
@@ -378,7 +495,7 @@ export default function AdminAdministrasi() {
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             Sistem Administrasi
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Kelola arsip surat, program kerja, produk hukum, laporan, dan presentasi lembaga.</p>
+          <p className="text-sm text-slate-500 mt-1">Kelola arsip surat, program kerja, produk hukum, laporan, presentasi, dan inventaris barang.</p>
         </div>
         <div className="bg-white p-2 rounded-md border border-slate-300 flex items-center gap-2 shadow-sm min-w-[250px]">
            <Building2 size={18} className="text-blue-600 ml-2" />
@@ -396,9 +513,29 @@ export default function AdminAdministrasi() {
         <button onClick={() => {setActiveTab("proker"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "proker" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><Briefcase size={16} /> Program Kerja</button>
         <button onClick={() => {setActiveTab("produkhukum"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "produkhukum" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><Scale size={16} /> Produk Hukum</button>
         <button onClick={() => {setActiveTab("laporan"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "laporan" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><FileCheck size={16} /> Laporan (LPJ)</button>
-        {/* 🔥 TAB BARU: PRESENTASI & DOKUMEN 🔥 */}
         <button onClick={() => {setActiveTab("presentasi"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "presentasi" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><MonitorPlay size={16} /> Presentasi & Dok</button>
+        <button onClick={() => {setActiveTab("inventaris"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "inventaris" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><Package size={16} /> Inventaris Barang</button>
       </div>
+
+      {/* PENGATURAN KALENDER GLOBAL INVENTARIS */}
+      {activeTab === "inventaris" && (
+        <div className="bg-purple-50 border border-purple-200 p-4 md:p-5 rounded-lg shadow-sm flex flex-col md:flex-row gap-4 items-center mb-6">
+          <div className="flex-1 w-full">
+            <label className="text-xs font-bold text-purple-900 mb-1 flex items-center gap-1.5"><CalendarDays size={14}/> Link Google Calendar (Peminjaman Global)</label>
+            <input 
+              type="url" 
+              value={globalCalendarUrl} 
+              onChange={(e) => setGlobalCalendarUrl(e.target.value)} 
+              className="w-full px-3 py-2 border border-purple-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white" 
+              placeholder="Masukkan link publik Google Calendar untuk seluruh inventaris..." 
+            />
+            <p className="text-[10px] text-purple-700 mt-1">Satu link kalender ini akan otomatis muncul pada tab peminjaman di semua barang inventaris.</p>
+          </div>
+          <button onClick={handleSaveGlobalCalendar} className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm px-5 py-2.5 rounded-md shadow-sm transition-colors w-full md:w-auto flex items-center justify-center gap-2">
+            <Save size={16}/> Simpan Link
+          </button>
+        </div>
+      )}
 
       {/* FILTER & AKSI */}
       <div className="bg-white p-4 md:p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col xl:flex-row justify-between gap-4 items-center mb-6">
@@ -411,7 +548,7 @@ export default function AdminAdministrasi() {
            )}
            <div className="relative flex-1 xl:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"/>
-              <input type="text" placeholder={activeTab === "presentasi" ? "Cari judul atau tipe dokumen..." : "Cari arsip..."} value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className={`${inputStandardClass} pl-9`} />
+              <input type="text" placeholder={activeTab === "inventaris" ? "Cari barang..." : activeTab === "presentasi" ? "Cari judul atau tipe..." : "Cari arsip..."} value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className={`${inputStandardClass} pl-9`} />
            </div>
          </div>
          
@@ -440,7 +577,6 @@ export default function AdminAdministrasi() {
               <tr>
                 <th className="py-4 px-4 w-12 text-center">No</th>
                 
-                {/* Header Persuratan */}
                 {activeTab === "persuratan" && (
                   <>
                     <th className="py-4 px-4">Nomor Surat</th>
@@ -451,7 +587,6 @@ export default function AdminAdministrasi() {
                   </>
                 )}
 
-                {/* Header Proker */}
                 {activeTab === "proker" && (
                   <>
                     <th className="py-4 px-4">Nama Kegiatan</th>
@@ -464,7 +599,6 @@ export default function AdminAdministrasi() {
                   </>
                 )}
 
-                {/* Header Produk Hukum & Laporan */}
                 {(activeTab === "produkhukum" || activeTab === "laporan") && (
                   <>
                     <th className="py-4 px-4">{activeTab === "produkhukum" ? "Nomor SK / Judul" : "Judul Laporan"}</th>
@@ -472,7 +606,6 @@ export default function AdminAdministrasi() {
                   </>
                 )}
 
-                {/* 🔥 HEADER PRESENTASI 🔥 */}
                 {activeTab === "presentasi" && (
                   <>
                     <th className="py-4 px-4">Judul Dokumen</th>
@@ -481,7 +614,16 @@ export default function AdminAdministrasi() {
                   </>
                 )}
 
-                <th className="py-4 px-4 text-center">Berkas</th>
+                {activeTab === "inventaris" && (
+                  <>
+                    <th className="py-4 px-4">Nama Barang</th>
+                    <th className="py-4 px-4 w-24 text-center">Jumlah</th>
+                    <th className="py-4 px-4 w-32 text-center">Kondisi</th>
+                    <th className="py-4 px-4 max-w-[300px]">Deskripsi</th>
+                  </>
+                )}
+
+                <th className="py-4 px-4 text-center">{activeTab === "inventaris" ? "Media" : "Berkas"}</th>
                 <th className="py-4 px-4 w-24 text-center">Aksi</th>
               </tr>
             </thead>
@@ -498,7 +640,6 @@ export default function AdminAdministrasi() {
                       <tr className={`transition-colors hover:bg-slate-50 cursor-pointer ${isExpanded ? 'bg-slate-50' : ''}`} onClick={() => setExpandedRowId(isExpanded ? null : index)}>
                         <td className="py-3 px-4 text-center font-medium text-slate-400">{index + 1}</td>
                         
-                        {/* Row Persuratan */}
                         {activeTab === "persuratan" && (
                           <>
                             <td className="py-3 px-4 font-semibold text-slate-900">{item.nomorSurat || "-"}</td>
@@ -509,7 +650,6 @@ export default function AdminAdministrasi() {
                           </>
                         )}
 
-                        {/* Row Proker */}
                         {activeTab === "proker" && (
                           <>
                             <td className="py-3 px-4 font-semibold text-slate-900">{item.namaProker || "-"}</td>
@@ -522,7 +662,6 @@ export default function AdminAdministrasi() {
                           </>
                         )}
 
-                        {/* Row Hukum & Laporan */}
                         {(activeTab === "produkhukum" || activeTab === "laporan") && (
                           <>
                             <td className="py-3 px-4">
@@ -533,11 +672,23 @@ export default function AdminAdministrasi() {
                           </>
                         )}
 
-                        {/* 🔥 ROW PRESENTASI 🔥 */}
                         {activeTab === "presentasi" && (
                           <>
                             <td className="py-3 px-4 font-semibold text-slate-900 truncate max-w-[200px]">{item.judul || "-"}</td>
                             <td className="py-3 px-4 text-slate-600"><span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">{item.tipeDokumen || "Presentasi"}</span></td>
+                            <td className="py-3 px-4 text-slate-500 truncate max-w-[250px]">{item.deskripsi || "-"}</td>
+                          </>
+                        )}
+
+                        {activeTab === "inventaris" && (
+                          <>
+                            <td className="py-3 px-4 font-semibold text-slate-900 truncate max-w-[200px]">{item.namaBarang || "-"}</td>
+                            <td className="py-3 px-4 text-center font-mono font-bold text-slate-700 bg-slate-50/50">{item.jumlah || "0"}</td>
+                            <td className="py-3 px-4 text-center">
+                              <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-md ${item.kondisi === 'Baik' ? 'bg-emerald-100 text-emerald-700' : item.kondisi === 'Rusak Ringan' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                                {item.kondisi || "Baik"}
+                              </span>
+                            </td>
                             <td className="py-3 px-4 text-slate-500 truncate max-w-[250px]">{item.deskripsi || "-"}</td>
                           </>
                         )}
@@ -548,6 +699,14 @@ export default function AdminAdministrasi() {
                                {item.embedUrl && <a href={item.embedUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-[10px] font-semibold bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 transition">Lihat Embed</a>}
                                {item.downloadUrl && <a href={item.downloadUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-emerald-600 hover:text-emerald-800 text-[10px] font-semibold bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded border border-emerald-200 transition"><Download size={12}/> Unduh</a>}
                                {!item.embedUrl && !item.downloadUrl && <span className="text-slate-400 text-[10px] bg-slate-100 px-2 py-1 rounded">Kosong</span>}
+                             </div>
+                          ) : activeTab === "inventaris" ? (
+                             <div className="flex flex-col gap-1.5 items-center justify-center">
+                               {item.fotoGroup && item.fotoGroup.length > 0 ? (
+                                  <span className="inline-flex items-center gap-1.5 text-blue-600 text-[10px] font-semibold bg-blue-50 px-2 py-1 rounded border border-blue-200"><Camera size={12}/> {item.fotoGroup.length} Foto</span>
+                               ) : (
+                                  <span className="text-slate-400 text-[10px] bg-slate-100 px-2 py-1 rounded">No Foto</span>
+                               )}
                              </div>
                           ) : (
                               item.linkFile ? (
@@ -586,7 +745,6 @@ export default function AdminAdministrasi() {
 
             <div className="p-6 overflow-y-auto bg-white flex-1">
                
-               {/* TOMBOL LINK BANTUAN AI */}
                {activeTab === "persuratan" && !editDataId && (
                   <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex flex-col sm:flex-row items-center gap-4">
                     <div className="flex-1">
@@ -600,7 +758,6 @@ export default function AdminAdministrasi() {
                )}
 
                <form id="arsipForm" onSubmit={handleSaveData} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* INPUT PERSURATAN */}
                   {activeTab === "persuratan" && (
                     <>
                       <div className="md:col-span-2">
@@ -630,7 +787,6 @@ export default function AdminAdministrasi() {
                     </>
                   )}
 
-                  {/* INPUT PROGRAM KERJA */}
                   {activeTab === "proker" && (
                     <>
                       <div className="md:col-span-2">
@@ -668,7 +824,6 @@ export default function AdminAdministrasi() {
                     </>
                   )}
 
-                  {/* INPUT PRODUK HUKUM */}
                   {activeTab === "produkhukum" && (
                     <>
                       <div className="md:col-span-2">
@@ -686,7 +841,6 @@ export default function AdminAdministrasi() {
                     </>
                   )}
 
-                  {/* INPUT LPJ */}
                   {activeTab === "laporan" && (
                     <>
                       <div className="md:col-span-2">
@@ -704,7 +858,6 @@ export default function AdminAdministrasi() {
                     </>
                   )}
 
-                  {/* 🔥 INPUT PRESENTASI & DOKUMEN 🔥 */}
                   {activeTab === "presentasi" && (
                     <>
                       <div className="md:col-span-2">
@@ -728,7 +881,6 @@ export default function AdminAdministrasi() {
                       <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
                         <label className={labelStandardClass}>Link Sematkan (Embed URL) - Wajib Untuk View Interaktif</label>
                         <input type="url" value={formData.embedUrl || ''} onChange={e => setFormData({...formData, embedUrl: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="Masukkan link dari Bagikan > Sematkan (Embed)..." />
-                        <p className="text-[10px] text-amber-600 font-semibold mt-1">Pastikan menggunakan fitur "Sematkan (Embed)" dari Canva/Google agar animasi berjalan lancar.</p>
                       </div>
                       <div className="md:col-span-2">
                         <label className={labelStandardClass}>Link File Unduhan (Opsional)</label>
@@ -737,8 +889,68 @@ export default function AdminAdministrasi() {
                     </>
                   )}
 
-                  {/* INPUT GLOBAL (LINK) KHUSUS SELAIN PRESENTASI */}
-                  {activeTab !== "presentasi" && (
+                  {/* 🔥 INPUT INVENTARIS BARANG & UPLOAD CLOUDINARY 🔥 */}
+                  {activeTab === "inventaris" && (
+                    <>
+                      <div className="md:col-span-2">
+                        <label className={labelStandardClass}>Nama Barang</label>
+                        <input type="text" required value={formData.namaBarang || ''} onChange={e => setFormData({...formData, namaBarang: e.target.value})} className={inputStandardClass} placeholder="Contoh: Proyektor Epson, Sound System, dll" />
+                      </div>
+                      <div>
+                        <label className={labelStandardClass}>Jumlah Stok</label>
+                        <input type="number" required min="1" value={formData.jumlah || ''} onChange={e => setFormData({...formData, jumlah: e.target.value})} className={inputStandardClass} placeholder="Misal: 5" />
+                      </div>
+                      <div>
+                        <label className={labelStandardClass}>Kondisi Barang</label>
+                        <select value={formData.kondisi || 'Baik'} onChange={e => setFormData({...formData, kondisi: e.target.value})} className={inputStandardClass}>
+                          <option value="Baik">Baik</option>
+                          <option value="Rusak Ringan">Rusak Ringan</option>
+                          <option value="Rusak Berat">Rusak Berat</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={labelStandardClass}>Deskripsi Detail</label>
+                        <textarea rows="2" value={formData.deskripsi || ''} onChange={e => setFormData({...formData, deskripsi: e.target.value})} className={inputStandardClass} placeholder="Kelengkapan barang (kabel, tas), merk, ciri khusus..." />
+                      </div>
+
+                      <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                        <label className={labelStandardClass}>Upload Foto Barang (Otomatis Kompres & Bisa Pilih Banyak)</label>
+                        <input 
+                          type="file" 
+                          multiple 
+                          accept="image/*" 
+                          onChange={(e) => uploadToCloudinary(e.target.files)} 
+                          className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" 
+                          disabled={isUploadingFoto}
+                        />
+                        
+                        {isUploadingFoto && (
+                          <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                            <Loader2 size={12} className="animate-spin" /> Mengunggah & mengompresi gambar (Cloudinary)...
+                          </p>
+                        )}
+
+                        {fotoUrls.length > 0 && (
+                          <div className="flex flex-wrap gap-3 mt-4 bg-slate-50 p-3 rounded-md border border-slate-100">
+                            {fotoUrls.map((url, idx) => (
+                              <div key={idx} className="relative w-20 h-20 rounded-md overflow-hidden border border-slate-200 group">
+                                <img src={url} alt="preview" className="w-full h-full object-cover" />
+                                <button 
+                                  type="button" 
+                                  onClick={() => removeFoto(idx)} 
+                                  className="absolute top-1 right-1 bg-red-500/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {activeTab !== "presentasi" && activeTab !== "inventaris" && (
                     <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
                       <label className={labelStandardClass}>Link File Arsip (G-Drive / PDF)</label>
                       <input type="url" value={formData.linkFile || ''} onChange={e => setFormData({...formData, linkFile: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="https://drive.google.com/..." />
@@ -749,7 +961,12 @@ export default function AdminAdministrasi() {
             
             <div className="bg-slate-50 border-t border-slate-200 p-4 flex justify-end gap-3 shrink-0">
                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-md transition">Batal</button>
-               <button type="submit" form="arsipForm" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2 rounded-md shadow-sm transition flex items-center gap-2">
+               <button 
+                  type="submit" 
+                  form="arsipForm" 
+                  disabled={isUploadingFoto}
+                  className={`text-sm font-medium px-6 py-2 rounded-md shadow-sm transition flex items-center gap-2 ${isUploadingFoto ? 'bg-slate-400 text-slate-200 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+               >
                   <Save size={16}/> Simpan Data
                </button>
             </div>
