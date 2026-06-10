@@ -2,12 +2,12 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, updateDoc, query, orderBy } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { 
   FolderArchive, Mail, Briefcase, Scale, FileCheck, Inbox, Send, Search, 
   Download, Plus, Trash2, Edit, Save, FileSpreadsheet, Building2, 
-  Loader2, Sparkles, X, ExternalLink, UploadCloud, MonitorPlay, Package, Camera, CalendarDays
+  Loader2, Sparkles, X, ExternalLink, UploadCloud, MonitorPlay, Package, Camera, CalendarDays, ClipboardList, CheckCircle, XCircle
 } from "lucide-react";
 
 export default function AdminAdministrasi() {
@@ -24,6 +24,8 @@ export default function AdminAdministrasi() {
   const [masterPresentasi, setMasterPresentasi] = useState([]); 
   const [masterInventaris, setMasterInventaris] = useState([]); 
   
+  // 🔥 STATE BARU: DATA PEMINJAMAN 🔥
+  const [masterPeminjaman, setMasterPeminjaman] = useState([]);
   const [globalCalendarUrl, setGlobalCalendarUrl] = useState("");
   
   // State Navigasi
@@ -37,18 +39,18 @@ export default function AdminAdministrasi() {
   const [formData, setFormData] = useState({});
   const [expandedRowId, setExpandedRowId] = useState(null);
   
-  // 🔥 STATE BARU UNTUK FOTO CLOUDINARY 🔥
+  // STATE UNTUK FOTO CLOUDINARY
   const [fotoUrls, setFotoUrls] = useState([]); 
   const [isUploadingFoto, setIsUploadingFoto] = useState(false);
   
   const excelInputRef = useRef(null);
 
-  // Styling Standar
   const inputStandardClass = "w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white";
   const labelStandardClass = "text-xs font-semibold text-slate-700 block mb-1.5";
 
   useEffect(() => {
     fetchAdministrasiData();
+    fetchPeminjamanData(); // 🔥 Panggil data peminjaman
   }, []); 
 
   async function fetchAdministrasiData() {
@@ -75,6 +77,21 @@ export default function AdminAdministrasi() {
     }
   }
 
+  // 🔥 FUNGSI AMBIL DATA PEMINJAMAN DARI FIREBASE 🔥
+  async function fetchPeminjamanData() {
+    try {
+      const q = query(collection(db, "peminjaman_inventaris"));
+      const snap = await getDocs(q);
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Urutkan dari yang terbaru
+      data.sort((a, b) => new Date(b.waktuPinjam) - new Date(a.waktuPinjam));
+      setMasterPeminjaman(data);
+    } catch (error) {
+      console.error("Gagal mengambil data peminjaman:", error);
+    }
+  }
+
   const handleSaveGlobalCalendar = async () => {
     try {
       const docRef = doc(db, "website_config", "database_administrasi");
@@ -85,11 +102,24 @@ export default function AdminAdministrasi() {
     }
   };
 
-  // 🔥 FUNGSI UPLOAD CLOUDINARY TERHUBUNG DENGAN .ENV 🔥
+  // 🔥 FUNGSI UBAH STATUS PEMINJAMAN (SETUJUI / TOLAK) 🔥
+  const handleUpdateStatusPeminjaman = async (id, newStatus) => {
+    if (!confirm(`Yakin ingin mengubah status pengajuan ini menjadi ${newStatus}?`)) return;
+    try {
+      await updateDoc(doc(db, "peminjaman_inventaris", id), {
+        status: newStatus
+      });
+      // Update state lokal
+      setMasterPeminjaman(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
+      alert(`Berhasil! Pengajuan peminjaman telah ${newStatus}.`);
+    } catch (error) {
+      alert("Gagal mengubah status: " + error.message);
+    }
+  };
+
   const uploadToCloudinary = async (files) => {
     if (!files || files.length === 0) return;
     
-    // Memanggil API dari .env
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME; 
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET; 
 
@@ -103,19 +133,18 @@ export default function AdminAdministrasi() {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", uploadPreset);
+      const formDataObj = new FormData();
+      formDataObj.append("file", file);
+      formDataObj.append("upload_preset", uploadPreset);
 
       try {
         const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
           method: "POST",
-          body: formData,
+          body: formDataObj,
         });
         const data = await res.json();
         
         if (data.secure_url) {
-          // AUTO KOMPRES: Menambahkan parameter q_auto,f_auto ke URL agar ukuran MB jadi sangat kecil!
           const compressedUrl = data.secure_url.replace("/upload/", "/upload/q_auto,f_auto/");
           uploadedUrls.push(compressedUrl);
         }
@@ -125,7 +154,6 @@ export default function AdminAdministrasi() {
       }
     }
 
-    // Gabungkan foto lama dengan foto yang baru diupload
     setFotoUrls((prev) => [...prev, ...uploadedUrls]);
     setIsUploadingFoto(false);
   };
@@ -171,6 +199,9 @@ export default function AdminAdministrasi() {
       return currentPresentasi.filter(i => (i.judul||"").toLowerCase().includes(q) || (i.tipeDokumen||"").toLowerCase().includes(q) || (i.deskripsi||"").toLowerCase().includes(q));
     } else if (activeTab === "inventaris") {
       return currentInventaris.filter(i => (i.namaBarang||"").toLowerCase().includes(q) || (i.kondisi||"").toLowerCase().includes(q) || (i.deskripsi||"").toLowerCase().includes(q));
+    } else if (activeTab === "peminjaman") {
+      // 🔥 FILTER DATA PEMINJAMAN 🔥
+      return masterPeminjaman.filter(i => (i.namaBarang||"").toLowerCase().includes(q) || (i.namaOrganisasi||"").toLowerCase().includes(q) || (i.peminjam||"").toLowerCase().includes(q));
     }
     return [];
   };
@@ -182,7 +213,7 @@ export default function AdminAdministrasi() {
       setEditDataId(data.id || data.nomorSurat || data.nomorSK || data.namaProker || data.judul || Math.random());
       setFormData(data);
       if (activeTab === "inventaris" && data.fotoGroup) {
-        setFotoUrls(data.fotoGroup); // Set sebagai array
+        setFotoUrls(data.fotoGroup); 
       } else {
         setFotoUrls([]);
       }
@@ -205,7 +236,6 @@ export default function AdminAdministrasi() {
       let finalPayload = { ...formData, id: editDataId || Date.now().toString(), lembaga: activeLembaga };
       let newMaster;
 
-      // Masukkan array foto ke payload
       if (activeTab === "inventaris") {
         finalPayload = { ...finalPayload, fotoGroup: fotoUrls };
       }
@@ -246,7 +276,7 @@ export default function AdminAdministrasi() {
   };
 
   const handleDeleteData = async (idToDelete) => {
-    if (!confirm("Hapus arsip ini secara permanen?")) return;
+    if (!confirm("Hapus data ini secara permanen?")) return;
     try {
       let newMaster;
       if (activeTab === "persuratan") {
@@ -479,7 +509,13 @@ export default function AdminAdministrasi() {
       formattedData = currentListData.map((i, idx) => ({
         "No": idx + 1, "Nama Barang": i.namaBarang, "Jumlah": i.jumlah, "Kondisi": i.kondisi, "Deskripsi": i.deskripsi
       }));
+    } else if (activeTab === "peminjaman") {
+      // 🔥 EXPORT UNTUK PEMINJAMAN 🔥
+      formattedData = currentListData.map((i, idx) => ({
+        "No": idx + 1, "Nama Barang": i.namaBarang, "Organisasi": i.namaOrganisasi, "Peminjam / PJ": i.peminjam, "Kegiatan": i.kegiatan, "Jumlah Pinjam": i.jumlahPinjam, "Tanggal Mulai": i.waktuPinjam, "Tanggal Selesai": i.waktuSelesai, "Status": i.status
+      }));
     }
+
     const ws = XLSX.utils.json_to_sheet(formattedData); const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Arsip"); XLSX.writeFile(wb, `Rekap_${activeTab}_${Date.now()}.xlsx`);
   };
@@ -515,6 +551,9 @@ export default function AdminAdministrasi() {
         <button onClick={() => {setActiveTab("laporan"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "laporan" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><FileCheck size={16} /> Laporan (LPJ)</button>
         <button onClick={() => {setActiveTab("presentasi"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "presentasi" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><MonitorPlay size={16} /> Presentasi & Dok</button>
         <button onClick={() => {setActiveTab("inventaris"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "inventaris" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><Package size={16} /> Inventaris Barang</button>
+        
+        {/* 🔥 TAB BARU: PERSETUJUAN PEMINJAMAN 🔥 */}
+        <button onClick={() => {setActiveTab("peminjaman"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "peminjaman" ? "border-emerald-600 text-emerald-600 bg-emerald-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><ClipboardList size={16} /> Pengajuan Pinjaman</button>
       </div>
 
       {/* PENGATURAN KALENDER GLOBAL INVENTARIS */}
@@ -548,28 +587,34 @@ export default function AdminAdministrasi() {
            )}
            <div className="relative flex-1 xl:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"/>
-              <input type="text" placeholder={activeTab === "inventaris" ? "Cari barang..." : activeTab === "presentasi" ? "Cari judul atau tipe..." : "Cari arsip..."} value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className={`${inputStandardClass} pl-9`} />
+              <input type="text" placeholder={activeTab === "inventaris" ? "Cari barang..." : activeTab === "peminjaman" ? "Cari peminjam/barang..." : "Cari arsip..."} value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className={`${inputStandardClass} pl-9`} />
            </div>
          </div>
          
          <div className="flex w-full xl:w-auto flex-wrap gap-2 justify-end">
-           <button onClick={handleDownloadTemplate} className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
-              <Download size={16} /> <span className="hidden sm:inline">Template</span>
-           </button>
-           <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={excelInputRef} onChange={handleImportExcel} />
-           <button onClick={() => excelInputRef.current.click()} className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
-              <UploadCloud size={16} /> <span className="hidden sm:inline">Impor</span>
-           </button>
+           {activeTab !== "peminjaman" && (
+             <>
+               <button onClick={handleDownloadTemplate} className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
+                  <Download size={16} /> <span className="hidden sm:inline">Template</span>
+               </button>
+               <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={excelInputRef} onChange={handleImportExcel} />
+               <button onClick={() => excelInputRef.current.click()} className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
+                  <UploadCloud size={16} /> <span className="hidden sm:inline">Impor</span>
+               </button>
+             </>
+           )}
            <button onClick={handleExportExcel} className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
               <FileSpreadsheet size={16} /> <span className="hidden sm:inline">Ekspor</span>
            </button>
-           <button onClick={() => handleOpenModal()} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md text-sm transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
-              <Plus size={16} /> Tambah Data
-           </button>
+           {activeTab !== "peminjaman" && (
+             <button onClick={() => handleOpenModal()} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md text-sm transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
+                <Plus size={16} /> Tambah Data
+             </button>
+           )}
          </div>
       </div>
 
-      {/* TABEL DATA SESUAI KOLOM AWAL */}
+      {/* TABEL DATA */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-left whitespace-nowrap">
@@ -623,8 +668,20 @@ export default function AdminAdministrasi() {
                   </>
                 )}
 
-                <th className="py-4 px-4 text-center">{activeTab === "inventaris" ? "Media" : "Berkas"}</th>
-                <th className="py-4 px-4 w-24 text-center">Aksi</th>
+                {/* 🔥 HEADER TABEL PEMINJAMAN 🔥 */}
+                {activeTab === "peminjaman" && (
+                  <>
+                    <th className="py-4 px-4">Barang & Jumlah</th>
+                    <th className="py-4 px-4">Organisasi / Peminjam</th>
+                    <th className="py-4 px-4">Kegiatan</th>
+                    <th className="py-4 px-4">Jadwal Pinjam</th>
+                    <th className="py-4 px-4 text-center">Surat</th>
+                    <th className="py-4 px-4 text-center">Status</th>
+                  </>
+                )}
+
+                <th className="py-4 px-4 text-center">{activeTab === "inventaris" ? "Media" : activeTab === "peminjaman" ? "Tindakan" : "Berkas"}</th>
+                {activeTab !== "peminjaman" && <th className="py-4 px-4 w-24 text-center">Aksi</th>}
               </tr>
             </thead>
             
@@ -689,10 +746,45 @@ export default function AdminAdministrasi() {
                                 {item.kondisi || "Baik"}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-slate-500 truncate max-w-[250px]">{item.deskripsi || "-"}</td>
+                            <td className="py-3 px-4 text-slate-500 max-w-[300px]">
+                              <div className="truncate font-medium text-slate-700">{item.deskripsi || "-"}</div>
+                            </td>
                           </>
                         )}
 
+                        {/* 🔥 ROW TABEL PEMINJAMAN 🔥 */}
+                        {activeTab === "peminjaman" && (
+                          <>
+                            <td className="py-3 px-4">
+                               <p className="font-semibold text-slate-900 line-clamp-1">{item.namaBarang}</p>
+                               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded mt-1 inline-block">{item.jumlahPinjam} Unit</span>
+                            </td>
+                            <td className="py-3 px-4">
+                               <p className="font-bold text-slate-800 line-clamp-1">{item.namaOrganisasi}</p>
+                               <p className="text-[11px] text-slate-500">PJ: {item.peminjam}</p>
+                            </td>
+                            <td className="py-3 px-4 text-slate-600 truncate max-w-[150px]">{item.kegiatan}</td>
+                            <td className="py-3 px-4 text-[11px] font-mono text-slate-600">
+                               {item.waktuPinjam} <br/><span className="text-slate-400">s/d</span> {item.waktuSelesai}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {item.suratUrl ? (
+                                <a href={item.suratUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-[10px] font-semibold bg-blue-50 hover:bg-blue-100 px-2 py-1.5 rounded-md border border-blue-200 transition"><FileCheck size={12}/> Surat</a>
+                              ) : <span className="text-slate-400 text-[10px] bg-slate-100 px-2 py-1 rounded">Tidak ada</span>}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {item.status === "Disetujui" ? (
+                                <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center justify-center gap-1"><CheckCircle size={12}/> Disetujui</span>
+                              ) : item.status === "Ditolak" ? (
+                                <span className="bg-red-100 text-red-700 text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center justify-center gap-1"><XCircle size={12}/> Ditolak</span>
+                              ) : (
+                                <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center justify-center gap-1"><Loader2 size={12} className="animate-spin"/> Diproses</span>
+                              )}
+                            </td>
+                          </>
+                        )}
+
+                        {/* KOLOM BERKAS / TINDAKAN */}
                         <td className="py-3 px-4 text-center">
                           {activeTab === "presentasi" ? (
                              <div className="flex flex-col gap-1.5 items-center justify-center">
@@ -708,18 +800,37 @@ export default function AdminAdministrasi() {
                                   <span className="text-slate-400 text-[10px] bg-slate-100 px-2 py-1 rounded">No Foto</span>
                                )}
                              </div>
+                          ) : activeTab === "peminjaman" ? (
+                             /* 🔥 TOMBOL TINDAKAN ADMIN UNTUK PEMINJAMAN 🔥 */
+                             <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                               {item.status === "Diproses" && (
+                                  <>
+                                    <button onClick={() => handleUpdateStatusPeminjaman(item.id, "Disetujui")} className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded shadow-sm transition tooltip" title="Setujui"><CheckCircle size={14}/></button>
+                                    <button onClick={() => handleUpdateStatusPeminjaman(item.id, "Ditolak")} className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded shadow-sm transition tooltip" title="Tolak"><XCircle size={14}/></button>
+                                  </>
+                               )}
+                               {item.status === "Disetujui" && (
+                                  <a href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[Peminjaman ${item.namaBarang || 'Barang'}] ${item.kegiatan}`)}&dates=${item.waktuPinjam?.replace(/-/g, "") || ""}/${item.waktuSelesai?.replace(/-/g, "") || item.waktuPinjam?.replace(/-/g, "") || ""}&details=${encodeURIComponent(`Organisasi: ${item.namaOrganisasi}\nPJ Pelaksana: ${item.peminjam || '-'}\nJumlah Pinjam: ${item.jumlahPinjam || '1'} Unit`)}`} target="_blank" rel="noopener noreferrer" className="bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold px-2 py-1.5 rounded-md shadow-sm transition flex items-center gap-1">
+                                    <CalendarDays size={12}/> Sync Kalender
+                                  </a>
+                               )}
+                             </div>
                           ) : (
                               item.linkFile ? (
                                  <a href={item.linkFile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-semibold bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-md border border-blue-200 transition"><Download size={14}/> Buka</a>
                               ) : <span className="text-slate-400 text-xs bg-slate-100 px-2 py-1.5 rounded-md">Kosong</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex gap-2 justify-center" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => handleOpenModal(item)} className="text-amber-500 hover:text-amber-700 p-1.5 bg-white border border-slate-200 hover:border-amber-200 rounded-md shadow-sm transition"><Edit size={14}/></button>
-                            <button onClick={() => handleDeleteData(item.id)} className="text-red-500 hover:text-red-700 p-1.5 bg-white border border-slate-200 hover:border-red-200 rounded-md shadow-sm transition"><Trash2 size={14}/></button>
-                          </div>
-                        </td>
+
+                        {activeTab !== "peminjaman" && (
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex gap-2 justify-center" onClick={(e) => e.stopPropagation()}>
+                              <button onClick={() => handleOpenModal(item)} className="text-amber-500 hover:text-amber-700 p-1.5 bg-white border border-slate-200 hover:border-amber-200 rounded-md shadow-sm transition"><Edit size={14}/></button>
+                              <button onClick={() => handleDeleteData(item.id)} className="text-red-500 hover:text-red-700 p-1.5 bg-white border border-slate-200 hover:border-red-200 rounded-md shadow-sm transition"><Trash2 size={14}/></button>
+                            </div>
+                          </td>
+                        )}
+
                       </tr>
                     </React.Fragment>
                   )
@@ -889,7 +1000,7 @@ export default function AdminAdministrasi() {
                     </>
                   )}
 
-                  {/* 🔥 INPUT INVENTARIS BARANG & UPLOAD CLOUDINARY 🔥 */}
+                  {/* 🔥 INPUT INVENTARIS BARANG: HAPUS FORM KEGIATAN LAMA 🔥 */}
                   {activeTab === "inventaris" && (
                     <>
                       <div className="md:col-span-2">
@@ -897,7 +1008,7 @@ export default function AdminAdministrasi() {
                         <input type="text" required value={formData.namaBarang || ''} onChange={e => setFormData({...formData, namaBarang: e.target.value})} className={inputStandardClass} placeholder="Contoh: Proyektor Epson, Sound System, dll" />
                       </div>
                       <div>
-                        <label className={labelStandardClass}>Jumlah Stok</label>
+                        <label className={labelStandardClass}>Jumlah Stok Total</label>
                         <input type="number" required min="1" value={formData.jumlah || ''} onChange={e => setFormData({...formData, jumlah: e.target.value})} className={inputStandardClass} placeholder="Misal: 5" />
                       </div>
                       <div>
