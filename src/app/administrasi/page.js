@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-// 🔥 IMPORT BARU: Package, Camera, dan CalendarDays untuk Inventaris
 import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, MonitorPlay, Share2, Package, Camera, CalendarDays } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -18,14 +17,13 @@ export default function AdministrasiPage() {
   const [activeLembaga, setActiveLembaga] = useState("Komisariat"); 
   const [listLSO, setListLSO] = useState([]); 
   
-  // State Data Master dari Firebase (Menyimpan seluruh data)
+  // State Data Master dari Firebase
   const [masterSuratMasuk, setMasterSuratMasuk] = useState([]); 
   const [masterSuratKeluar, setMasterSuratKeluar] = useState([]); 
   const [masterProker, setMasterProker] = useState([]);
   const [masterProdukHukum, setMasterProdukHukum] = useState([]);
   const [masterLpj, setMasterLpj] = useState([]); 
   const [masterPresentasi, setMasterPresentasi] = useState([]); 
-  // 🔥 STATE BARU UNTUK INVENTARIS
   const [masterInventaris, setMasterInventaris] = useState([]); 
   
   // State Navigasi & Filter
@@ -36,7 +34,6 @@ export default function AdministrasiPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
-  // Tarik Data Administrasi
   useEffect(() => {
     async function fetchAdministrasiData() {
       setLoading(true);
@@ -52,7 +49,6 @@ export default function AdministrasiPage() {
           setMasterProdukHukum(data.listProdukHukum || []); 
           setMasterLpj(data.listLpj || []); 
           setMasterPresentasi(data.listPresentasi || []); 
-          // 🔥 AMBIL DATA INVENTARIS
           setMasterInventaris(data.listInventaris || []); 
           setListLSO(data.listLSO || []);
         }
@@ -65,37 +61,97 @@ export default function AdministrasiPage() {
     fetchAdministrasiData();
   }, []); 
 
-  // ================= HELPER: PENERJEMAH TANGGAL EXCEL/SISTEM =================
+  // 🔥 1. FORMAT TANGGAL PATEN (DD/MM/YYYY) 🔥
   const formatDisplayDate = (dateVal) => {
     if (!dateVal) return "-";
     
+    // Jika input berupa string (seperti YYYY-MM-DD atau DD/MM/YYYY)
+    if (typeof dateVal === 'string') {
+      const str = dateVal.trim();
+      const parts = str.includes('/') ? str.split('/') : str.split('-');
+      if (parts.length === 3) {
+        if (parts[2].length >= 4) { 
+          // Format sudah DD/MM/YYYY
+          return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2].substring(0,4)}`;
+        } 
+        else if (parts[0].length === 4) { 
+          // Format masih YYYY-MM-DD (Dibalik secara aman ke DD/MM/YYYY)
+          const day = parts[2].substring(0, 2);
+          return `${day.padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        }
+      }
+    }
+
+    // Jika input format Excel Serial Number
     if (!isNaN(dateVal) && Number(dateVal) > 20000) {
       const date = new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000));
       return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
     }
     
-    if (typeof dateVal === 'string' && dateVal.includes('T') && !isNaN(new Date(dateVal))) {
-      const d = new Date(dateVal);
+    // Fallback Date Default
+    const d = new Date(dateVal);
+    if (!isNaN(d)) {
       return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     }
-
     return dateVal;
+  };
+
+  // 🔥 2. PENERJEMAH TANGGAL UNTUK SORTING AGAR TIDAK ERROR 🔥
+  const getSortableDate = (dateVal) => {
+    if (!dateVal) return 0;
+    
+    if (typeof dateVal === 'string') {
+      const str = dateVal.trim();
+      const parts = str.includes('/') ? str.split('/') : str.split('-');
+      if (parts.length === 3) {
+        if (parts[2].length >= 4) { 
+          // Format DD/MM/YYYY (Ubah ke standar mesin: YYYY-MM-DD)
+          return new Date(`${parts[2].substring(0,4)}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`).getTime();
+        } 
+        else if (parts[0].length === 4) { 
+          // Format YYYY-MM-DD
+          return new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].substring(0, 2).padStart(2, '0')}T00:00:00`).getTime();
+        }
+      }
+    }
+
+    if (!isNaN(dateVal) && Number(dateVal) > 20000) {
+      return new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000)).getTime();
+    }
+
+    const d = new Date(dateVal);
+    return isNaN(d) ? 0 : d.getTime();
   };
 
   const filterByLembaga = (dataArray) => {
     return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   };
 
-  const currentSuratMasuk = filterByLembaga(masterSuratMasuk);
-  const currentSuratKeluar = filterByLembaga(masterSuratKeluar);
+  // 🔥 3. LOGIKA SORTING DIPERBAIKI (S. MASUK: TERLAMA DI ATAS | S. KELUAR: NO 001 DI ATAS) 🔥
+  const currentSuratMasuk = filterByLembaga(masterSuratMasuk).sort((a, b) => {
+    // a - b memastikan urutannya Ascending (Dari tanggal lama ke tanggal baru)
+    return getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang); 
+  });
+  
+  const currentSuratKeluar = filterByLembaga(masterSuratKeluar).sort((a, b) => {
+    // Mengekstrak angka pertama yang ditemukan (contoh: "045.PK..." -> 45, "Un.03..." -> 3)
+    const getNum = (str) => {
+      const match = (str || "").match(/\d+/);
+      return match ? parseInt(match[0], 10) : 999999;
+    };
+    const numA = getNum(a.nomorSurat);
+    const numB = getNum(b.nomorSurat);
+    
+    if (numA !== numB) return numA - numB; // Angka terkecil di atas
+    return (a.nomorSurat || "").localeCompare(b.nomorSurat || "");
+  });
+
   const currentProker = filterByLembaga(masterProker);
   const currentProdukHukum = filterByLembaga(masterProdukHukum);
   const currentLpj = filterByLembaga(masterLpj);
   const currentPresentasi = filterByLembaga(masterPresentasi);
-  // 🔥 FILTER DATA INVENTARIS
   const currentInventaris = filterByLembaga(masterInventaris);
 
-  // Logika Filter Pencarian Cerdas
   const getFilteredData = () => {
     const q = searchQuery.toLowerCase();
     
@@ -132,7 +188,6 @@ export default function AdministrasiPage() {
         (item.tipeDokumen || "").toLowerCase().includes(q)
       );
     } else if (activeTab === "inventaris") {
-      // 🔥 PENCARIAN UNTUK INVENTARIS
       return currentInventaris.filter(item => 
         (item.namaBarang || "").toLowerCase().includes(q) ||
         (item.kondisi || "").toLowerCase().includes(q) ||
@@ -197,7 +252,6 @@ export default function AdministrasiPage() {
         "Link Unduh": item.downloadUrl || "Tidak Ada"
       }));
     } else if (activeTab === "inventaris") {
-      // 🔥 EXPORT EXCEL UNTUK INVENTARIS
       formattedData = currentListData.map((item, idx) => ({
         "No": idx + 1,
         "Nama Barang": item.namaBarang || "-",
@@ -288,7 +342,6 @@ export default function AdministrasiPage() {
           <button onClick={() => handleTabChange("produkhukum")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "produkhukum" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Scale size={16} /> Produk Hukum</button>
           <button onClick={() => handleTabChange("laporan")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "laporan" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><FileCheck size={16} /> Laporan (LPJ)</button>
           <button onClick={() => handleTabChange("presentasi")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "presentasi" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><MonitorPlay size={16} /> Presentasi & Dok</button>
-          {/* 🔥 TOMBOL BARU: INVENTARIS */}
           <button onClick={() => handleTabChange("inventaris")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "inventaris" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Package size={16} /> Inventaris Barang</button>
         </div>
 

@@ -24,7 +24,7 @@ export default function AdminAdministrasi() {
   const [masterPresentasi, setMasterPresentasi] = useState([]); 
   const [masterInventaris, setMasterInventaris] = useState([]); 
   
-  // 🔥 STATE BARU: DATA PEMINJAMAN 🔥
+  // STATE BARU: DATA PEMINJAMAN
   const [masterPeminjaman, setMasterPeminjaman] = useState([]);
   const [globalCalendarUrl, setGlobalCalendarUrl] = useState("");
   
@@ -50,7 +50,7 @@ export default function AdminAdministrasi() {
 
   useEffect(() => {
     fetchAdministrasiData();
-    fetchPeminjamanData(); // 🔥 Panggil data peminjaman
+    fetchPeminjamanData();
   }, []); 
 
   async function fetchAdministrasiData() {
@@ -77,14 +77,11 @@ export default function AdminAdministrasi() {
     }
   }
 
-  // 🔥 FUNGSI AMBIL DATA PEMINJAMAN DARI FIREBASE 🔥
   async function fetchPeminjamanData() {
     try {
       const q = query(collection(db, "peminjaman_inventaris"));
       const snap = await getDocs(q);
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      
-      // Urutkan dari yang terbaru
       data.sort((a, b) => new Date(b.waktuPinjam) - new Date(a.waktuPinjam));
       setMasterPeminjaman(data);
     } catch (error) {
@@ -102,14 +99,12 @@ export default function AdminAdministrasi() {
     }
   };
 
-  // 🔥 FUNGSI UBAH STATUS PEMINJAMAN (SETUJUI / TOLAK) 🔥
   const handleUpdateStatusPeminjaman = async (id, newStatus) => {
     if (!confirm(`Yakin ingin mengubah status pengajuan ini menjadi ${newStatus}?`)) return;
     try {
       await updateDoc(doc(db, "peminjaman_inventaris", id), {
         status: newStatus
       });
-      // Update state lokal
       setMasterPeminjaman(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
       alert(`Berhasil! Pengajuan peminjaman telah ${newStatus}.`);
     } catch (error) {
@@ -162,27 +157,96 @@ export default function AdminAdministrasi() {
     setFotoUrls((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
-  // ================= FILTERING =================
+  // 🔥 1. FORMAT TANGGAL PATEN (DD/MM/YYYY) 🔥
   const formatDisplayDate = (dateVal) => {
     if (!dateVal) return "-";
+    
+    // Jika input berupa string (seperti YYYY-MM-DD atau DD/MM/YYYY)
+    if (typeof dateVal === 'string') {
+      const str = dateVal.trim();
+      const parts = str.includes('/') ? str.split('/') : str.split('-');
+      if (parts.length === 3) {
+        if (parts[2].length >= 4) { 
+          // Format sudah DD/MM/YYYY
+          return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2].substring(0,4)}`;
+        } 
+        else if (parts[0].length === 4) { 
+          // Format masih YYYY-MM-DD (Dibalik secara aman ke DD/MM/YYYY)
+          const day = parts[2].substring(0, 2);
+          return `${day.padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        }
+      }
+    }
+
+    // Jika input format Excel Serial Number
     if (!isNaN(dateVal) && Number(dateVal) > 20000) {
       const date = new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000));
       return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
     }
-    if (typeof dateVal === 'string' && dateVal.includes('T') && !isNaN(new Date(dateVal))) {
-      const d = new Date(dateVal);
+    
+    // Fallback Date Default
+    const d = new Date(dateVal);
+    if (!isNaN(d)) {
       return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     }
     return dateVal;
   };
 
-  const currentSuratMasuk = masterSuratMasuk.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  const currentSuratKeluar = masterSuratKeluar.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  const currentProker = masterProker.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  const currentProdukHukum = masterProdukHukum.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  const currentLpj = masterLpj.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  const currentPresentasi = masterPresentasi.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
-  const currentInventaris = masterInventaris.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
+  // 🔥 2. PENERJEMAH TANGGAL UNTUK SORTING AGAR TIDAK ERROR 🔥
+  const getSortableDate = (dateVal) => {
+    if (!dateVal) return 0;
+    
+    if (typeof dateVal === 'string') {
+      const str = dateVal.trim();
+      const parts = str.includes('/') ? str.split('/') : str.split('-');
+      if (parts.length === 3) {
+        if (parts[2].length >= 4) { 
+          // Format DD/MM/YYYY (Ubah ke standar mesin: YYYY-MM-DD)
+          return new Date(`${parts[2].substring(0,4)}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`).getTime();
+        } 
+        else if (parts[0].length === 4) { 
+          // Format YYYY-MM-DD
+          return new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].substring(0, 2).padStart(2, '0')}T00:00:00`).getTime();
+        }
+      }
+    }
+
+    if (!isNaN(dateVal) && Number(dateVal) > 20000) {
+      return new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000)).getTime();
+    }
+
+    const d = new Date(dateVal);
+    return isNaN(d) ? 0 : d.getTime();
+  };
+
+  const filterByLembaga = (dataArray) => {
+    return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
+  };
+
+  // 🔥 3. LOGIKA PENGURUTAN SURAT MASUK (Tanggal Terbaru di Atas) & KELUAR (Nomor Urut 001 dst) 🔥
+  const currentSuratMasuk = filterByLembaga(masterSuratMasuk).sort((a, b) => {
+    // b - a memastikan urutannya Descending (Dari tanggal terbaru ke tanggal lama)
+    return getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang); 
+  });
+  
+  const currentSuratKeluar = filterByLembaga(masterSuratKeluar).sort((a, b) => {
+    // Mengekstrak angka pertama yang ditemukan (contoh: "045.PK..." -> 45, "Un.03..." -> 3)
+    const getNum = (str) => {
+      const match = (str || "").match(/\d+/);
+      return match ? parseInt(match[0], 10) : 999999;
+    };
+    const numA = getNum(a.nomorSurat);
+    const numB = getNum(b.nomorSurat);
+    
+    if (numA !== numB) return numA - numB; // Angka terkecil di atas
+    return (a.nomorSurat || "").localeCompare(b.nomorSurat || "");
+  });
+
+  const currentProker = filterByLembaga(masterProker);
+  const currentProdukHukum = filterByLembaga(masterProdukHukum);
+  const currentLpj = filterByLembaga(masterLpj);
+  const currentPresentasi = filterByLembaga(masterPresentasi);
+  const currentInventaris = filterByLembaga(masterInventaris);
 
   const getFilteredData = () => {
     const q = searchQuery.toLowerCase();
@@ -200,7 +264,6 @@ export default function AdminAdministrasi() {
     } else if (activeTab === "inventaris") {
       return currentInventaris.filter(i => (i.namaBarang||"").toLowerCase().includes(q) || (i.kondisi||"").toLowerCase().includes(q) || (i.deskripsi||"").toLowerCase().includes(q));
     } else if (activeTab === "peminjaman") {
-      // 🔥 FILTER DATA PEMINJAMAN 🔥
       return masterPeminjaman.filter(i => (i.namaBarang||"").toLowerCase().includes(q) || (i.namaOrganisasi||"").toLowerCase().includes(q) || (i.peminjam||"").toLowerCase().includes(q));
     }
     return [];
@@ -510,7 +573,6 @@ export default function AdminAdministrasi() {
         "No": idx + 1, "Nama Barang": i.namaBarang, "Jumlah": i.jumlah, "Kondisi": i.kondisi, "Deskripsi": i.deskripsi
       }));
     } else if (activeTab === "peminjaman") {
-      // 🔥 EXPORT UNTUK PEMINJAMAN 🔥
       formattedData = currentListData.map((i, idx) => ({
         "No": idx + 1, "Nama Barang": i.namaBarang, "Organisasi": i.namaOrganisasi, "Peminjam / PJ": i.peminjam, "Kegiatan": i.kegiatan, "Jumlah Pinjam": i.jumlahPinjam, "Tanggal Mulai": i.waktuPinjam, "Tanggal Selesai": i.waktuSelesai, "Status": i.status
       }));
@@ -551,8 +613,6 @@ export default function AdminAdministrasi() {
         <button onClick={() => {setActiveTab("laporan"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "laporan" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><FileCheck size={16} /> Laporan (LPJ)</button>
         <button onClick={() => {setActiveTab("presentasi"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "presentasi" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><MonitorPlay size={16} /> Presentasi & Dok</button>
         <button onClick={() => {setActiveTab("inventaris"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "inventaris" ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><Package size={16} /> Inventaris Barang</button>
-        
-        {/* 🔥 TAB BARU: PERSETUJUAN PEMINJAMAN 🔥 */}
         <button onClick={() => {setActiveTab("peminjaman"); setSearchQuery("");}} className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "peminjaman" ? "border-emerald-600 text-emerald-600 bg-emerald-50/50 rounded-t-md" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}><ClipboardList size={16} /> Pengajuan Pinjaman</button>
       </div>
 
@@ -668,7 +728,6 @@ export default function AdminAdministrasi() {
                   </>
                 )}
 
-                {/* 🔥 HEADER TABEL PEMINJAMAN 🔥 */}
                 {activeTab === "peminjaman" && (
                   <>
                     <th className="py-4 px-4">Barang & Jumlah</th>
@@ -697,11 +756,21 @@ export default function AdminAdministrasi() {
                       <tr className={`transition-colors hover:bg-slate-50 cursor-pointer ${isExpanded ? 'bg-slate-50' : ''}`} onClick={() => setExpandedRowId(isExpanded ? null : index)}>
                         <td className="py-3 px-4 text-center font-medium text-slate-400">{index + 1}</td>
                         
+                        {/* 🔥 TAMPILAN TANGGAL DIPERBAIKI 🔥 */}
                         {activeTab === "persuratan" && (
                           <>
                             <td className="py-3 px-4 font-semibold text-slate-900">{item.nomorSurat || "-"}</td>
                             <td className="py-3 px-4 text-slate-600">{activeSuratTab === "masuk" ? (item.asalSurat||"-") : (item.tujuanSurat||"-")}</td>
-                            <td className="py-3 px-4 text-slate-600">{formatDisplayDate(item.tglBuat)}</td>
+                            
+                            <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
+                              <div className="flex flex-col gap-1 text-[11px]">
+                                <span className="text-slate-500">Buat: <strong className="text-slate-700">{formatDisplayDate(item.tglBuat)}</strong></span>
+                                <span className={activeSuratTab === "masuk" ? "text-emerald-600" : "text-blue-600"}>
+                                  <strong>{activeSuratTab === "masuk" ? "Datang: " : "Kirim: "}</strong> {formatDisplayDate(activeSuratTab === "masuk" ? item.tglDatang : item.tglKirim)}
+                                </span>
+                              </div>
+                            </td>
+
                             <td className="py-3 px-4 font-medium">{item.hal || item.perihalSurat || "-"}</td>
                             <td className="py-3 px-4 text-slate-500 truncate max-w-[150px]">{item.ket || item.deskripsiSurat || "-"}</td>
                           </>
@@ -752,7 +821,6 @@ export default function AdminAdministrasi() {
                           </>
                         )}
 
-                        {/* 🔥 ROW TABEL PEMINJAMAN 🔥 */}
                         {activeTab === "peminjaman" && (
                           <>
                             <td className="py-3 px-4">
@@ -765,7 +833,7 @@ export default function AdminAdministrasi() {
                             </td>
                             <td className="py-3 px-4 text-slate-600 truncate max-w-[150px]">{item.kegiatan}</td>
                             <td className="py-3 px-4 text-[11px] font-mono text-slate-600">
-                               {item.waktuPinjam} <br/><span className="text-slate-400">s/d</span> {item.waktuSelesai}
+                               {formatDisplayDate(item.waktuPinjam)} <br/><span className="text-slate-400">s/d</span> {formatDisplayDate(item.waktuSelesai)}
                             </td>
                             <td className="py-3 px-4 text-center">
                               {item.suratUrl ? (
@@ -784,7 +852,6 @@ export default function AdminAdministrasi() {
                           </>
                         )}
 
-                        {/* KOLOM BERKAS / TINDAKAN */}
                         <td className="py-3 px-4 text-center">
                           {activeTab === "presentasi" ? (
                              <div className="flex flex-col gap-1.5 items-center justify-center">
@@ -801,7 +868,6 @@ export default function AdminAdministrasi() {
                                )}
                              </div>
                           ) : activeTab === "peminjaman" ? (
-                             /* 🔥 TOMBOL TINDAKAN ADMIN UNTUK PEMINJAMAN 🔥 */
                              <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
                                {item.status === "Diproses" && (
                                   <>
@@ -1000,7 +1066,6 @@ export default function AdminAdministrasi() {
                     </>
                   )}
 
-                  {/* 🔥 INPUT INVENTARIS BARANG: HAPUS FORM KEGIATAN LAMA 🔥 */}
                   {activeTab === "inventaris" && (
                     <>
                       <div className="md:col-span-2">
