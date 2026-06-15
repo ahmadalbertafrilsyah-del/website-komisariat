@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { ChevronRight, Clock, Lock } from "lucide-react";
+import { ChevronRight, Clock, Lock, MapPin, Heart } from "lucide-react";
 
 export default function Footer() {
   const [config, setConfig] = useState({
@@ -33,15 +33,24 @@ export default function Footer() {
     <footer className="bg-[#0f172a] text-slate-300 pt-16 pb-8 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
         
-        {/* PERUBAHAN: sm:grid-cols-2 lg:grid-cols-3 membuat layout sangat rapi di tablet */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12 mb-12">
           
-          {/* Kolom 1: Tentang */}
-          <div className="sm:col-span-2 lg:col-span-1">
-            <h3 className="text-xl font-bold text-yellow-400 mb-5 md:mb-6">Tentang PMII Komisariat</h3>
-            <p className="text-sm leading-relaxed text-slate-400 whitespace-pre-line">
-              {config.tentangPmii}
-            </p>
+          {/* Kolom 1: Tentang & Lokasi */}
+          <div className="sm:col-span-2 lg:col-span-1 space-y-6">
+            <div>
+              <h3 className="text-xl font-bold text-yellow-400 mb-4">Tentang PMII Komisariat</h3>
+              <p className="text-sm leading-relaxed text-slate-400 whitespace-pre-line">
+                {config.tentangPmii}
+              </p>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-200 mb-2 flex items-center gap-2">
+                <MapPin size={16} className="text-yellow-400" /> Lokasi Kami
+              </h4>
+              <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-line">
+                {config.lokasi}
+              </p>
+            </div>
           </div>
           
           {/* Kolom 2: Link Cepat */}
@@ -57,10 +66,10 @@ export default function Footer() {
             </ul>
           </div>
           
-          {/* Kolom 3: Jam & Lokasi */}
+          {/* Kolom 3: Jam & Donasi */}
           <div>
             <h3 className="text-xl font-bold text-yellow-400 mb-5 md:mb-6">Jam Operasional</h3>
-            <div className="space-y-4 text-sm text-slate-400 mb-6">
+            <div className="space-y-4 text-sm text-slate-400 mb-8">
               <div className="flex items-start gap-3">
                 <Clock size={18} className="text-yellow-400 shrink-0 mt-0.5" />
                 <div>
@@ -76,10 +85,16 @@ export default function Footer() {
                 </div>
               </div>
             </div>
-            <h4 className="font-bold text-slate-200 mb-2 flex items-center gap-2">Lokasi Kami</h4>
-            <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-line">
-              {config.lokasi}
-            </p>
+
+            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+               <h4 className="font-bold text-slate-200 mb-2 flex items-center gap-2">
+                 <money size={16} className="text-pink-500" /> Dukung Pengembangan
+               </h4>
+               <p className="text-xs text-slate-400 mb-3 leading-relaxed">Mari berkontribusi membangun kemandirian organisasi lewat donasi digital.</p>
+               <Link href="/donasi" className="block w-full text-center bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold py-2 rounded-lg text-sm transition shadow-sm">
+                 Donasi Sekarang
+               </Link>
+            </div>
           </div>
         </div>
 
@@ -88,10 +103,7 @@ export default function Footer() {
           <p className="text-xs text-slate-500 text-center md:text-left">
             {config.footerText}
           </p>
-          <Link 
-            href="/admin/login" 
-            className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-yellow-400 transition group"
-          >
+          <Link href="/admin/login" className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-yellow-400 transition group">
             <Lock size={12} className="group-hover:-translate-y-0.5 transition-transform" /> Portal Pengurus
           </Link>
         </div>
