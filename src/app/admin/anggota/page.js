@@ -222,13 +222,13 @@ export default function AdminAnggotaEditor() {
             <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-12 text-center">No</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nama Lengkap</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36">NIM</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36">NIA PMII</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40">Asal Rayon</th>
+                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Nama Lengkap</th>
+                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36 text-center">NIM</th>
+                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36 text-center">NIA</th>
+                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40 text-center">Asal Rayon</th>
                 <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Angkatan</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36">No. WhatsApp</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-16 text-center">Opsi</th>
+                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36 text-center">WhatsApp</th>
+                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-16 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-700 bg-white">
