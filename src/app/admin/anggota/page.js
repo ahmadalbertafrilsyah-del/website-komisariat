@@ -50,10 +50,8 @@ export default function AdminAnggotaEditor() {
 
         let newData = [];
 
-        // PERBAIKAN: Tambahkan parameter 'index' di dalam forEach
         data.forEach((row, index) => { 
           newData.push({
-            // PERBAIKAN: Gabungkan Date.now(), index, dan string acak agar ID mutlak unik
             id: `excel-import-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`, 
             nama: String(row["Nama Lengkap"] || row["Nama"] || "").trim(),
             nim: String(row["NIM"] || "").trim(),
@@ -64,7 +62,6 @@ export default function AdminAnggotaEditor() {
           });
         });
 
-        // Gabungkan data lama dengan data baru dari Excel
         const combinedData = [...anggotaData, ...newData.filter(item => item.nama !== "")];
         setAnggotaData(combinedData);
         alert(`Berhasil mengimpor ${newData.length} data anggota baru! Jangan lupa klik "Simpan Pembaruan Database" di bawah.`);
@@ -109,11 +106,9 @@ export default function AdminAnggotaEditor() {
     }
   };
 
-  // Mengambil daftar Rayon & Angkatan unik untuk opsi Filter
   const uniqueRayon = ["Semua", ...new Set(anggotaData.map(item => item.rayon).filter(r => r !== ""))];
   const uniqueAngkatan = ["Semua", ...new Set(anggotaData.map(item => item.angkatan).filter(a => a !== ""))].sort();
 
-  // Logika Filter & Search
   const filteredData = anggotaData.filter(item => {
     const matchSearch = item.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
                         item.nim.toLowerCase().includes(searchQuery.toLowerCase());
@@ -123,56 +118,49 @@ export default function AdminAnggotaEditor() {
     return matchSearch && matchRayon && matchAngkatan;
   });
 
-  const inputClass = "w-full bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 border border-transparent focus:border-blue-300 px-2.5 py-1.5 rounded-md outline-none text-sm transition-all";
+  // STYLE STANDAR ENTERPRISE UNTUK INPUT INLINE
+  const inputClass = "w-full bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 border border-transparent focus:border-blue-300 px-2.5 py-1.5 rounded outline-none text-[13px] text-slate-800 transition-all placeholder:text-slate-400";
 
-  if (loading) return <p className="text-slate-500 text-sm font-medium">Memuat database anggota...</p>;
+  if (loading) return <p className="text-slate-500 text-[13px] font-medium">Memuat database anggota...</p>;
 
   return (
     <div className="space-y-6 pb-12 w-full">
       
-      {/* Header & Statistik */}
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-8">
+      {/* HEADER PANEL & STATISTIK */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            Database Anggota
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">Pusat data kader PMII Komisariat. Lakukan perubahan langsung pada baris tabel.</p>
+          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">Database Anggota</h1>
+          <p className="text-[13px] text-slate-500 mt-1">Pusat data kader PMII Komisariat. Anda bisa mengetik langsung di tabel.</p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm flex items-center gap-3 shrink-0">
-           <Users size={20} className="text-blue-600" />
+        <div className="bg-white px-4 py-2 rounded-md border border-slate-200 shadow-sm flex items-center gap-3 shrink-0">
+           <Users size={18} className="text-blue-600" />
            <div>
-             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Kader Terdaftar</p>
-             <p className="text-lg font-bold text-slate-800 leading-none">{anggotaData.length} <span className="text-sm font-medium text-slate-500">Orang</span></p>
+             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-0.5">Total Kader Terdaftar</p>
+             <p className="text-lg font-bold text-slate-800 leading-none">{anggotaData.length} <span className="text-[12px] font-medium text-slate-500">Orang</span></p>
            </div>
         </div>
       </div>
 
-      {/* Control Panel (Upload, Filter, Search) */}
-      <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4">
+      {/* CONTROL PANEL (Upload, Filter, Search) */}
+      <div className="bg-white p-4 rounded-md border border-slate-200 shadow-sm space-y-4">
         
         {/* Baris Atas: Tombol Aksi */}
         <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
           <div className="flex gap-2 w-full sm:w-auto">
-            {/* Tombol Import Excel */}
             <div className="relative inline-block w-full sm:w-auto">
-               <button className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
-                 <UploadCloud size={16}/> Impor dari Excel
+               <button className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-[13px] flex items-center justify-center gap-2 transition shadow-sm">
+                 <UploadCloud size={15}/> Impor via Excel
                </button>
-               <input 
-                 type="file" accept=".xlsx, .xls" ref={fileInputRef} onChange={handleFileUpload}
-                 className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
-               />
+               <input type="file" accept=".xlsx, .xls" ref={fileInputRef} onChange={handleFileUpload} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"/>
             </div>
-            
-            {/* Tombol Tambah Manual */}
-            <button onClick={handleAddManual} className="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
-              <Plus size={16}/> Tambah Baris Manual
+            <button onClick={handleAddManual} className="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 px-4 rounded-md text-[13px] flex items-center justify-center gap-2 transition shadow-sm whitespace-nowrap">
+              <Plus size={15}/> Tambah Baris Manual
             </button>
           </div>
 
-          <div className="text-xs text-slate-500 bg-slate-50 px-3 py-2 rounded-md border border-slate-200 flex items-center gap-1.5 w-full sm:w-auto">
+          <div className="text-[11px] text-slate-500 bg-slate-50 px-3 py-2 rounded border border-slate-200 flex items-center gap-1.5 w-full sm:w-auto">
             <FileSpreadsheet size={14} className="text-emerald-600 shrink-0"/> 
-            <span>Format Kolom: <span className="font-mono font-semibold text-slate-700">Nama | NIM | NIA | Rayon | Angkatan | WhatsApp</span></span>
+            <span>Format Kolom: <span className="font-mono font-bold text-slate-700">Nama Lengkap | NIM | NIA | Rayon | Angkatan | WhatsApp</span></span>
           </div>
         </div>
 
@@ -180,33 +168,29 @@ export default function AdminAnggotaEditor() {
 
         {/* Baris Bawah: Filter & Pencarian */}
         <div className="flex flex-col md:flex-row gap-3">
-          
-          {/* Kolom Pencarian */}
           <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
             <input 
               type="text" placeholder="Cari nama atau NIM..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none transition-shadow"
+              className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-md text-[13px] focus:ring-1 focus:ring-blue-500 outline-none transition-shadow"
             />
           </div>
 
-          {/* Filter Rayon */}
           <div className="relative w-full md:w-56 shrink-0">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
             <select 
               value={filterRayon} onChange={(e) => setFilterRayon(e.target.value)}
-              className="w-full pl-8 pr-4 py-2 border border-slate-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none appearance-none bg-white font-medium text-slate-700 cursor-pointer"
+              className="w-full pl-8 pr-3 py-2 border border-slate-300 rounded-md text-[13px] focus:ring-1 focus:ring-blue-500 outline-none appearance-none bg-white font-medium text-slate-700 cursor-pointer"
             >
               {uniqueRayon.map((r, i) => <option key={i} value={r}>{r === "Semua" ? "Semua Rayon" : r}</option>)}
             </select>
           </div>
 
-          {/* Filter Angkatan */}
           <div className="relative w-full md:w-48 shrink-0">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
             <select 
               value={filterAngkatan} onChange={(e) => setFilterAngkatan(e.target.value)}
-              className="w-full pl-8 pr-4 py-2 border border-slate-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none appearance-none bg-white font-medium text-slate-700 cursor-pointer"
+              className="w-full pl-8 pr-3 py-2 border border-slate-300 rounded-md text-[13px] focus:ring-1 focus:ring-blue-500 outline-none appearance-none bg-white font-medium text-slate-700 cursor-pointer"
             >
               {uniqueAngkatan.map((a, i) => <option key={i} value={a}>{a === "Semua" ? "Semua Angkatan" : a}</option>)}
             </select>
@@ -215,52 +199,60 @@ export default function AdminAnggotaEditor() {
 
       </div>
 
-      {/* Tabel Database Interaktif (Inline Editing) Standar SaaS */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto max-h-[65vh] hide-scrollbar relative">
-          <table className="w-full text-left border-collapse whitespace-nowrap min-w-[900px]">
-            <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
+      {/* TABEL DATABASE (INLINE EDITING) */}
+      <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto max-h-[60vh] hide-scrollbar relative">
+          <table className="w-full text-left border-collapse whitespace-nowrap min-w-[900px] table-fixed">
+            <thead className="bg-slate-50/80 sticky top-0 z-10 border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-12 text-center">No</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Nama Lengkap</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36 text-center">NIM</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36 text-center">NIA</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40 text-center">Asal Rayon</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Angkatan</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36 text-center">WhatsApp</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-16 text-center">Aksi</th>
+                <th className="py-3 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-12 text-center">No</th>
+                
+                {/* Kolom Nama dibuat sangat lebar */}
+                <th className="py-3 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[25%] min-w-[200px] text-center">Nama Lengkap</th>
+                
+                <th className="py-3 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[12%] min-w-[100px] text-center">NIM</th>
+                <th className="py-3 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[12%] min-w-[100px] text-center">NIA</th>
+                
+                {/* Kolom Rayon dibuat lebih lebar */}
+                <th className="py-3 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[20%] min-w-[160px] text-center">Asal Rayon</th>
+                
+                {/* Kolom Angkatan dibuat sangat kecil */}
+                <th className="py-3 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[8%] min-w-[60px] text-center">Angkatan</th>
+                
+                <th className="py-3 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[13%] min-w-[120px] text-center">WhatsApp</th>
+                <th className="py-3 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-16 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm text-slate-700 bg-white">
+            <tbody className="divide-y divide-slate-100 text-[13px] text-slate-700 bg-white">
               {filteredData.length > 0 ? (
                 filteredData.map((item, index) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="py-2 px-4 text-center font-mono font-medium text-slate-400 text-xs">{index + 1}</td>
+                    <td className="py-1.5 px-3 text-center font-mono font-medium text-slate-400 text-[12px]">{index + 1}</td>
                     
                     {/* Inline Edit Inputs */}
-                    <td className="py-2 px-4">
-                      <input type="text" value={item.nama} onChange={(e) => handleInputChange(item.id, "nama", e.target.value)} className={`${inputClass} font-semibold text-slate-800`} placeholder="Nama..." />
+                    <td className="py-1.5 px-3">
+                      <input type="text" value={item.nama} onChange={(e) => handleInputChange(item.id, "nama", e.target.value)} className={`${inputClass} font-semibold`} placeholder="Nama Lengkap..." />
                     </td>
-                    <td className="py-2 px-4">
-                      <input type="text" value={item.nim} onChange={(e) => handleInputChange(item.id, "nim", e.target.value)} className={`${inputClass} font-mono text-xs`} placeholder="NIM..." />
+                    <td className="py-1.5 px-3">
+                      <input type="text" value={item.nim} onChange={(e) => handleInputChange(item.id, "nim", e.target.value)} className={`${inputClass} font-mono text-[12px] text-center`} placeholder="NIM..." />
                     </td>
-                    <td className="py-2 px-4">
-                      <input type="text" value={item.nia} onChange={(e) => handleInputChange(item.id, "nia", e.target.value)} className={`${inputClass} font-mono text-xs`} placeholder="NIA..." />
+                    <td className="py-1.5 px-3">
+                      <input type="text" value={item.nia} onChange={(e) => handleInputChange(item.id, "nia", e.target.value)} className={`${inputClass} font-mono text-[12px] text-center`} placeholder="NIA..." />
                     </td>
-                    <td className="py-2 px-4">
-                      <input type="text" value={item.rayon} onChange={(e) => handleInputChange(item.id, "rayon", e.target.value)} className={inputClass} placeholder="Rayon..." />
+                    <td className="py-1.5 px-3">
+                      <input type="text" value={item.rayon} onChange={(e) => handleInputChange(item.id, "rayon", e.target.value)} className={`${inputClass} text-center`} placeholder="Rayon..." />
                     </td>
-                    <td className="py-2 px-4">
+                    <td className="py-1.5 px-3">
                       <input type="text" value={item.angkatan} onChange={(e) => handleInputChange(item.id, "angkatan", e.target.value)} className={`${inputClass} text-center font-medium`} placeholder="Tahun..." />
                     </td>
-                    <td className="py-2 px-4">
-                      <input type="text" value={item.whatsapp} onChange={(e) => handleInputChange(item.id, "whatsapp", e.target.value)} className={`${inputClass} font-mono text-xs`} placeholder="628..." />
+                    <td className="py-1.5 px-3">
+                      <input type="text" value={item.whatsapp} onChange={(e) => handleInputChange(item.id, "whatsapp", e.target.value)} className={`${inputClass} font-mono text-[12px]`} placeholder="628..." />
                     </td>
                     
-                    {/* Hapus Baris */}
-                    <td className="py-2 px-4 text-center">
-                      <button onClick={() => handleDelete(item.id)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition border border-transparent hover:border-red-100" title="Hapus Data">
-                        <Trash2 size={16} />
+                    {/* Aksi Hapus */}
+                    <td className="py-1.5 px-3 text-center">
+                      <button onClick={() => handleDelete(item.id)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition border border-transparent hover:border-red-100" title="Hapus Data">
+                        <Trash2 size={14} />
                       </button>
                     </td>
                   </tr>
@@ -269,9 +261,9 @@ export default function AdminAnggotaEditor() {
                 <tr>
                   <td colSpan="8" className="py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400">
-                      <Search size={32} className="mb-3 opacity-30" />
-                      <p className="font-medium text-slate-600 text-sm">Tidak ada data anggota ditemukan.</p>
-                      <p className="text-xs mt-1">Sesuaikan filter pencarian atau pastikan data telah diunggah.</p>
+                      <Search size={24} className="mb-3 opacity-30" />
+                      <p className="font-medium text-slate-600 text-[13px]">Tidak ada data anggota ditemukan.</p>
+                      <p className="text-[12px] mt-1">Sesuaikan filter pencarian atau pastikan data telah diunggah.</p>
                     </div>
                   </td>
                 </tr>
@@ -282,13 +274,13 @@ export default function AdminAnggotaEditor() {
       </div>
 
       {/* Floating Action Bar (Simpan) */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg border border-slate-200 sticky bottom-6 z-40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-         <div className="flex items-start gap-2.5 text-sm text-slate-600 max-w-2xl">
-           <Info size={18} className="shrink-0 mt-0.5 text-blue-500" />
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-md border border-slate-200 sticky bottom-6 z-40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+         <div className="flex items-start gap-2.5 text-[12px] text-slate-600 max-w-2xl">
+           <Info size={16} className="shrink-0 mt-0.5 text-blue-500" />
            <p>Semua perubahan (ketikan manual, hapus, maupun impor excel) baru akan diperbarui ke sistem publik setelah Anda menekan tombol simpan.</p>
          </div>
-         <button onClick={handleSave} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap shrink-0 text-sm">
-            <Save size={16} /> Simpan Pembaruan Database
+         <button onClick={handleSave} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap shrink-0 text-[13px]">
+            <Save size={15} /> Simpan Pembaruan Database
           </button>
       </div>
 

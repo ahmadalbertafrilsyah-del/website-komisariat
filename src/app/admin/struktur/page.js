@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import * as XLSX from "xlsx"; 
-import { Save, Users, Plus, Trash2, Briefcase, FileSpreadsheet, UploadCloud, Info, Loader2 } from "lucide-react";
+import { Save, Users, Plus, Trash2, Briefcase, FileSpreadsheet, UploadCloud, Info, Loader2, ChevronDown, ChevronUp, Edit } from "lucide-react";
 
 export default function AdminStrukturEditor() {
   const [loading, setLoading] = useState(true);
@@ -11,6 +11,7 @@ export default function AdminStrukturEditor() {
   const [newKategori, setNewKategori] = useState("");
   
   const [uploadingId, setUploadingId] = useState(null); 
+  const [expandedDivisi, setExpandedDivisi] = useState({}); // State untuk mengatur panel buka/tutup
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -47,6 +48,8 @@ export default function AdminStrukturEditor() {
     const updated = [...strukturData, { kategori: newKategori.trim(), anggota: [] }];
     setStrukturData(updated);
     setNewKategori("");
+    // Otomatis buka panel biro yang baru dibuat
+    setExpandedDivisi(prev => ({ ...prev, [updated.length - 1]: true }));
   };
 
   const handleDelKategori = (indexKategori) => {
@@ -61,6 +64,8 @@ export default function AdminStrukturEditor() {
       nama: "", jabatan: "", nim: "", nia: "", rayon: "", angkatan: "", whatsapp: "", foto: ""
     });
     setStrukturData(updated);
+    // Otomatis buka panel jika ada penambahan anggota
+    setExpandedDivisi(prev => ({ ...prev, [indexKategori]: true }));
   };
 
   const handleDelAnggota = (indexKategori, indexAnggota) => {
@@ -73,6 +78,10 @@ export default function AdminStrukturEditor() {
     const updated = [...strukturData];
     updated[indexKategori].anggota[indexAnggota][field] = value;
     setStrukturData(updated);
+  };
+
+  const toggleExpand = (index) => {
+    setExpandedDivisi(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
   const handleImageUpload = async (e, indexKategori, indexAnggota) => {
@@ -173,6 +182,9 @@ export default function AdminStrukturEditor() {
     }
   };
 
+  // Kalkulasi Total Personil untuk Persentase
+  const totalPersonil = strukturData.reduce((acc, curr) => acc + (curr.anggota?.length || 0), 0);
+
   // STYLE STANDAR ENTERPRISE
   const inputStyle = "w-full px-3 py-2 border border-slate-300 rounded-md text-[13px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-shadow bg-white placeholder:text-slate-400";
   const labelStyle = "text-[13px] font-semibold text-slate-700 block mb-1.5";
@@ -227,14 +239,7 @@ export default function AdminStrukturEditor() {
           <div className="p-5 flex flex-col flex-1 justify-between space-y-4">
             <p className="text-[12px] text-slate-500 leading-relaxed">
               Format Header Kolom Wajib:<br/>
-              <span className="font-mono bg-slate-100 border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] mr-1">Biro</span> | 
-              <span className="font-mono bg-slate-100 border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] mx-1">Nama Lengkap</span> | 
-              <span className="font-mono bg-slate-100 border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] mx-1">Jabatan</span> | 
-              <span className="font-mono bg-slate-100 border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] ml-1">NIM</span>
-              <span className="font-mono bg-slate-100 border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] ml-1">NIA</span>
-              <span className="font-mono bg-slate-100 border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] ml-1">Rayon</span>
-              <span className="font-mono bg-slate-100 border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] ml-1">Angkatan</span>
-              <span className="font-mono bg-slate-100 border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] ml-1">WhatsApp</span>
+              <span className="font-mono font-bold text-slate-700">Biro | Nama Lengkap | Jabatan | NIM | NIA | Rayon | Angkatan | WhatsApp</span>
             </p>
             <div className="relative w-full overflow-hidden inline-block">
                <button className="w-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-medium py-2 px-4 rounded-md text-[13px] flex items-center justify-center gap-2 transition">
@@ -250,100 +255,123 @@ export default function AdminStrukturEditor() {
       {/* ================= AREA DATA STRUKTUR ================= */}
       <form onSubmit={handleSubmit} className="space-y-6">
         
-        {strukturData.map((divisi, divIdx) => (
-          <div key={divIdx} className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden mb-6">
-            
-            {/* Header Biro */}
-            <div className="bg-slate-50/80 px-5 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3 flex-grow">
-                <Briefcase size={16} className="text-slate-400 shrink-0" />
-                <input 
-                  type="text" value={divisi.kategori}
-                  onChange={(e) => {
-                     const updated = [...strukturData];
-                     updated[divIdx].kategori = e.target.value;
-                     setStrukturData(updated);
-                  }}
-                  className="font-bold text-slate-800 text-[14px] bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none transition w-full sm:max-w-md py-1"
-                />
-                <span className="bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded text-[11px] font-bold shadow-sm whitespace-nowrap shrink-0">
-                  {divisi.anggota.length} Personil
-                </span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button type="button" onClick={() => handleAddAnggota(divIdx)} className="bg-white hover:bg-blue-50 border border-slate-200 text-blue-600 text-[12px] font-bold px-3 py-1.5 rounded flex items-center gap-1.5 transition shadow-sm">
-                  <Plus size={14}/> Tambah Personil
-                </button>
-                <button type="button" onClick={() => handleDelKategori(divIdx)} className="bg-white text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 p-1.5 rounded transition shadow-sm" title="Hapus Biro Ini">
-                  <Trash2 size={14}/>
-                </button>
-              </div>
-            </div>
+        {strukturData.map((divisi, divIdx) => {
+          const isExpanded = expandedDivisi[divIdx] || false;
+          const pct = totalPersonil === 0 ? "0.0" : (((divisi.anggota?.length || 0) / totalPersonil) * 100).toFixed(1);
 
-            {/* Grid Tabel Anggota */}
-            <div className="p-0 overflow-x-auto">
-              {divisi.anggota.length === 0 ? (
-                <p className="text-center text-[13px] text-slate-400 py-8 bg-white">Biro ini belum memiliki personil yang ditugaskan.</p>
-              ) : (
-                <div className="min-w-[900px] w-full">
-                  {/* Table Header */}
-                  <div className="grid grid-cols-12 gap-3 px-5 py-2.5 bg-slate-50/40 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                     <div className="col-span-3">Nama Lengkap</div>
-                     <div className="col-span-2">Jabatan</div>
-                     <div className="col-span-2">NIM & NIA</div>
-                     <div className="col-span-2">Rayon & Angkatan</div>
-                     <div className="col-span-3">WA & Tautan Foto</div>
-                  </div>
+          return (
+            <div key={divIdx} className={`bg-white rounded-md border shadow-sm overflow-hidden transition-all duration-300 ${isExpanded ? 'border-blue-300 ring-1 ring-blue-100' : 'border-slate-200 hover:border-slate-300'}`}>
+              
+              {/* Header Biro (Bisa di-klik untuk buka/tutup) */}
+              <div 
+                className={`px-5 py-3 flex flex-col xl:flex-row xl:items-center justify-between gap-4 transition-colors cursor-pointer ${isExpanded ? 'bg-blue-50/50 border-b border-blue-100' : 'bg-slate-50/80'}`}
+                onClick={() => toggleExpand(divIdx)}
+              >
+                <div className="flex items-center gap-3 flex-grow">
+                  <button type="button" className="text-slate-400 hover:text-blue-600 transition p-1 rounded-md hover:bg-slate-200">
+                    {isExpanded ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
+                  </button>
+                  <Briefcase size={16} className="text-slate-500 shrink-0" />
+                  
+                  <input 
+                    type="text" value={divisi.kategori}
+                    onClick={(e) => e.stopPropagation()} 
+                    onChange={(e) => {
+                       const updated = [...strukturData];
+                       updated[divIdx].kategori = e.target.value;
+                       setStrukturData(updated);
+                    }}
+                    className="font-bold text-slate-800 text-[14px] bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:outline-none transition w-full sm:max-w-md py-1"
+                  />
 
-                  {/* Table Rows */}
-                  <div className="divide-y divide-slate-100">
-                    {divisi.anggota.map((member, memIdx) => (
-                      <div key={memIdx} className="grid grid-cols-12 gap-3 px-5 py-3 relative group hover:bg-slate-50/50 transition-colors">
-                        
-                        <div className="col-span-3 flex flex-col justify-center">
-                          <input type="text" placeholder="Nama..." required value={member.nama} onChange={(e) => handleInputChange(divIdx, memIdx, "nama", e.target.value)} className={`${inputStyle} font-semibold`} />
-                        </div>
-                        
-                        <div className="col-span-2 flex flex-col justify-center">
-                          <input type="text" placeholder="Jabatan..." required value={member.jabatan} onChange={(e) => handleInputChange(divIdx, memIdx, "jabatan", e.target.value)} className={inputStyle} />
-                        </div>
-
-                        <div className="col-span-2 space-y-2">
-                          <input type="text" placeholder="NIM..." value={member.nim} onChange={(e) => handleInputChange(divIdx, memIdx, "nim", e.target.value)} className={`${inputStyle} font-mono text-[12px]`} />
-                          <input type="text" placeholder="NIA..." value={member.nia} onChange={(e) => handleInputChange(divIdx, memIdx, "nia", e.target.value)} className={`${inputStyle} font-mono text-[12px]`} />
-                        </div>
-
-                        <div className="col-span-2 space-y-2">
-                          <input type="text" placeholder="Rayon..." value={member.rayon} onChange={(e) => handleInputChange(divIdx, memIdx, "rayon", e.target.value)} className={inputStyle} />
-                          <input type="text" placeholder="Angkatan..." value={member.angkatan} onChange={(e) => handleInputChange(divIdx, memIdx, "angkatan", e.target.value)} className={inputStyle} />
-                        </div>
-
-                        <div className="col-span-3 space-y-2 pr-6">
-                          <input type="text" placeholder="No WhatsApp (628...)" value={member.whatsapp} onChange={(e) => handleInputChange(divIdx, memIdx, "whatsapp", e.target.value)} className={`${inputStyle} font-mono text-[12px]`} />
-                          <div className="flex items-center gap-2">
-                             <label className={`cursor-pointer flex items-center justify-center p-2 rounded-md border transition-colors shrink-0 ${uploadingId === `${divIdx}-${memIdx}` ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 hover:text-blue-600 hover:border-blue-300 border-slate-300 shadow-sm'}`} title="Upload Foto">
-                                {uploadingId === `${divIdx}-${memIdx}` ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, divIdx, memIdx)} disabled={uploadingId !== null} />
-                             </label>
-                             <input type="text" placeholder="URL Foto Profil..." value={member.foto} onChange={(e) => handleInputChange(divIdx, memIdx, "foto", e.target.value)} className={`${inputStyle} font-mono text-[11px] text-slate-500`} />
-                          </div>
-                        </div>
-                        
-                        {/* Action Delete melayang */}
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button type="button" onClick={() => handleDelAnggota(divIdx, memIdx)} className="bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded shadow-sm transition" title="Hapus Personil">
-                            <Trash2 size={14}/>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                  {/* Badge Statistik Formal */}
+                  <div className="hidden sm:flex items-center gap-2 bg-white border border-slate-200 px-3 py-1 rounded-md shadow-sm shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <Users size={12} className="text-slate-400" />
+                    <span className="text-[11px] font-bold text-slate-700">{divisi.anggota.length} Personil</span>
+                    <span className="text-[10px] text-slate-400 font-medium">({pct}%)</span>
                   </div>
                 </div>
-              )}
-            </div>
 
-          </div>
-        ))}
+                <div className="flex items-center gap-2 shrink-0 ml-10 xl:ml-0" onClick={(e) => e.stopPropagation()}>
+                  <button type="button" onClick={() => toggleExpand(divIdx)} className={`bg-white border text-[12px] font-bold px-3 py-1.5 rounded flex items-center gap-1.5 transition shadow-sm ${isExpanded ? 'text-slate-500 border-slate-200 hover:bg-slate-50' : 'text-blue-600 border-blue-200 hover:bg-blue-50'}`}>
+                    <Edit size={14} className={isExpanded ? "text-slate-400" : "text-blue-500"}/> {isExpanded ? "Tutup Data" : "Edit Data"}
+                  </button>
+                  <button type="button" onClick={() => { handleAddAnggota(divIdx); }} className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-[12px] font-bold px-3 py-1.5 rounded flex items-center gap-1.5 transition shadow-sm">
+                    <Plus size={14}/> Personil Baru
+                  </button>
+                  <button type="button" onClick={() => handleDelKategori(divIdx)} className="bg-white text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 p-1.5 rounded transition shadow-sm" title="Hapus Biro Ini">
+                    <Trash2 size={14}/>
+                  </button>
+                </div>
+              </div>
+
+              {/* Grid Tabel Anggota (Hanya Tampil Jika isExpanded === true) */}
+              {isExpanded && (
+                <div className="p-0 overflow-x-auto animate-in slide-in-from-top-2 duration-300">
+                  {divisi.anggota.length === 0 ? (
+                    <p className="text-center text-[13px] text-slate-400 py-8 bg-white">Biro ini belum memiliki personil yang ditugaskan.</p>
+                  ) : (
+                    <div className="min-w-[900px] w-full">
+                      {/* Table Header */}
+                      <div className="grid grid-cols-12 gap-3 px-5 py-2.5 bg-slate-50/40 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                         <div className="col-span-3">Nama Lengkap</div>
+                         <div className="col-span-2">Jabatan</div>
+                         <div className="col-span-2">NIM & NIA</div>
+                         <div className="col-span-2">Rayon & Angkatan</div>
+                         <div className="col-span-3">WA & Tautan Foto</div>
+                      </div>
+
+                      {/* Table Rows */}
+                      <div className="divide-y divide-slate-100 pb-2">
+                        {divisi.anggota.map((member, memIdx) => (
+                          <div key={memIdx} className="grid grid-cols-12 gap-3 px-5 py-3 relative group hover:bg-slate-50/50 transition-colors">
+                            
+                            <div className="col-span-3 flex flex-col justify-center">
+                              <input type="text" placeholder="Nama..." required value={member.nama} onChange={(e) => handleInputChange(divIdx, memIdx, "nama", e.target.value)} className={`${inputStyle} font-semibold`} />
+                            </div>
+                            
+                            <div className="col-span-2 flex flex-col justify-center">
+                              <input type="text" placeholder="Jabatan..." required value={member.jabatan} onChange={(e) => handleInputChange(divIdx, memIdx, "jabatan", e.target.value)} className={inputStyle} />
+                            </div>
+
+                            <div className="col-span-2 space-y-2">
+                              <input type="text" placeholder="NIM..." value={member.nim} onChange={(e) => handleInputChange(divIdx, memIdx, "nim", e.target.value)} className={`${inputStyle} font-mono text-[12px]`} />
+                              <input type="text" placeholder="NIA..." value={member.nia} onChange={(e) => handleInputChange(divIdx, memIdx, "nia", e.target.value)} className={`${inputStyle} font-mono text-[12px]`} />
+                            </div>
+
+                            <div className="col-span-2 space-y-2">
+                              <input type="text" placeholder="Rayon..." value={member.rayon} onChange={(e) => handleInputChange(divIdx, memIdx, "rayon", e.target.value)} className={inputStyle} />
+                              <input type="text" placeholder="Angkatan..." value={member.angkatan} onChange={(e) => handleInputChange(divIdx, memIdx, "angkatan", e.target.value)} className={inputStyle} />
+                            </div>
+
+                            <div className="col-span-3 space-y-2 pr-6">
+                              <input type="text" placeholder="No WhatsApp (628...)" value={member.whatsapp} onChange={(e) => handleInputChange(divIdx, memIdx, "whatsapp", e.target.value)} className={`${inputStyle} font-mono text-[12px]`} />
+                              <div className="flex items-center gap-2">
+                                 <label className={`cursor-pointer flex items-center justify-center p-2 rounded-md border transition-colors shrink-0 ${uploadingId === `${divIdx}-${memIdx}` ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 hover:text-blue-600 hover:border-blue-300 border-slate-300 shadow-sm'}`} title="Upload Foto">
+                                    {uploadingId === `${divIdx}-${memIdx}` ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, divIdx, memIdx)} disabled={uploadingId !== null} />
+                                 </label>
+                                 <input type="text" placeholder="URL Foto Profil..." value={member.foto} onChange={(e) => handleInputChange(divIdx, memIdx, "foto", e.target.value)} className={`${inputStyle} font-mono text-[11px] text-slate-500`} />
+                              </div>
+                            </div>
+                            
+                            {/* Action Delete melayang */}
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button type="button" onClick={() => handleDelAnggota(divIdx, memIdx)} className="bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded shadow-sm transition" title="Hapus Personil">
+                                <Trash2 size={14}/>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          );
+        })}
 
         {/* Floating/Bottom Action Bar */}
         {strukturData.length > 0 && (

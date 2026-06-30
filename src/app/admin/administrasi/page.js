@@ -412,53 +412,53 @@ export default function AdminAdministrasi() {
                 
                 {activeTab === "persuratan" && (
                   <>
-                    <th className="py-3 px-4">Nomor Surat</th>
-                    <th className="py-3 px-4">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</th>
-                    <th className="py-3 px-4">Tanggal</th>
-                    <th className="py-3 px-4">Perihal</th>
-                    <th className="py-3 px-4 max-w-[200px]">Keterangan</th>
+                    <th className="py-3 px-4 text-center">Nomor Surat</th>
+                    <th className="py-3 px-4 text-center">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</th>
+                    <th className="py-3 px-4 text-center">Tanggal</th>
+                    <th className="py-3 px-4 text-center">Perihal</th>
+                    <th className="py-3 px-4 max-w-[200px] text-center">Keterangan</th>
                   </>
                 )}
 
                 {activeTab === "proker" && (
                   <>
-                    <th className="py-3 px-4">Nama Kegiatan</th>
-                    <th className="py-3 px-4">Sasaran & Tujuan</th>
-                    <th className="py-3 px-4">Pelaksanaan</th>
-                    <th className="py-3 px-4">PJ</th>
-                    <th className="py-3 px-4">Dana</th>
+                    <th className="py-3 px-4 text-center">Nama Kegiatan</th>
+                    <th className="py-3 px-4 text-center">Sasaran & Tujuan</th>
+                    <th className="py-3 px-4 text-center">Pelaksanaan</th>
+                    <th className="py-3 px-4 text-center">PJ</th>
+                    <th className="py-3 px-4 text-center">Dana</th>
                   </>
                 )}
 
                 {(activeTab === "produkhukum" || activeTab === "laporan") && (
                   <>
-                    <th className="py-3 px-4">{activeTab === "produkhukum" ? "Nomor SK / Judul" : "Judul Laporan"}</th>
-                    <th className="py-3 px-4 max-w-[300px]">Deskripsi Singkat</th>
+                    <th className="py-3 px-4 text-center">{activeTab === "produkhukum" ? "Nomor SK / Judul" : "Judul Laporan"}</th>
+                    <th className="py-3 px-4 max-w-[300px] text-center">Deskripsi Singkat</th>
                   </>
                 )}
 
                 {activeTab === "presentasi" && (
                   <>
-                    <th className="py-3 px-4">Judul Dokumen</th>
+                    <th className="py-3 px-4 text-center">Judul Dokumen</th>
                     <th className="py-3 px-4 text-center">Tipe</th>
-                    <th className="py-3 px-4 max-w-[300px]">Deskripsi Singkat</th>
+                    <th className="py-3 px-4 max-w-[300px] text-center">Deskripsi Singkat</th>
                   </>
                 )}
 
                 {activeTab === "inventaris" && (
                   <>
-                    <th className="py-3 px-4">Nama Barang</th>
+                    <th className="py-3 px-4 text-center">Nama Barang</th>
                     <th className="py-3 px-4 w-24 text-center">Jumlah</th>
                     <th className="py-3 px-4 w-32 text-center">Kondisi</th>
-                    <th className="py-3 px-4 max-w-[300px]">Deskripsi</th>
+                    <th className="py-3 px-4 max-w-[300px] text-center">Deskripsi</th>
                   </>
                 )}
 
                 {activeTab === "peminjaman" && (
                   <>
-                    <th className="py-3 px-4">Peminjam</th>
-                    <th className="py-3 px-4">Barang</th>
-                    <th className="py-3 px-4">Jadwal Pinjam</th>
+                    <th className="py-3 px-4 text-center">Peminjam</th>
+                    <th className="py-3 px-4 text-center">Barang</th>
+                    <th className="py-3 px-4 text-center">Jadwal Pinjam</th>
                     <th className="py-3 px-4 text-center">Surat</th>
                     <th className="py-3 px-4 text-center">Status</th>
                   </>
