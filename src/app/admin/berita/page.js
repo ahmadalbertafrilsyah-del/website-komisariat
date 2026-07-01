@@ -39,7 +39,6 @@ export default function AdminBerita() {
   const [editId, setEditId] = useState(null);
   const [title, setTitle] = useState("");
   const [kategori, setKategori] = useState("Berita Utama");
-  const [excerpt, setExcerpt] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [content, setContent] = useState("");
   const [status, setStatus] = useState("Dipublikasikan"); 
@@ -145,7 +144,7 @@ export default function AdminBerita() {
       .replace(/white-space:\s*[^;"]+;?/gi, '');
 
     const payload = {
-      title, kategori, excerpt, imageUrl, status,
+      title, kategori, imageUrl, status,
       content: cleanedContent, 
       dateline, tags, 
       penulis, fotoPenulis, 
@@ -196,7 +195,6 @@ export default function AdminBerita() {
     setEditId(article.id);
     setTitle(article.title || "");
     setKategori(article.kategori || "Berita Utama");
-    setExcerpt(article.excerpt || "");
     setImageUrl(article.imageUrl || "");
     setContent(article.content || "");
     setStatus(article.status || "Dipublikasikan");
@@ -213,7 +211,7 @@ export default function AdminBerita() {
 
   const resetForm = () => {
     setIsEditing(false); setEditId(null); setTitle("");
-    setKategori("Berita Utama"); setExcerpt(""); setImageUrl(""); setContent(""); setStatus("Dipublikasikan");
+    setKategori("Berita Utama"); setImageUrl(""); setContent(""); setStatus("Dipublikasikan");
     setDateline(""); setTags(""); setPenulis(""); setFotoPenulis(""); setEditorName(""); setFotoEditor(""); setFotografer(""); setFotoFotografer(""); setSumber(""); setLogoSumber("");
   };
 
@@ -324,7 +322,6 @@ export default function AdminBerita() {
                              <span className={`font-bold text-[14px] truncate max-w-[350px] ${isDraft ? 'text-slate-500' : 'text-slate-800'}`}>
                                {item.title} {isDraft && <span className="font-bold text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded ml-2 uppercase tracking-wide">Draf</span>}
                              </span>
-                             <span className="text-[11px] text-slate-400 font-mono mt-1 line-clamp-1">{item.excerpt || "Tidak ada kutipan..."}</span>
                            </div>
                         </div>
                       </td>
@@ -539,16 +536,6 @@ export default function AdminBerita() {
                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'cover')} disabled={uploadingField !== null} />
                      </label>
                      <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className={`${inputStyle} font-mono text-[10px]`} placeholder="Atau paste URL gambar..." readOnly={uploadingField === 'cover'} />
-                   </div>
-                </div>
-
-                {/* Panel Kutipan */}
-                <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden">
-                   <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-                     <h3 className="text-[13px] font-bold text-slate-800">Kutipan (Excerpt)</h3>
-                   </div>
-                   <div className="p-4">
-                     <textarea rows="3" required value={excerpt} onChange={(e) => setExcerpt(e.target.value)} className={`${inputStyle} resize-none`} placeholder="Satu atau dua kalimat menarik untuk ditampilkan di kartu halaman depan..."/>
                    </div>
                 </div>
 

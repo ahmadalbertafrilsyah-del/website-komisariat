@@ -8,11 +8,11 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { 
   ArrowLeft, Calendar, User, Clock, AlertCircle, 
   Newspaper, Sparkles, MessageCircle, Link2, Users, Tag, 
-  Edit3, Camera, Globe, Eye, Send
+  Edit3, Camera, Globe, Eye, Send, Loader2
 } from "lucide-react";
 
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, getDocs, updateDoc, increment } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, updateDoc, increment, addDoc, query, where, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
 
 import "react-quill-new/dist/quill.snow.css";
 
@@ -52,6 +52,12 @@ export default function DetailBerita() {
   const [article, setArticle] = useState(null);
   const [scrollProgress, setScrollProgress] = useState(0);
 
+  // STATE KOMENTAR
+  const [comments, setComments] = useState([]);
+  const [newCommentName, setNewCommentName] = useState("");
+  const [newCommentText, setNewCommentText] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
   // Efek Scroll Progress Bar
   useEffect(() => {
     const handleScroll = () => {
@@ -64,6 +70,7 @@ export default function DetailBerita() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // LOAD ARTIKEL
   useEffect(() => {
     async function fetchBeritaDetail() {
       try {
@@ -104,6 +111,65 @@ export default function DetailBerita() {
     }
     fetchBeritaDetail();
   }, [params.id]);
+
+  // LOAD KOMENTAR REAL-TIME (Diperbarui tanpa butuh Composite Index Firebase)
+  useEffect(() => {
+    if (!article?.id) return;
+    
+    const commentsRef = collection(db, "berita_comments");
+    // HANYA gunakan where() agar tidak memicu error Indexing Firestore
+    const q = query(commentsRef, where("articleId", "==", article.id));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedComments = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Urutkan komentar dari yang terbaru secara manual menggunakan JavaScript
+      loadedComments.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return timeB - timeA; 
+      });
+
+      setComments(loadedComments);
+    }, (error) => {
+      console.error("Error meload komentar:", error);
+    });
+
+    return () => unsubscribe();
+  }, [article?.id]);
+
+  // SUBMIT KOMENTAR
+  const handleSubmitComment = async (e) => {
+    e.preventDefault();
+    if (!newCommentName.trim() || !newCommentText.trim()) return;
+    if (!article?.id) return;
+
+    setIsSubmittingComment(true);
+    try {
+      // 1. Simpan Komentar Baru
+      await addDoc(collection(db, "berita_comments"), {
+        articleId: article.id,
+        name: newCommentName.trim(),
+        text: newCommentText.trim(),
+        createdAt: serverTimestamp()
+      });
+
+      // 2. Update Total Komentar di Dokumen Artikel
+      const articleRef = doc(db, "berita", article.id);
+      await updateDoc(articleRef, { commentsCount: increment(1) });
+
+      setNewCommentName("");
+      setNewCommentText("");
+    } catch (error) {
+      console.error("Error submit comment:", error);
+      alert("Gagal mengirim komentar. Pastikan rules database sudah diizinkan.");
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
 
   // Fungsi Bagikan ke Sosmed
   const shareLinks = {
@@ -156,18 +222,20 @@ export default function DetailBerita() {
   // Validasi apakah ada susunan redaksi yang diisi
   const hasRedaksi = article.penulis || article.editorName || article.fotografer || article.sumber;
 
-  // GANTI BAGIAN LOGIKA DATELINE DENGAN INI:
+  // PROSES DATELINE AGAR INLINE DENGAN PARAGRAF PERTAMA
   let finalHtmlContent = cleanCorruptedHTML(article.content);
-
   if (article.dateline) {
     const datelineHTML = `<strong style="color: #0f172a; text-transform: uppercase;">${article.dateline} &mdash; </strong>`;
     
-    // Cek apakah konten diawali dengan <p>
-    if (finalHtmlContent.trim().startsWith('<p>')) {
-      // Kita masukkan dateline tepat setelah tag <p> pembuka
-      finalHtmlContent = finalHtmlContent.replace('<p>', `<p>${datelineHTML}`);
+    // Cari tag <p> pertama yang tidak kosong
+    const pMatch = finalHtmlContent.match(/<p\b[^>]*>(.*?)<\/p>/i);
+    
+    if (pMatch && pMatch[0]) {
+      // Sisipkan dateline langsung di dalam tag <p> pertama tersebut
+      const updatedP = pMatch[0].replace(/<p\b[^>]*>/i, `$&${datelineHTML}`);
+      finalHtmlContent = finalHtmlContent.replace(pMatch[0], updatedP);
     } else {
-      // Jika tidak ada <p>, kita buatkan paragraf baru
+      // Fallback jika tidak ada <p> sama sekali
       finalHtmlContent = `<p>${datelineHTML}${finalHtmlContent}</p>`;
     }
   }
@@ -179,7 +247,7 @@ export default function DetailBerita() {
       {/* READING PROGRESS BAR */}
       <div className="fixed top-0 left-0 h-1.5 bg-blue-600 z-[60] transition-all duration-150 ease-out" style={{ width: `${scrollProgress}%` }}></div>
 
-      <div className="pt-24 md:pt-32 pb-20 px-5 max-w-4xl mx-auto w-full relative">
+      <div className="pt-24 md:pt-32 pb-20 px-4 md:px-5 max-w-4xl mx-auto w-full relative">
         
         {/* FLOATING SHARE SIDEBAR (Desktop) */}
         <div className="hidden lg:flex flex-col gap-3 absolute -left-12 top-64 z-10">
@@ -205,25 +273,19 @@ export default function DetailBerita() {
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Indeks Berita
             </Link>
             
-            <div className="block mb-4">
+            <div className="block mb-4 md:mb-6">
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getCategoryColor(article.kategori)}`}>
                 <Sparkles size={12} className="shrink-0" /> {article.kategori || "Berita Utama"}
               </span>
             </div>
             
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 leading-[1.25] md:leading-[1.15] mb-6 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 leading-[1.3] md:leading-[1.15] mb-6 tracking-tight">
               {article.title}
             </h1>
             
-            {article.excerpt && (
-              <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed mb-6">
-                {article.excerpt}
-              </p>
-            )}
-            
             {/* METADATA PENULIS & STATISTIK */}
             <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6 pt-6 border-t border-slate-100">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center md:justify-start gap-3">
                    <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200 text-slate-400 shrink-0">
                      {article.fotoPenulis ? (
                         <img src={article.fotoPenulis} alt={article.penulis} className="w-full h-full object-cover" />
@@ -239,7 +301,7 @@ export default function DetailBerita() {
                 
                 <div className="hidden md:block w-px h-8 bg-slate-200"></div>
                 
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500 font-medium w-full md:w-auto justify-center md:justify-start">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 text-xs sm:text-sm text-slate-500 font-medium">
                    <div className="flex items-center gap-1.5"><Calendar size={15} className="text-slate-400"/> {publishDate}</div>
                    <div className="flex items-center gap-1.5"><Clock size={15} className="text-slate-400"/> {readTime} min baca</div>
                    <div className="flex items-center gap-1.5"><Eye size={15} className="text-blue-400"/> {article.views || 0} Dilihat</div>
@@ -249,19 +311,19 @@ export default function DetailBerita() {
           </header>
 
           {/* GAMBAR SAMPUL */}
-          <div className="w-full aspect-[4/3] sm:aspect-video bg-slate-100 rounded-2xl mb-12 overflow-hidden shadow-sm border border-slate-200 flex items-center justify-center relative group">
+          <div className="w-full aspect-[4/3] sm:aspect-video bg-slate-100 rounded-xl md:rounded-2xl mb-8 md:mb-12 overflow-hidden shadow-sm border border-slate-200 flex items-center justify-center relative group">
               {article.imageUrl ? (
                 <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
               ) : (
                 <div className="flex flex-col items-center text-slate-400 w-full h-full justify-center">
-                  <Newspaper size={48} className="mb-3 opacity-30" />
-                  <span className="font-semibold text-sm opacity-50">Tanpa Gambar Sampul</span>
+                  <Newspaper size={40} className="mb-3 opacity-30" />
+                  <span className="font-semibold text-xs md:text-sm opacity-50">Tanpa Gambar Sampul</span>
                 </div>
               )}
           </div>
 
-          {/* ISI ARTIKEL (HTML) - SUDAH TERMASUK DATELINE */}
-          <div className="ql-snow w-full max-w-full overflow-hidden">
+          {/* ISI ARTIKEL (HTML) - SUDAH TERMASUK DATELINE INLINE */}
+          <div className="ql-snow w-full max-w-full overflow-hidden px-1 md:px-0">
             <div 
               id="super-clean-article"
               className="ql-editor w-full text-slate-800" 
@@ -269,7 +331,7 @@ export default function DetailBerita() {
             />
           </div>
 
-          {/* CSS EDITORIAL UNTUK ARTIKEL (DIKEMBALIKAN KE STANDAR ADMIN QUILL) */}
+          {/* CSS EDITORIAL UNTUK ARTIKEL (Responsif HP & Desktop) */}
           <style dangerouslySetInnerHTML={{
             __html: `
               #super-clean-article,
@@ -283,7 +345,7 @@ export default function DetailBerita() {
               #super-clean-article {
                 padding: 0 !important;
                 font-family: ui-sans-serif, system-ui, -apple-system, sans-serif !important;
-                font-size: 1.05rem !important;
+                font-size: 1.1rem !important; /* Default desktop */
                 line-height: 1.8 !important;
                 color: #334155 !important;
               }
@@ -331,11 +393,26 @@ export default function DetailBerita() {
                 border-radius: 0.5rem;
                 margin: 2rem auto;
               }
+
+              /* Penyesuaian Khusus Mobile (HP) */
+              @media (max-width: 640px) {
+                #super-clean-article {
+                  font-size: 1.05rem !important;
+                  line-height: 1.7 !important;
+                  text-align: left !important;
+                }
+                #super-clean-article p { margin-bottom: 1.1rem !important; }
+                #super-clean-article blockquote {
+                  padding: 0.75rem 1rem !important;
+                  margin: 1.5rem 0 !important;
+                  font-size: 0.95rem !important;
+                }
+              }
             `
           }} />
 
           {/* AREA BAWAH: TAGS & REDAKSI */}
-          <div className="mt-12 space-y-8 border-t border-slate-200 pt-10">
+          <div className="mt-10 md:mt-12 space-y-8 border-t border-slate-200 pt-8 md:pt-10">
              
              {/* KATA KUNCI (TAGS) - KLIKABLE */}
              {tagsArray.length > 0 && (
@@ -359,20 +436,20 @@ export default function DetailBerita() {
 
              {/* SUSUNAN REDAKSI (KREDIT) - HANYA MUNCUL JIKA ADA DATA */}
              {hasRedaksi && (
-               <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 md:p-8">
+               <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 md:p-8">
                   <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-widest text-[13px]">
                     <Users size={16} className="text-blue-600"/> Susunan Redaksi
                   </h3>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                      {article.penulis && (
                        <div className="flex flex-col gap-2">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Penulis</p>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
-                              {article.fotoPenulis ? <img src={article.fotoPenulis} className="w-full h-full object-cover"/> : <User size={16} className="m-2 text-slate-400"/>}
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
+                              {article.fotoPenulis ? <img src={article.fotoPenulis} className="w-full h-full object-cover"/> : <User size={14} className="m-1 md:m-2 text-slate-400"/>}
                             </div>
-                            <p className="text-[13px] font-bold text-slate-800 leading-tight">{article.penulis}</p>
+                            <p className="text-xs md:text-[13px] font-bold text-slate-800 leading-tight">{article.penulis}</p>
                           </div>
                        </div>
                      )}
@@ -380,11 +457,11 @@ export default function DetailBerita() {
                      {article.editorName && (
                        <div className="flex flex-col gap-2">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Editor</p>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
-                              {article.fotoEditor ? <img src={article.fotoEditor} className="w-full h-full object-cover"/> : <Edit3 size={14} className="m-2 text-slate-400"/>}
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
+                              {article.fotoEditor ? <img src={article.fotoEditor} className="w-full h-full object-cover"/> : <Edit3 size={12} className="m-1.5 md:m-2 text-slate-400"/>}
                             </div>
-                            <p className="text-[13px] font-bold text-slate-800 leading-tight">{article.editorName}</p>
+                            <p className="text-xs md:text-[13px] font-bold text-slate-800 leading-tight">{article.editorName}</p>
                           </div>
                        </div>
                      )}
@@ -392,11 +469,11 @@ export default function DetailBerita() {
                      {article.fotografer && (
                        <div className="flex flex-col gap-2">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fotografer</p>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
-                              {article.fotoFotografer ? <img src={article.fotoFotografer} className="w-full h-full object-cover"/> : <Camera size={14} className="m-2 text-slate-400"/>}
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
+                              {article.fotoFotografer ? <img src={article.fotoFotografer} className="w-full h-full object-cover"/> : <Camera size={12} className="m-1.5 md:m-2 text-slate-400"/>}
                             </div>
-                            <p className="text-[13px] font-bold text-slate-800 leading-tight">{article.fotografer}</p>
+                            <p className="text-xs md:text-[13px] font-bold text-slate-800 leading-tight">{article.fotografer}</p>
                           </div>
                        </div>
                      )}
@@ -404,11 +481,11 @@ export default function DetailBerita() {
                      {article.sumber && (
                        <div className="flex flex-col gap-2">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sumber</p>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-md bg-slate-200 overflow-hidden shrink-0 border border-slate-300 flex items-center justify-center">
-                              {article.logoSumber ? <img src={article.logoSumber} className="w-full h-full object-contain bg-white p-1"/> : <Globe size={14} className="text-slate-400"/>}
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-md bg-slate-200 overflow-hidden shrink-0 border border-slate-300 flex items-center justify-center">
+                              {article.logoSumber ? <img src={article.logoSumber} className="w-full h-full object-contain bg-white p-1"/> : <Globe size={12} className="text-slate-400"/>}
                             </div>
-                            <p className="text-[13px] font-bold text-slate-800 leading-tight line-clamp-2">{article.sumber}</p>
+                            <p className="text-xs md:text-[13px] font-bold text-slate-800 leading-tight line-clamp-2">{article.sumber}</p>
                           </div>
                        </div>
                      )}
@@ -416,50 +493,89 @@ export default function DetailBerita() {
                </div>
              )}
 
-             {/* UI KOLOM KOMENTAR (PLACEHOLDER) */}
-             <div className="pt-10">
+             {/* UI KOLOM KOMENTAR REAL-TIME */}
+             <div className="pt-6 md:pt-10">
                 <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-widest text-[13px]">
                   <MessageCircle size={16} className="text-pink-500"/> Komentar Pembaca ({article.commentsCount || 0})
                 </h3>
                 
-                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-8">
-                  <div className="flex gap-4">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200"><User size={18} className="text-slate-400"/></div>
-                    <div className="w-full">
+                {/* Form Kirim Komentar */}
+                <form onSubmit={handleSubmitComment} className="bg-white border border-slate-200 rounded-xl p-4 md:p-5 shadow-sm mb-8">
+                  <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+                    <div className="hidden md:flex w-10 h-10 rounded-full bg-slate-100 items-center justify-center shrink-0 border border-slate-200"><User size={18} className="text-slate-400"/></div>
+                    <div className="w-full space-y-3">
+                       <input 
+                         type="text" 
+                         required 
+                         value={newCommentName}
+                         onChange={(e) => setNewCommentName(e.target.value)}
+                         className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-sm font-semibold" 
+                         placeholder="Nama Anda..."
+                       />
                        <textarea 
+                         required
                          rows="3" 
+                         value={newCommentText}
+                         onChange={(e) => setNewCommentText(e.target.value)}
                          className="w-full px-3 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-sm resize-none" 
                          placeholder="Tulis pendapat atau tanggapan Anda di sini..."
                        />
-                       <div className="flex justify-end mt-3">
-                         <button className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-6 rounded-md transition flex items-center gap-2 text-[13px]">
-                           <Send size={14} /> Kirim Komentar
+                       <div className="flex justify-end">
+                         <button type="submit" disabled={isSubmittingComment} className="w-full md:w-auto bg-slate-800 hover:bg-slate-900 disabled:bg-slate-500 text-white font-bold py-2.5 md:py-2 px-6 rounded-md transition flex items-center justify-center gap-2 text-[13px]">
+                           {isSubmittingComment ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} 
+                           {isSubmittingComment ? "Mengirim..." : "Kirim Komentar"}
                          </button>
                        </div>
                     </div>
                   </div>
-                </div>
+                </form>
 
-                {(!article.commentsCount || article.commentsCount === 0) && (
-                   <p className="text-center text-sm text-slate-400 py-8 bg-slate-50 rounded-xl border border-slate-100 border-dashed">Belum ada komentar. Jadilah yang pertama memberikan tanggapan!</p>
+                {/* Daftar Komentar */}
+                {comments.length > 0 ? (
+                  <div className="space-y-4">
+                    {comments.map((comment) => {
+                      const dateStr = comment.createdAt?.toDate 
+                        ? comment.createdAt.toDate().toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : "Baru saja";
+
+                      return (
+                        <div key={comment.id} className="bg-slate-50 rounded-xl p-4 md:p-5 flex gap-3 md:gap-4 border border-slate-100">
+                           <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white flex items-center justify-center shrink-0 border border-slate-200 text-blue-600 font-black text-sm md:text-base uppercase shadow-sm">
+                             {comment.name.charAt(0)}
+                           </div>
+                           <div>
+                             <div className="flex items-center gap-2 mb-1">
+                               <h4 className="font-bold text-slate-800 text-sm">{comment.name}</h4>
+                               <span className="text-[10px] text-slate-400 font-medium">• {dateStr}</span>
+                             </div>
+                             <p className="text-slate-600 text-xs md:text-sm leading-relaxed">{comment.text}</p>
+                           </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-center text-sm text-slate-400 py-8 bg-slate-50 rounded-xl border border-slate-100 border-dashed">Belum ada komentar. Jadilah yang pertama memberikan tanggapan!</p>
                 )}
              </div>
 
              {/* Mobile Share Buttons */}
-             <div className="flex items-center justify-center gap-4 pt-6 border-t border-slate-100 lg:hidden">
-                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Bagikan:</span>
-                 <a href={shareLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-md">
-                   <MessageCircle size={18} />
-                 </a>
-                 <a href={shareLinks.twitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-[#1DA1F2] text-white rounded-full flex items-center justify-center shadow-md">
-                   <TwitterIcon size={18} />
-                 </a>
-                 <a href={shareLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-[#1877F2] text-white rounded-full flex items-center justify-center shadow-md">
-                   <FacebookIcon size={18} />
-                 </a>
-                 <button onClick={handleCopyLink} className="w-10 h-10 bg-slate-800 text-white rounded-full flex items-center justify-center shadow-md">
-                   <Link2 size={18} />
-                 </button>
+             <div className="flex flex-col items-center justify-center gap-3 pt-8 border-t border-slate-100 lg:hidden">
+                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">Bagikan Artikel Ini:</span>
+                 <div className="flex items-center gap-4">
+                   <a href={shareLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-md">
+                     <MessageCircle size={20} />
+                   </a>
+                   <a href={shareLinks.twitter} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-[#1DA1F2] text-white rounded-full flex items-center justify-center shadow-md">
+                     <TwitterIcon size={20} />
+                   </a>
+                   <a href={shareLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-[#1877F2] text-white rounded-full flex items-center justify-center shadow-md">
+                     <FacebookIcon size={20} />
+                   </a>
+                   <button onClick={handleCopyLink} className="w-12 h-12 bg-slate-800 text-white rounded-full flex items-center justify-center shadow-md">
+                     <Link2 size={20} />
+                   </button>
+                 </div>
              </div>
 
           </div>

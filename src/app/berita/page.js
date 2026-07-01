@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Search, Calendar, ChevronRight, BookOpen, Sparkles, ExternalLink, Image as ImageIcon, User } from "lucide-react";
+import { Search, Calendar, ChevronRight, BookOpen, Sparkles, ExternalLink, Image as ImageIcon, User, Clock } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore";
 
@@ -13,12 +13,20 @@ const createSlug = (title) => {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 };
 
+// Fungsi untuk mengambil cuplikan isi berita (Menghapus HTML & Memotong Teks)
+const extractSnippet = (htmlContent, maxLength = 150) => {
+  if (!htmlContent) return "";
+  // Hapus semua tag HTML, ganti &nbsp; dengan spasi, dan hilangkan spasi berlebih
+  let plainText = htmlContent.replace(/<[^>]*>?/gm, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  if (plainText.length <= maxLength) return plainText;
+  return plainText.substring(0, maxLength).trim() + '...';
+};
+
 export default function Berita() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
-  const [visibleCount, setVisibleCount] = useState(6); 
+  const [visibleCount, setVisibleCount] = useState(7); // Tampilkan 7 berita pertama
   
-  // State untuk data nyata
   const [allArticles, setAllArticles] = useState([]);
   const [externalLink, setExternalLink] = useState("");
   const [loading, setLoading] = useState(true);
@@ -27,21 +35,18 @@ export default function Berita() {
   useEffect(() => {
     async function fetchBerita() {
       try {
-        // 1. Ambil Link Portal Eksternal dari Pengaturan Admin
         const configRef = doc(db, "website_config", "berita_config");
         const configSnap = await getDoc(configRef);
         if (configSnap.exists()) {
           setExternalLink(configSnap.data().externalNewsLink || "");
         }
 
-        // 2. Ambil Data Berita Real
         const newsRef = collection(db, "berita");
         const q = query(newsRef, orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
 
         const fetchedNews = snapshot.docs.map(doc => {
           const data = doc.data();
-          // Format tanggal
           let formattedDate = "Tanggal Tidak Diketahui";
           if (data.createdAt) {
             const dateObj = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
@@ -53,16 +58,15 @@ export default function Berita() {
             title: data.title || "Tanpa Judul",
             category: data.kategori || "Berita Utama",
             date: formattedDate,
-            excerpt: data.excerpt || "Tidak ada deskripsi singkat...",
+            content: data.content || "", // Tarik isi berita asli
             imageUrl: data.imageUrl || "",
-            // INTEGRASI DATA REDAKSI BARU DARI ADMIN
             dateline: data.dateline || "",
             penulis: data.penulis || "Redaksi Komisariat",
             tags: data.tags || ""
           };
         });
 
-        // Pastikan hanya menampilkan yang statusnya BUKAN Draf
+        // Hanya tampilkan yang BUKAN Draf
         setAllArticles(fetchedNews.filter(news => news.status !== "Draf"));
       } catch (error) {
         console.error("Gagal memuat berita:", error);
@@ -70,38 +74,33 @@ export default function Berita() {
         setLoading(false);
       }
     }
-
     fetchBerita();
   }, []);
 
   const filteredArticles = allArticles.filter((item) => {
     const matchesCategory = selectedCategory === "Semua" || item.category === selectedCategory;
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          item.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           item.tags.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
-  // DISINKRONKAN DENGAN ADMIN BERITA
   const categories = ["Semua", "Berita Utama", "Opini Kader", "Kajian & Artikel", "Pengumuman"];
 
-  // Fungsi Warna Kategori Cerdas
-  const getCategoryColor = (cat, isFeatured = false) => {
-    if (isFeatured) {
-      // Khusus layout featured di atas gambar gelap, pakai warna cerah
+  const getCategoryColor = (cat, isHero = false) => {
+    if (isHero) {
       switch (cat) {
-        case "Opini Kader": return "bg-emerald-400 text-emerald-950";
-        case "Kajian & Artikel": return "bg-purple-400 text-purple-950";
-        case "Pengumuman": return "bg-amber-400 text-amber-950";
-        default: return "bg-yellow-400 text-slate-900"; // Berita Utama
+        case "Opini Kader": return "bg-emerald-500 text-white";
+        case "Kajian & Artikel": return "bg-purple-500 text-white";
+        case "Pengumuman": return "bg-amber-500 text-white";
+        default: return "bg-blue-600 text-white"; 
       }
     } else {
-      // Layout standard (putih)
       switch (cat) {
-        case "Opini Kader": return "bg-emerald-100 text-emerald-700";
-        case "Kajian & Artikel": return "bg-purple-100 text-purple-700";
-        case "Pengumuman": return "bg-amber-100 text-amber-700";
-        default: return "bg-blue-100 text-blue-700"; // Berita Utama
+        case "Opini Kader": return "bg-emerald-50 text-emerald-700 border-emerald-200";
+        case "Kajian & Artikel": return "bg-purple-50 text-purple-700 border-purple-200";
+        case "Pengumuman": return "bg-amber-50 text-amber-700 border-amber-200";
+        default: return "bg-blue-50 text-blue-700 border-blue-200"; 
       }
     }
   };
@@ -125,236 +124,181 @@ export default function Berita() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none"></div>
           <div className="relative z-10">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 tracking-tight">
-              Berita & <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">Artikel</span>
+              Kabar <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">Pergerakan</span>
             </h1>
             <p className="text-slate-300 max-w-2xl mx-auto text-lg font-light leading-relaxed mb-8">
-              "Menanam Gagasan, Menuai Perubahan" Ini adalah ruang dialektika kader—tempat gagasan dirawat, suara disuarakan, dan perubahan dirancang. Kami menulis bukan hanya untuk mengabarkan, tetapi untuk menggerakkan.
+              "Menanam Gagasan, Menuai Perubahan" Ini adalah ruang dialektika kader—tempat gagasan dirawat, suara disuarakan, dan perubahan dirancang.
             </p>
-
-            {/* TOMBOL LINK PORTAL BERITA UTAMA */}
             {externalLink && (
-              <a 
-                href={externalLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 px-8 rounded-full transition-all shadow-lg shadow-blue-600/30 hover:-translate-y-1"
-              >
-                Kunjungi Portal Berita Utama Kami <ExternalLink size={18} />
+              <a href={externalLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 px-8 rounded-full transition-all shadow-lg shadow-blue-600/30 hover:-translate-y-1">
+                Kunjungi Portal Utama <ExternalLink size={18} />
               </a>
             )}
-
           </div>
         </section>
 
         {/* Filter & Search Bar */}
         <section className="py-8 px-4 max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
-            
-            {/* Kategori */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 hide-scrollbar">
               {categories.map((cat) => (
                 <button
                   key={cat}
-                  onClick={() => {
-                    setSelectedCategory(cat);
-                    setVisibleCount(6);
-                  }}
+                  onClick={() => { setSelectedCategory(cat); setVisibleCount(7); }}
                   className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                    selectedCategory === cat
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                      : "bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200"
+                    selectedCategory === cat ? "bg-slate-800 text-white shadow-md" : "bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200"
                   }`}
                 >
                   {cat}
                 </button>
               ))}
             </div>
-
-            {/* Input Pencarian */}
             <div className="relative w-full md:w-80">
               <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setVisibleCount(6);
-                }}
+                type="text" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(7); }}
                 placeholder="Cari berita atau tags..."
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
               <Search className="absolute left-4 top-3 h-5 w-5 text-slate-400" />
             </div>
           </div>
         </section>
 
-        {/* Grid Artikel Dinamis */}
+        {/* ================= TATA LETAK JURNALISTIK PROFESIONAL ================= */}
         <section className="py-4 px-4 max-w-7xl mx-auto mb-20">
           {filteredArticles.length === 0 ? (
-            <div className="bg-white rounded-[2rem] p-16 text-center border border-slate-100 shadow-sm">
+            <div className="bg-white rounded-2xl p-16 text-center border border-slate-200 shadow-sm">
               <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <p className="text-slate-500 text-lg font-medium">Belum ada arsip berita untuk saat ini.</p>
               <p className="text-sm text-slate-400 mt-2">Coba sesuaikan kata kunci pencarian atau kategori.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 lg:gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+              
               {filteredArticles.slice(0, visibleCount).map((item, idx) => {
-                
-                const pattern = idx % 6;
-                let gridClass = "";
-                let layoutType = "";
-
-                if (pattern === 0) {
-                  gridClass = "col-span-1 md:col-span-2 lg:col-span-8";
-                  layoutType = "featured";
-                } else if (pattern === 5) {
-                  gridClass = "col-span-1 md:col-span-2 lg:col-span-12";
-                  layoutType = "list";
-                } else {
-                  gridClass = "col-span-1 md:col-span-1 lg:col-span-4";
-                  layoutType = "square";
-                }
-
                 const articleSlug = createSlug(item.title);
-
-                return (
-                  <Link href={`/berita/${articleSlug}`} key={item.id} className={`${gridClass} block group h-full`}>
-                    
-                    {/* LAYOUT FEATURED */}
-                    {layoutType === "featured" && (
-                      <div className="bg-[#1e293b] rounded-3xl overflow-hidden shadow-xl border border-slate-800 flex flex-col md:flex-row h-full hover:shadow-2xl hover:shadow-blue-900/20 hover:-translate-y-1 transition-all duration-300">
-                        <div className="md:w-1/2 relative h-64 md:h-full bg-slate-800 overflow-hidden flex-shrink-0">
+                
+                // --- TATA LETAK 1: HEADLINE UTAMA (Besar di Atas) ---
+                if (idx === 0) {
+                  const snippetText = extractSnippet(item.content, 220); // Snippet lebih panjang untuk Headline
+                  return (
+                    <div key={item.id} className="md:col-span-12 group">
+                      <Link href={`/berita/${articleSlug}`} className="flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200 h-full">
+                        <div className="md:w-3/5 relative h-64 md:h-[400px] overflow-hidden bg-slate-100">
                           {item.imageUrl ? (
                              <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                           ) : (
-                             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 font-medium z-10 bg-slate-900">
-                                <ImageIcon size={32} className="mb-2 opacity-50"/>
-                                <span className="text-xs">Tanpa Gambar</span>
-                             </div>
+                             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400"><ImageIcon size={48} className="opacity-20 mb-2"/></div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#1e293b] via-transparent to-transparent z-20 md:bg-gradient-to-r"></div>
-                          <span className={`absolute top-6 left-6 shadow-lg text-xs font-bold px-4 py-2 rounded-full z-30 uppercase tracking-wider flex items-center gap-1.5 ${getCategoryColor(item.category, true)}`}>
-                            <Sparkles size={14}/> {item.category}
-                          </span>
-                        </div>
-                        <div className="md:w-1/2 p-8 md:p-10 flex flex-col justify-center flex-grow">
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400 font-medium mb-4">
-                            <span className="flex items-center gap-1.5"><Calendar size={16} className="text-yellow-400" /> {item.date}</span>
-                            <span className="flex items-center gap-1.5"><User size={16} className="text-blue-400" /> {item.penulis}</span>
+                          <div className={`absolute top-4 left-4 text-[10px] font-black px-3 py-1.5 rounded uppercase tracking-widest shadow-md ${getCategoryColor(item.category, true)}`}>
+                            {item.category}
                           </div>
-                          <h3 className="font-extrabold text-white text-2xl md:text-3xl mb-4 leading-tight group-hover:text-yellow-400 transition-colors">
+                        </div>
+                        <div className="md:w-2/5 p-6 md:p-10 flex flex-col justify-center">
+                          <div className="flex items-center gap-3 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                            <span className="flex items-center gap-1.5 text-blue-600"><Clock size={14}/> TERKINI</span>
+                            <span>•</span>
+                            <span>{item.date}</span>
+                          </div>
+                          <h2 className="font-extrabold text-slate-900 text-2xl md:text-3xl lg:text-4xl mb-4 leading-[1.2] group-hover:text-blue-600 transition-colors">
                             {item.title}
-                          </h3>
-                          <p className="text-slate-400 text-base line-clamp-3 mb-8 leading-relaxed">
-                            {/* Menambahkan Dateline terintegrasi dengan Excerpt */}
-                            {item.dateline && <span className="font-bold text-slate-200">{item.dateline} </span>}
-                            {item.excerpt}
+                          </h2>
+                          <p className="text-slate-600 text-sm md:text-base leading-relaxed mb-6">
+                            {item.dateline && <strong className="uppercase text-slate-900">{item.dateline} &mdash; </strong>}
+                            {snippetText}
                           </p>
-                          <div className="mt-auto inline-flex items-center gap-2 font-bold text-yellow-400 w-max group-hover:translate-x-2 transition-transform">
-                            Baca Selengkapnya
+                          <div className="mt-auto flex items-center gap-2 text-sm font-bold text-slate-800">
+                             <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden border border-slate-300"><User size={12} className="text-slate-500"/></div>
+                             {item.penulis}
                           </div>
                         </div>
-                      </div>
-                    )}
+                      </Link>
+                    </div>
+                  );
+                }
 
-                    {/* LAYOUT SQUARE */}
-                    {layoutType === "square" && (
-                      <div className="bg-white rounded-3xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col h-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                        <div className="relative h-52 bg-slate-200 overflow-hidden flex-shrink-0">
+                // --- TATA LETAK 2: BERITA SEKUNDER (Kotak / Grid 2 Kolom) ---
+                if (idx === 1 || idx === 2) {
+                  const snippetText = extractSnippet(item.content, 120);
+                  return (
+                    <div key={item.id} className="md:col-span-6 group">
+                      <Link href={`/berita/${articleSlug}`} className="flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-slate-200 h-full">
+                        <div className="relative h-56 overflow-hidden bg-slate-100">
                           {item.imageUrl ? (
                              <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                           ) : (
-                             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-sm font-medium z-10 bg-slate-100">
-                                <ImageIcon size={24} className="mb-2 opacity-30"/>
-                                <span className="text-xs italic">Tanpa Gambar</span>
-                             </div>
+                             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400"><ImageIcon size={32} className="opacity-20 mb-2"/></div>
                           )}
-                          <span className={`absolute top-4 left-4 shadow-sm text-[10px] font-bold px-3 py-1.5 rounded-md z-20 uppercase tracking-wider ${getCategoryColor(item.category, false)}`}>
+                          <div className={`absolute top-4 left-4 text-[10px] font-bold px-3 py-1 rounded border ${getCategoryColor(item.category, false)} uppercase tracking-wider`}>
                             {item.category}
-                          </span>
+                          </div>
                         </div>
                         <div className="p-6 md:p-8 flex flex-col flex-grow">
-                          <h3 className="font-bold text-slate-900 text-xl mb-3 leading-snug group-hover:text-blue-600 transition-colors line-clamp-3">
+                          <h3 className="font-extrabold text-slate-900 text-xl md:text-2xl mb-3 leading-snug group-hover:text-blue-600 transition-colors line-clamp-3">
                             {item.title}
                           </h3>
-                          <p className="text-slate-500 text-sm line-clamp-3 mb-6 leading-relaxed">
-                            {/* Menambahkan Dateline terintegrasi dengan Excerpt */}
-                            {item.dateline && <span className="font-bold text-slate-800">{item.dateline} </span>}
-                            {item.excerpt}
+                          <p className="text-slate-500 text-sm leading-relaxed mb-6 line-clamp-3">
+                            {item.dateline && <strong className="uppercase text-slate-800">{item.dateline} &mdash; </strong>}
+                            {snippetText}
                           </p>
-                          <div className="mt-auto pt-5 border-t border-slate-100 flex justify-between items-end text-xs text-slate-500 font-medium">
-                            <div className="flex flex-col gap-2">
-                               <span className="flex items-center gap-1.5"><Calendar size={14} className="text-blue-500"/> {item.date}</span>
-                               <span className="flex items-center gap-1.5"><User size={14} className="text-slate-400"/> {item.penulis}</span>
-                            </div>
-                            <span className="text-blue-600 font-bold group-hover:translate-x-1 transition-transform mb-1">Baca</span>
+                          <div className="mt-auto flex justify-between items-center text-xs text-slate-400 font-semibold border-t border-slate-100 pt-4">
+                            <span className="flex items-center gap-1.5"><Calendar size={14}/> {item.date}</span>
+                            <span className="text-blue-600 group-hover:translate-x-1 transition-transform">BACA</span>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      </Link>
+                    </div>
+                  );
+                }
 
-                    {/* LAYOUT LIST */}
-                    {layoutType === "list" && (
-                      <div className="bg-white rounded-3xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col md:flex-row h-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                        <div className="md:w-1/3 lg:w-1/4 relative h-48 md:h-auto bg-slate-200 overflow-hidden flex-shrink-0">
-                           {item.imageUrl ? (
-                              <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                           ) : (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-sm font-medium z-10 bg-slate-100">
-                                <ImageIcon size={24} className="mb-2 opacity-30"/>
-                                <span className="text-xs italic">Tanpa Gambar</span>
-                              </div>
-                           )}
-                           <span className={`absolute top-4 left-4 md:hidden text-[10px] font-bold px-3 py-1.5 rounded-md z-20 uppercase tracking-wider ${getCategoryColor(item.category, false)}`}>
-                             {item.category}
-                           </span>
+                // --- TATA LETAK 3: FEED BERITA TERBARU (List memanjang ke bawah) ---
+                if (idx > 2) {
+                  const snippetText = extractSnippet(item.content, 180);
+                  return (
+                    <div key={item.id} className="md:col-span-12 group">
+                      <Link href={`/berita/${articleSlug}`} className="flex flex-col sm:flex-row bg-white rounded-xl overflow-hidden hover:bg-slate-50 transition-colors duration-300 border border-slate-200 border-l-4 hover:border-l-blue-600">
+                        <div className="sm:w-1/3 md:w-1/4 relative h-48 sm:h-auto overflow-hidden bg-slate-100 shrink-0">
+                          {item.imageUrl ? (
+                             <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          ) : (
+                             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400"><ImageIcon size={24} className="opacity-20 mb-2"/></div>
+                          )}
                         </div>
-                        <div className="md:w-2/3 lg:w-3/4 p-6 md:p-8 flex flex-col justify-center flex-grow relative">
-                          <div className="hidden md:flex flex-wrap items-center gap-4 mb-3">
-                            <span className={`text-[10px] font-bold px-3 py-1 rounded-md uppercase tracking-wider ${getCategoryColor(item.category, false)}`}>
-                              {item.category}
-                            </span>
-                            <span className="text-sm text-slate-400 font-medium flex items-center gap-1.5"><Calendar size={14} className="text-blue-500"/> {item.date}</span>
-                            <span className="text-sm text-slate-400 font-medium flex items-center gap-1.5"><User size={14} /> {item.penulis}</span>
+                        <div className="sm:w-2/3 md:w-3/4 p-5 md:p-6 flex flex-col justify-center">
+                          <div className="flex items-center gap-3 mb-2">
+                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getCategoryColor(item.category, false)} uppercase tracking-wider`}>
+                               {item.category}
+                             </span>
+                             <span className="text-xs text-slate-400 font-semibold">{item.date}</span>
                           </div>
-                          
-                          <h3 className="font-extrabold text-slate-900 text-xl md:text-2xl mb-3 leading-snug group-hover:text-blue-600 transition-colors">
+                          <h3 className="font-bold text-slate-900 text-lg md:text-xl mb-2 leading-snug group-hover:text-blue-600 transition-colors">
                             {item.title}
                           </h3>
-                          <p className="text-slate-500 text-sm md:text-base line-clamp-2 md:line-clamp-3 mb-6 max-w-4xl leading-relaxed">
-                            {/* Menambahkan Dateline terintegrasi dengan Excerpt */}
-                            {item.dateline && <span className="font-bold text-slate-800">{item.dateline} </span>}
-                            {item.excerpt}
+                          <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 mb-4">
+                            {item.dateline && <strong className="uppercase text-slate-800">{item.dateline} &mdash; </strong>}
+                            {snippetText}
                           </p>
-                          
-                          <div className="mt-auto md:absolute md:bottom-8 md:right-8 flex md:hidden items-center justify-between text-xs text-slate-500 font-medium border-t border-slate-100 pt-4 w-full">
-                             <div className="flex flex-col gap-1.5">
-                               <span className="flex items-center gap-1.5"><Calendar size={14} className="text-blue-500"/> {item.date}</span>
-                               <span className="flex items-center gap-1.5"><User size={14} /> {item.penulis}</span>
-                             </div>
-                             <span className="text-blue-600 font-bold group-hover:translate-x-1 transition-transform mb-1">Baca</span>
-                          </div>
-                          
-                          <div className="hidden md:flex items-center gap-1 text-blue-600 font-bold absolute bottom-8 right-8 group-hover:translate-x-1 transition-transform">
-                            Lanjut Membaca <ChevronRight size={18}/>
+                          <div className="mt-auto flex items-center gap-2 text-xs font-semibold text-slate-400">
+                             <User size={14}/> {item.penulis}
                           </div>
                         </div>
-                      </div>
-                    )}
+                      </Link>
+                    </div>
+                  );
+                }
 
-                  </Link>
-                );
               })}
             </div>
           )}
 
           {/* Tombol Muat Lebih Banyak */}
           {filteredArticles.length > visibleCount && (
-            <div className="flex justify-center mt-16">
+            <div className="flex justify-center mt-12">
               <button
-                onClick={() => setVisibleCount(visibleCount + 4)}
-                className="bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 font-bold py-3.5 px-10 rounded-full transition-all shadow-sm flex items-center gap-2 group"
+                onClick={() => setVisibleCount(visibleCount + 5)}
+                className="bg-white border-2 border-slate-200 text-slate-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 font-bold py-3.5 px-8 rounded-full transition-all shadow-sm flex items-center gap-2 group text-sm"
               >
-                Tampilkan Lebih Banyak <ChevronRight size={18} className="group-hover:rotate-90 transition-transform" />
+                Muat Berita Lama <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           )}
