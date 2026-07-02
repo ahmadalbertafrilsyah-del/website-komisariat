@@ -301,14 +301,13 @@ export default function AdminApresiasi() {
                   <div className="px-4 py-3 bg-slate-50/50 flex justify-between items-center mt-auto">
                     <div className="flex items-center gap-1.5 text-slate-600">
                       <Trophy size={14} className="text-amber-500"/>
-                      <span className="text-xs font-semibold">{kader.prestasi.length} Catatan</span>
+                      <span className="text-xs font-semibold">{kader.prestasi.length} Data</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <button onClick={() => handleDeleteKader(kader.id)} className="text-slate-400 hover:text-red-600 transition" title="Hapus Kader">
                         <Trash2 size={16}/>
                       </button>
-                      <button onClick={() => setActiveEditKader(kader)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition py-1 px-2 border border-transparent hover:border-blue-200 hover:bg-blue-50 rounded-md">
-                        Detail & Edit &rarr;
+                      <button onClick={() => setActiveEditKader(kader)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition py-1 px-2 border border-transparent hover:border-blue-200 hover:bg-blue-50 rounded-md">Detail
                       </button>
                     </div>
                   </div>
