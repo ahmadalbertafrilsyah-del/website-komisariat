@@ -65,30 +65,25 @@ export default function AdministrasiPage() {
   const formatDisplayDate = (dateVal) => {
     if (!dateVal) return "-";
     
-    // Jika input berupa string (seperti YYYY-MM-DD atau DD/MM/YYYY)
     if (typeof dateVal === 'string') {
       const str = dateVal.trim();
       const parts = str.includes('/') ? str.split('/') : str.split('-');
       if (parts.length === 3) {
         if (parts[2].length >= 4) { 
-          // Format sudah DD/MM/YYYY
           return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2].substring(0,4)}`;
         } 
         else if (parts[0].length === 4) { 
-          // Format masih YYYY-MM-DD (Dibalik secara aman ke DD/MM/YYYY)
           const day = parts[2].substring(0, 2);
           return `${day.padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
         }
       }
     }
 
-    // Jika input format Excel Serial Number
     if (!isNaN(dateVal) && Number(dateVal) > 20000) {
       const date = new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000));
       return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
     }
     
-    // Fallback Date Default
     const d = new Date(dateVal);
     if (!isNaN(d)) {
       return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
@@ -105,11 +100,9 @@ export default function AdministrasiPage() {
       const parts = str.includes('/') ? str.split('/') : str.split('-');
       if (parts.length === 3) {
         if (parts[2].length >= 4) { 
-          // Format DD/MM/YYYY (Ubah ke standar mesin: YYYY-MM-DD)
           return new Date(`${parts[2].substring(0,4)}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`).getTime();
         } 
         else if (parts[0].length === 4) { 
-          // Format YYYY-MM-DD
           return new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].substring(0, 2).padStart(2, '0')}T00:00:00`).getTime();
         }
       }
@@ -127,14 +120,13 @@ export default function AdministrasiPage() {
     return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   };
 
-  // 🔥 3. LOGIKA SORTING DIPERBAIKI (S. MASUK: TERLAMA DI ATAS | S. KELUAR: NO 001 DI ATAS) 🔥
+  // 🔥 3. PEMISAHAN DATA: PERSURATAN & PROKER DIPISAH, SISANYA GLOBAL 🔥
   const currentSuratMasuk = filterByLembaga(masterSuratMasuk).sort((a, b) => {
-    // a - b memastikan urutannya Ascending (Dari tanggal lama ke tanggal baru)
+    // Ascending: Tanggal terlama/awal di atas, persis seperti format Admin
     return getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang); 
   });
   
   const currentSuratKeluar = filterByLembaga(masterSuratKeluar).sort((a, b) => {
-    // Mengekstrak angka pertama yang ditemukan (contoh: "045.PK..." -> 45, "Un.03..." -> 3)
     const getNum = (str) => {
       const match = (str || "").match(/\d+/);
       return match ? parseInt(match[0], 10) : 999999;
@@ -142,15 +134,17 @@ export default function AdministrasiPage() {
     const numA = getNum(a.nomorSurat);
     const numB = getNum(b.nomorSurat);
     
-    if (numA !== numB) return numA - numB; // Angka terkecil di atas
+    if (numA !== numB) return numA - numB; 
     return (a.nomorSurat || "").localeCompare(b.nomorSurat || "");
   });
 
   const currentProker = filterByLembaga(masterProker);
-  const currentProdukHukum = filterByLembaga(masterProdukHukum);
-  const currentLpj = filterByLembaga(masterLpj);
-  const currentPresentasi = filterByLembaga(masterPresentasi);
-  const currentInventaris = filterByLembaga(masterInventaris);
+  
+  // Data ini sekarang bersifat GLOBAL, tidak terpengaruh dropdown Lembaga
+  const currentProdukHukum = masterProdukHukum;
+  const currentLpj = masterLpj;
+  const currentPresentasi = masterPresentasi;
+  const currentInventaris = masterInventaris;
 
   const getFilteredData = () => {
     const q = searchQuery.toLowerCase();
@@ -314,27 +308,30 @@ export default function AdministrasiPage() {
 
       <section className="px-5 max-w-7xl mx-auto w-full -mt-10 md:-mt-12 relative z-20 space-y-4">
         
-        <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100 flex items-center justify-between relative z-30">
-           <div className="flex items-center gap-3 w-full">
-               <div className="bg-blue-100 p-2 rounded-lg text-blue-600 hidden sm:flex">
-                   <Building2 size={20} />
-               </div>
-               <div className="flex-grow">
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 mb-0.5">Ruang Kerja / Lembaga</p>
-                   <select
-                     value={activeLembaga}
-                     onChange={handleLembagaChange}
-                     className="w-full text-sm sm:text-base font-black text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
-                   >
-                      <option value="Komisariat">Administrasi Komisariat</option>
-                      <option value="KOPRI">Administrasi KOPRI</option>
-                      {listLSO.map((lso, index) => (
-                          <option key={index} value={lso}>Administrasi {lso}</option>
-                      ))}
-                   </select>
-               </div>
-           </div>
-        </div>
+        {/* Hanya tampilkan dropdown Lembaga di Tab Persuratan & Proker */}
+        {(activeTab === "persuratan" || activeTab === "proker") && (
+          <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100 flex items-center justify-between relative z-30">
+             <div className="flex items-center gap-3 w-full">
+                 <div className="bg-blue-100 p-2 rounded-lg text-blue-600 hidden sm:flex">
+                     <Building2 size={20} />
+                 </div>
+                 <div className="flex-grow">
+                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 mb-0.5">Ruang Kerja / Lembaga</p>
+                     <select
+                       value={activeLembaga}
+                       onChange={handleLembagaChange}
+                       className="w-full text-sm sm:text-base font-black text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
+                     >
+                        <option value="Komisariat">Administrasi Komisariat</option>
+                        <option value="KOPRI">Administrasi KOPRI</option>
+                        {listLSO.map((lso, index) => (
+                            <option key={index} value={lso}>Administrasi {lso}</option>
+                        ))}
+                     </select>
+                 </div>
+             </div>
+          </div>
+        )}
 
         <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-2xl flex flex-row gap-1 shadow-xl backdrop-blur-md overflow-x-auto whitespace-nowrap scrollbar-none w-full">
           <button onClick={() => handleTabChange("persuratan")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "persuratan" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Mail size={16} /> Arsip Persuratan</button>
@@ -377,7 +374,9 @@ export default function AdministrasiPage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center shadow-sm mt-4">
              <FileText className="w-14 h-14 text-slate-300 mx-auto mb-3" />
              <h3 className="font-bold text-slate-700 text-lg">Data Belum Tersedia</h3>
-             <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">Admin belum menginput data untuk kategori ini di ruang kerja <b>{activeLembaga}</b>, atau kata kunci pencarian Anda tidak ditemukan.</p>
+             <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">
+                Admin belum menginput data untuk kategori ini, atau kata kunci pencarian Anda tidak ditemukan.
+             </p>
           </div>
         ) : (
           <AnimatePresence mode="wait">
@@ -588,7 +587,7 @@ export default function AdministrasiPage() {
                 </div>
               )}
 
-              {/* 🔥 ================= SUB 6: INVENTARIS ================= 🔥 */}
+              {/* 🔥 ================= SUB 6: INVENTARIS (TANPA FILTER LEMBAGA) ================= 🔥 */}
               {activeTab === "inventaris" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {currentListData.map((item, index) => (
