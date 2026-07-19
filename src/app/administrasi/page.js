@@ -286,7 +286,8 @@ export default function AdministrasiPage() {
       <div className="p-4 flex flex-col flex-grow bg-white">
          <span className="text-[10px] font-mono font-bold text-slate-400 mb-1.5 line-clamp-1">{isHukum ? (item.nomorSK || "Tanpa Nomor") : (item.periode || "Tanpa Periode")}</span>
          <h3 className="font-bold text-slate-800 text-sm leading-snug line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">{isHukum ? (item.tentangHukum || "Dokumen Hukum") : (item.namaLaporan || "Laporan Kepengurusan")}</h3>
-         <p className="text-xs text-slate-500 line-clamp-2 mt-auto">{isHukum ? (item.deskripsiHukum || "-") : (item.deskripsiLaporan || "-")}</p>
+         {/* Format Deskripsi Support Enter */}
+         <p className="text-xs text-slate-500 line-clamp-2 mt-auto whitespace-pre-wrap">{isHukum ? (item.deskripsiHukum || "-") : (item.deskripsiLaporan || "-")}</p>
       </div>
     </motion.div>
   );
@@ -308,7 +309,7 @@ export default function AdministrasiPage() {
 
       <section className="px-5 max-w-7xl mx-auto w-full -mt-10 md:-mt-12 relative z-20 space-y-4">
         
-        {/* Hanya tampilkan dropdown Lembaga di Tab Persuratan & Proker */}
+        {/* Hanya tampilkan dropdown pada Tab Persuratan & Proker */}
         {(activeTab === "persuratan" || activeTab === "proker") && (
           <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100 flex items-center justify-between relative z-30">
              <div className="flex items-center gap-3 w-full">
@@ -374,9 +375,7 @@ export default function AdministrasiPage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center shadow-sm mt-4">
              <FileText className="w-14 h-14 text-slate-300 mx-auto mb-3" />
              <h3 className="font-bold text-slate-700 text-lg">Data Belum Tersedia</h3>
-             <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">
-                Admin belum menginput data untuk kategori ini, atau kata kunci pencarian Anda tidak ditemukan.
-             </p>
+             <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">Admin belum menginput data untuk kategori ini di ruang kerja <b>{activeLembaga}</b>, atau kata kunci pencarian Anda tidak ditemukan.</p>
           </div>
         ) : (
           <AnimatePresence mode="wait">
@@ -566,7 +565,7 @@ export default function AdministrasiPage() {
                         <h3 className="text-base font-bold text-slate-800 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
                           <a href={`/administrasi/dokumen/${docItem.id}`}>{docItem.judul}</a>
                         </h3>
-                        <p className="text-slate-500 text-sm line-clamp-3 flex-1 mb-4">{docItem.deskripsi}</p>
+                        <p className="text-slate-500 text-sm line-clamp-3 flex-1 mb-4 whitespace-pre-wrap">{docItem.deskripsi}</p>
                         <div className="flex items-center gap-3 mt-auto pt-4 border-t border-slate-100">
                            <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('Lihat Dokumen PMII: ' + docItem.judul + '\n' + window.location.origin + '/administrasi/dokumen/' + docItem.id)}`, '_blank')} className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold text-xs py-2 rounded-md transition-colors flex items-center justify-center gap-2">
                              <Share2 size={14}/> Bagikan
@@ -587,35 +586,44 @@ export default function AdministrasiPage() {
                 </div>
               )}
 
-              {/* 🔥 ================= SUB 6: INVENTARIS (TANPA FILTER LEMBAGA) ================= 🔥 */}
+              {/* 🔥 ================= SUB 6: INVENTARIS (RESPONSIF KOTAK 2 BARIS DI HP) ================= 🔥 */}
               {activeTab === "inventaris" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                   {currentListData.map((item, index) => (
-                    <div key={index} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col group">
-                      <div className="p-5 flex flex-col flex-1">
-                        <div className="flex justify-between items-start mb-3 gap-3">
-                          <h3 className="text-lg font-bold text-slate-800 line-clamp-2">{item.namaBarang}</h3>
-                          <span className={`shrink-0 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${item.kondisi === 'Baik' ? 'bg-emerald-50 text-emerald-600' : item.kondisi === 'Rusak Ringan' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>
-                            {item.kondisi || "Baik"}
-                          </span>
-                        </div>
+                    <div key={index} className="bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col group">
+                      
+                      {/* Thumbnail Gambar */}
+                      <div className="relative w-full pt-[75%] bg-slate-100 border-b border-slate-200 overflow-hidden">
+                        {item.fotoGroup && item.fotoGroup[0] ? (
+                          <img src={item.fotoGroup[0]} alt={item.namaBarang} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        ) : (
+                          <Package size={36} className="absolute inset-0 m-auto text-slate-300" />
+                        )}
+                        <span className={`absolute top-2 left-2 text-[8px] md:text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm ${item.kondisi === 'Baik' ? 'bg-emerald-100 text-emerald-700' : item.kondisi === 'Rusak Ringan' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                           {item.kondisi || "Baik"}
+                        </span>
+                      </div>
+
+                      <div className="p-3 md:p-5 flex flex-col flex-1">
+                        <h3 className="text-sm md:text-lg font-bold text-slate-800 line-clamp-2 leading-snug mb-1.5">{item.namaBarang}</h3>
                         
-                        <div className="flex items-center gap-2 mb-4">
-                           <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">
-                             Stok Tersedia: {item.jumlah}
+                        <div className="mb-2">
+                           <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] md:text-xs font-bold border border-slate-200">
+                             Stok: {item.jumlah}
                            </span>
                         </div>
                         
-                        <p className="text-slate-500 text-sm line-clamp-3 flex-1 mb-6">
-                          {item.deskripsi || "Tidak ada detail tambahan untuk barang ini."}
+                        {/* Deskripsi Pre-Wrap */}
+                        <p className="text-slate-500 text-[10px] md:text-sm line-clamp-3 md:line-clamp-4 flex-1 mb-4 leading-relaxed whitespace-pre-wrap">
+                          {item.deskripsi || "Tidak ada detail untuk barang ini."}
                         </p>
 
-                        <div className="flex items-center gap-3 mt-auto pt-4 border-t border-slate-100">
-                           <a href={`/administrasi/inventaris/${item.id}?tab=foto`} className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-bold text-xs py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 border border-blue-100 hover:border-blue-600">
-                             <Camera size={14}/> Lihat Barang
+                        <div className="flex flex-col sm:flex-row gap-2 mt-auto">
+                           <a href={`/administrasi/inventaris/${item.id}?tab=foto`} className="flex-1 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 font-bold text-[10px] md:text-xs py-2 md:py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                             <Camera size={14}/> Galeri
                            </a>
-                           <a href={`/administrasi/inventaris/${item.id}?tab=kalender`} className="flex-1 bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white font-bold text-xs py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 border border-purple-100 hover:border-purple-600">
-                             <CalendarDays size={14}/> Peminjaman
+                           <a href={`/administrasi/inventaris/${item.id}?tab=pengajuan`} className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-[10px] md:text-xs py-2 md:py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                             <FileText size={14}/> Pinjam
                            </a>
                         </div>
                       </div>

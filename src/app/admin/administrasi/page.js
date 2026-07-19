@@ -180,9 +180,17 @@ export default function AdminAdministrasi() {
     return isNaN(d) ? 0 : d.getTime();
   };
 
+  // Fungsi helper membuat slug (Untuk URL yang lebih cantik)
+  const createSlug = (text) => {
+    if (!text) return "";
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+  };
+
   const filterByLembaga = (dataArray) => { return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga); };
 
+  // 🔥 URUTAN SURAT MASUK DIPERBAIKI: ASCENDING (Tanggal Awal/Lama di Atas) 🔥
   const currentSuratMasuk = filterByLembaga(masterSuratMasuk).sort((a, b) => getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang));
+  
   const currentSuratKeluar = filterByLembaga(masterSuratKeluar).sort((a, b) => {
     const getNum = (str) => { const match = (str || "").match(/\d+/); return match ? parseInt(match[0], 10) : 999999; };
     const numA = getNum(a.nomorSurat); const numB = getNum(b.nomorSurat);
@@ -236,7 +244,9 @@ export default function AdminAdministrasi() {
       let finalPayload = { ...formData, id: editDataId || Date.now().toString(), lembaga: activeLembaga };
       let newMaster;
 
-      if (activeTab === "inventaris") finalPayload = { ...finalPayload, fotoGroup: fotoUrls };
+      if (activeTab === "inventaris") {
+        finalPayload = { ...finalPayload, fotoGroup: fotoUrls, slug: createSlug(formData.namaBarang) }; // 🔥 Menyisipkan SLUG
+      }
 
       if (activeTab === "persuratan") {
         if (activeSuratTab === "masuk") { newMaster = editDataId ? masterSuratMasuk.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterSuratMasuk]; setMasterSuratMasuk(newMaster); } 
@@ -279,6 +289,223 @@ export default function AdminAdministrasi() {
     else if (tab === "presentasi") updateField = { listPresentasi: newMasterData }; 
     else if (tab === "inventaris") updateField = { listInventaris: newMasterData }; 
     await setDoc(docRef, updateField, { merge: true });
+  };
+
+  // 🔥 1. TOMBOL EXCEL DIPERBAIKI AGAR MUNCUL KEMBALI 🔥
+  const handleDownloadTemplate = () => {
+    let templateData = [];
+    if (activeTab === "persuratan") {
+      templateData = [{
+        "Nomor Surat": "001/PMII/2026",
+        "Asal/Tujuan Surat": "PC PMII Kota Malang",
+        "Tanggal Buat (YYYY-MM-DD)": "2026-06-01",
+        "Tanggal Terima/Kirim (YYYY-MM-DD)": "2026-06-02",
+        "Perihal": "Undangan Kegiatan",
+        "Keterangan": "Surat Penting",
+        "Link Berkas": "https://drive.google.com/..."
+      }];
+    } else if (activeTab === "proker") {
+      templateData = [{
+        "Nama Program Kerja": "Pelatihan Jurnalistik",
+        "Biro / Pelaksana": "Biro Media",
+        "Waktu Pelaksanaan (YYYY-MM-DD)": "2026-07-15",
+        "Tujuan Kegiatan": "Meningkatkan kemampuan menulis kader",
+        "Indikator": "50 Peserta mampu menulis opini",
+        "Sasaran": "Anggota Baru",
+        "Penanggung Jawab": "Ahmad Albert",
+        "Estimasi Dana": "Rp 500.000",
+        "Link Berkas": ""
+      }];
+    } else if (activeTab === "produkhukum") {
+      templateData = [{
+        "Nomor SK / Ketetapan": "01/SK/PMII/2026",
+        "Tentang": "Pengesahan Pengurus Rayon",
+        "Deskripsi Singkat": "Mengesahkan kepengurusan Rayon untuk masa khidmat 2026-2027",
+        "Link Berkas": ""
+      }];
+    } else if (activeTab === "laporan") {
+      templateData = [{
+        "Nama Laporan": "LPJ Panitia RTK",
+        "Periode": "Tahun 2026",
+        "Deskripsi Singkat": "Laporan akhir panitia Rapat Tahunan",
+        "Link Berkas": ""
+      }];
+    } else if (activeTab === "presentasi") {
+      templateData = [{
+        "Judul Dokumen": "Materi Kaderisasi PMII",
+        "Tipe Dokumen (Canva/Google Docs/Google Sheets/Google Slides)": "Canva",
+        "Deskripsi Singkat": "Materi wajib anggota baru",
+        "Link Sematkan (Embed)": "https://www.canva.com/design/.../view?embed",
+        "Link Unduh (PDF/PPTX)": "https://firebasestorage.googleapis.com/..."
+      }];
+    } else if (activeTab === "inventaris") {
+      templateData = [{
+        "Nama Barang": "Proyektor Epson XY-100",
+        "Jumlah": "2",
+        "Kondisi (Baik/Rusak Ringan/Rusak Berat)": "Baik",
+        "Deskripsi": "Lengkap dengan tas dan kabel HDMI",
+        "Link Foto 1 (Pisahkan dgn koma jika banyak)": "https://res.cloudinary.com/..."
+      }];
+    }
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `Template_${activeTab}`);
+    XLSX.writeFile(wb, `Template_Impor_${activeTab.toUpperCase()}.xlsx`);
+  };
+
+  const handleImportExcel = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        let updatedData = [];
+        if (activeTab === "persuratan") {
+          const isMasuk = activeSuratTab === "masuk";
+          updatedData = data.map(row => ({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+            lembaga: activeLembaga,
+            nomorSurat: row["Nomor Surat"] || "",
+            hal: row["Perihal"] || "",
+            ket: row["Keterangan"] || "",
+            tglBuat: row["Tanggal Buat (YYYY-MM-DD)"] || "",
+            linkFile: row["Link Berkas"] || "",
+            ...(isMasuk 
+              ? { asalSurat: row["Asal/Tujuan Surat"] || "", tglDatang: row["Tanggal Terima/Kirim (YYYY-MM-DD)"] || "" } 
+              : { tujuanSurat: row["Asal/Tujuan Surat"] || "", tglKirim: row["Tanggal Terima/Kirim (YYYY-MM-DD)"] || "" })
+          }));
+          const newMaster = [...updatedData, ...(isMasuk ? masterSuratMasuk : masterSuratKeluar)];
+          if (isMasuk) setMasterSuratMasuk(newMaster); else setMasterSuratKeluar(newMaster);
+          await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
+        } else if (activeTab === "proker") {
+          updatedData = data.map(row => ({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+            lembaga: activeLembaga,
+            namaProker: row["Nama Program Kerja"] || "",
+            pelaksanaProker: row["Biro / Pelaksana"] || "",
+            waktuPelaksanaan: row["Waktu Pelaksanaan (YYYY-MM-DD)"] || "",
+            tujuan: row["Tujuan Kegiatan"] || "",
+            indikator: row["Indikator"] || "",
+            sasaran: row["Sasaran"] || "",
+            penanggungJawab: row["Penanggung Jawab"] || "",
+            estimasiDana: row["Estimasi Dana"] || "",
+            linkFile: row["Link Berkas"] || ""
+          }));
+          const newMaster = [...updatedData, ...masterProker];
+          setMasterProker(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
+        } else if (activeTab === "produkhukum") {
+          updatedData = data.map(row => ({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+            lembaga: activeLembaga,
+            nomorSK: row["Nomor SK / Ketetapan"] || "",
+            tentangHukum: row["Tentang"] || "",
+            deskripsiHukum: row["Deskripsi Singkat"] || "",
+            linkFile: row["Link Berkas"] || ""
+          }));
+          const newMaster = [...updatedData, ...masterProdukHukum];
+          setMasterProdukHukum(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
+        } else if (activeTab === "laporan") {
+          updatedData = data.map(row => ({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+            lembaga: activeLembaga,
+            namaLaporan: row["Nama Laporan"] || "",
+            periode: row["Periode"] || "",
+            deskripsiLaporan: row["Deskripsi Singkat"] || "",
+            linkFile: row["Link Berkas"] || ""
+          }));
+          const newMaster = [...updatedData, ...masterLpj];
+          setMasterLpj(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
+        } else if (activeTab === "presentasi") {
+          updatedData = data.map(row => ({
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+            lembaga: activeLembaga,
+            judul: row["Judul Dokumen"] || "",
+            tipeDokumen: row["Tipe Dokumen (Canva/Google Docs/Google Sheets/Google Slides)"] || "Canva",
+            deskripsi: row["Deskripsi Singkat"] || "",
+            embedUrl: row["Link Sematkan (Embed)"] || "",
+            downloadUrl: row["Link Unduh (PDF/PPTX)"] || "",
+            createdAt: new Date().toISOString()
+          }));
+          const newMaster = [...updatedData, ...masterPresentasi];
+          setMasterPresentasi(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
+        } else if (activeTab === "inventaris") {
+          updatedData = data.map(row => {
+            const fotosText = row["Link Foto 1 (Pisahkan dgn koma jika banyak)"] || "";
+            const fotoGroup = fotosText ? fotosText.split(',').map(u => u.trim()) : [];
+            const namaBrg = row["Nama Barang"] || ""; 
+            
+            return {
+              id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+              lembaga: activeLembaga,
+              namaBarang: namaBrg,
+              slug: createSlug(namaBrg), // 🔥 Memasukkan SLUG saat Import Excel
+              jumlah: row["Jumlah"] || "1",
+              kondisi: row["Kondisi (Baik/Rusak Ringan/Rusak Berat)"] || "Baik",
+              deskripsi: row["Deskripsi"] || "",
+              fotoGroup: fotoGroup,
+              createdAt: new Date().toISOString()
+            }
+          });
+          const newMaster = [...updatedData, ...masterInventaris];
+          setMasterInventaris(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
+        }
+
+        alert(`Berhasil mengimpor ${updatedData.length} data ke arsip ${activeTab.toUpperCase()} (${activeLembaga})!`);
+      } catch (error) {
+        alert("Gagal membaca file Excel. Pastikan format tabel sesuai dengan Template Unduhan.");
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = null;
+  };
+
+  const handleExportExcel = () => {
+    if (currentListData.length === 0) return alert("Tidak ada data untuk diekspor!");
+    let formattedData = [];
+    if (activeTab === "persuratan") {
+      formattedData = currentListData.map((i, idx) => ({
+        "No": idx + 1, "Nomor Surat": i.nomorSurat, [activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"]: activeSuratTab === "masuk" ? i.asalSurat : i.tujuanSurat, "Tanggal Buat": i.tglBuat, [activeSuratTab === "masuk" ? "Tanggal Datang" : "Tanggal Kirim"]: activeSuratTab === "masuk" ? i.tglDatang : i.tglKirim, "Perihal": i.hal || i.perihalSurat, "Keterangan": i.ket || i.deskripsiSurat, "Link Berkas": i.linkFile
+      }));
+    } else if (activeTab === "proker") {
+      formattedData = currentListData.map((i, idx) => ({
+        "No": idx + 1, "Biro/Pelaksana": i.pelaksanaProker, "Nama Kegiatan": i.namaProker, "Tujuan": i.tujuan, "Indikator": i.indikator, "Sasaran": i.sasaran, "Waktu Pelaksanaan": i.waktuPelaksanaan, "Penanggung Jawab": i.penanggungJawab, "Estimasi Dana": i.estimasiDana, "Link Berkas": i.linkFile
+      }));
+    } else if (activeTab === "produkhukum") {
+      formattedData = currentListData.map((i, idx) => ({
+        "No": idx + 1, "Nomor SK": i.nomorSK, "Tentang Hukum": i.tentangHukum, "Deskripsi": i.deskripsiHukum, "Link Berkas": i.linkFile
+      }));
+    } else if (activeTab === "laporan") {
+      formattedData = currentListData.map((i, idx) => ({
+        "No": idx + 1, "Nama Laporan": i.namaLaporan, "Periode": i.periode, "Deskripsi Laporan": i.deskripsiLaporan, "Link Berkas": i.linkFile
+      }));
+    } else if (activeTab === "presentasi") {
+      formattedData = currentListData.map((i, idx) => ({
+        "No": idx + 1, "Judul Dokumen": i.judul, "Tipe Dokumen": i.tipeDokumen, "Deskripsi": i.deskripsi, "Link Sematkan (Embed)": i.embedUrl, "Link Unduh": i.downloadUrl
+      }));
+    } else if (activeTab === "inventaris") {
+      formattedData = currentListData.map((i, idx) => ({
+        "No": idx + 1, "Nama Barang": i.namaBarang, "Jumlah": i.jumlah, "Kondisi": i.kondisi, "Deskripsi": i.deskripsi
+      }));
+    } else if (activeTab === "peminjaman") {
+      formattedData = currentListData.map((i, idx) => ({
+        "No": idx + 1, "Nama Barang": i.namaBarang, "Organisasi": i.namaOrganisasi, "Peminjam / PJ": i.peminjam, "Kegiatan": i.kegiatan, "Jumlah Pinjam": i.jumlahPinjam, "Tanggal Mulai": i.waktuPinjam, "Tanggal Selesai": i.waktuSelesai, "Status": i.status
+      }));
+    }
+
+    const ws = XLSX.utils.json_to_sheet(formattedData); const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Arsip"); XLSX.writeFile(wb, `Rekap_${activeTab}_${Date.now()}.xlsx`);
   };
 
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 size={32} className="text-blue-600 animate-spin"/></div>;
@@ -327,7 +554,22 @@ export default function AdminAdministrasi() {
            </div>
          </div>
          
+         {/* KEMBALIKAN TOMBOL UPLOAD/DOWNLOAD EXCEL */}
          <div className="flex w-full xl:w-auto flex-wrap gap-2 justify-end">
+           {activeTab !== "peminjaman" && (
+             <>
+               <button onClick={handleDownloadTemplate} className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
+                  <Download size={16} /> <span className="hidden sm:inline">Template</span>
+               </button>
+               <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={excelInputRef} onChange={handleImportExcel} />
+               <button onClick={() => excelInputRef.current.click()} className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
+                  <UploadCloud size={16} /> <span className="hidden sm:inline">Impor</span>
+               </button>
+             </>
+           )}
+           <button onClick={handleExportExcel} className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
+              <FileSpreadsheet size={16} /> <span className="hidden sm:inline">Ekspor</span>
+           </button>
            {activeTab !== "peminjaman" && (
              <button onClick={() => handleOpenModal()} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md text-sm transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
                 <Plus size={16} /> Tambah Data
@@ -478,7 +720,8 @@ export default function AdminAdministrasi() {
                               </span>
                             </td>
                             <td className="py-2 px-2 md:py-3 md:px-4 text-slate-500 max-w-[300px]">
-                              <div className="truncate font-medium text-slate-700">{item.deskripsi || "-"}</div>
+                              {/* Tambahkan whitespace-pre-wrap agar enter terbaca di tabel Admin */}
+                              <div className="truncate font-medium text-slate-700 whitespace-pre-wrap">{item.deskripsi || "-"}</div>
                             </td>
                           </>
                         )}
@@ -599,28 +842,28 @@ export default function AdminAdministrasi() {
                   {activeTab === "persuratan" && (
                     <>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Nomor Surat</label>
-                        <input type="text" required value={formData.nomorSurat || ''} onChange={e => setFormData({...formData, nomorSurat: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Nomor Surat</label>
+                        <input type="text" required value={formData.nomorSurat || ''} onChange={e => setFormData({...formData, nomorSurat: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</label>
-                        <input type="text" required value={activeSuratTab === "masuk" ? formData.asalSurat || '' : formData.tujuanSurat || ''} onChange={e => setFormData({...formData, [activeSuratTab === "masuk" ? "asalSurat" : "tujuanSurat"]: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</label>
+                        <input type="text" required value={activeSuratTab === "masuk" ? formData.asalSurat || '' : formData.tujuanSurat || ''} onChange={e => setFormData({...formData, [activeSuratTab === "masuk" ? "asalSurat" : "tujuanSurat"]: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Tanggal Pembuatan</label>
-                        <input type="date" value={formData.tglBuat || ''} onChange={e => setFormData({...formData, tglBuat: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Tanggal Pembuatan</label>
+                        <input type="date" value={formData.tglBuat || ''} onChange={e => setFormData({...formData, tglBuat: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">{activeSuratTab === "masuk" ? "Tanggal Diterima" : "Tanggal Dikirim"}</label>
-                        <input type="date" value={activeSuratTab === "masuk" ? formData.tglDatang || '' : formData.tglKirim || ''} onChange={e => setFormData({...formData, [activeSuratTab === "masuk" ? "tglDatang" : "tglKirim"]: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>{activeSuratTab === "masuk" ? "Tanggal Diterima" : "Tanggal Dikirim"}</label>
+                        <input type="date" value={activeSuratTab === "masuk" ? formData.tglDatang || '' : formData.tglKirim || ''} onChange={e => setFormData({...formData, [activeSuratTab === "masuk" ? "tglDatang" : "tglKirim"]: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Perihal / Hal</label>
-                        <input type="text" value={formData.hal || ''} onChange={e => setFormData({...formData, hal: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Perihal / Hal</label>
+                        <input type="text" value={formData.hal || ''} onChange={e => setFormData({...formData, hal: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Keterangan (Opsional)</label>
-                        <input type="text" value={formData.ket || ''} onChange={e => setFormData({...formData, ket: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" placeholder="Contoh: Sangat Penting, Segera..." />
+                        <label className={labelStandardClass}>Keterangan (Opsional)</label>
+                        <input type="text" value={formData.ket || ''} onChange={e => setFormData({...formData, ket: e.target.value})} className={inputStandardClass} placeholder="Contoh: Sangat Penting, Segera..." />
                       </div>
                     </>
                   )}
@@ -628,36 +871,36 @@ export default function AdminAdministrasi() {
                   {activeTab === "proker" && (
                     <>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Nama Program Kerja</label>
-                        <input type="text" required value={formData.namaProker || ''} onChange={e => setFormData({...formData, namaProker: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Nama Program Kerja</label>
+                        <input type="text" required value={formData.namaProker || ''} onChange={e => setFormData({...formData, namaProker: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Biro / Pelaksana</label>
-                        <input type="text" required value={formData.pelaksanaProker || ''} onChange={e => setFormData({...formData, pelaksanaProker: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Biro / Pelaksana</label>
+                        <input type="text" required value={formData.pelaksanaProker || ''} onChange={e => setFormData({...formData, pelaksanaProker: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Waktu Pelaksanaan</label>
-                        <input type="date" value={formData.waktuPelaksanaan || ''} onChange={e => setFormData({...formData, waktuPelaksanaan: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Waktu Pelaksanaan</label>
+                        <input type="date" value={formData.waktuPelaksanaan || ''} onChange={e => setFormData({...formData, waktuPelaksanaan: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Tujuan Kegiatan</label>
-                        <textarea rows="2" value={formData.tujuan || ''} onChange={e => setFormData({...formData, tujuan: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Tujuan Kegiatan</label>
+                        <textarea rows="2" value={formData.tujuan || ''} onChange={e => setFormData({...formData, tujuan: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Indikator Keberhasilan</label>
-                        <textarea rows="2" value={formData.indikator || ''} onChange={e => setFormData({...formData, indikator: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Indikator Keberhasilan</label>
+                        <textarea rows="2" value={formData.indikator || ''} onChange={e => setFormData({...formData, indikator: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Sasaran</label>
-                        <input type="text" value={formData.sasaran || ''} onChange={e => setFormData({...formData, sasaran: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" placeholder="Misal: Kader Baru" />
+                        <label className={labelStandardClass}>Sasaran</label>
+                        <input type="text" value={formData.sasaran || ''} onChange={e => setFormData({...formData, sasaran: e.target.value})} className={inputStandardClass} placeholder="Misal: Kader Baru" />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Penanggung Jawab</label>
-                        <input type="text" value={formData.penanggungJawab || ''} onChange={e => setFormData({...formData, penanggungJawab: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" placeholder="Nama Koordinator" />
+                        <label className={labelStandardClass}>Penanggung Jawab</label>
+                        <input type="text" value={formData.penanggungJawab || ''} onChange={e => setFormData({...formData, penanggungJawab: e.target.value})} className={inputStandardClass} placeholder="Nama Koordinator" />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Estimasi Dana</label>
-                        <input type="text" value={formData.estimasiDana || ''} onChange={e => setFormData({...formData, estimasiDana: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" placeholder="Misal: Rp 1.500.000" />
+                        <label className={labelStandardClass}>Estimasi Dana</label>
+                        <input type="text" value={formData.estimasiDana || ''} onChange={e => setFormData({...formData, estimasiDana: e.target.value})} className={inputStandardClass} placeholder="Misal: Rp 1.500.000" />
                       </div>
                     </>
                   )}
@@ -665,16 +908,16 @@ export default function AdminAdministrasi() {
                   {activeTab === "produkhukum" && (
                     <>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Nomor SK / Ketetapan</label>
-                        <input type="text" required value={formData.nomorSK || ''} onChange={e => setFormData({...formData, nomorSK: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Nomor SK / Ketetapan</label>
+                        <input type="text" required value={formData.nomorSK || ''} onChange={e => setFormData({...formData, nomorSK: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Tentang</label>
-                        <textarea rows="2" required value={formData.tentangHukum || ''} onChange={e => setFormData({...formData, tentangHukum: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Tentang</label>
+                        <textarea rows="2" required value={formData.tentangHukum || ''} onChange={e => setFormData({...formData, tentangHukum: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Deskripsi Singkat Hukum</label>
-                        <textarea rows="2" value={formData.deskripsiHukum || ''} onChange={e => setFormData({...formData, deskripsiHukum: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Deskripsi Singkat Hukum</label>
+                        <textarea rows="2" value={formData.deskripsiHukum || ''} onChange={e => setFormData({...formData, deskripsiHukum: e.target.value})} className={inputStandardClass} />
                       </div>
                     </>
                   )}
@@ -682,16 +925,16 @@ export default function AdminAdministrasi() {
                   {activeTab === "laporan" && (
                     <>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Nama / Judul Laporan</label>
-                        <input type="text" required value={formData.namaLaporan || ''} onChange={e => setFormData({...formData, namaLaporan: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Nama / Judul Laporan</label>
+                        <input type="text" required value={formData.namaLaporan || ''} onChange={e => setFormData({...formData, namaLaporan: e.target.value})} className={inputStandardClass} />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Periode Laporan</label>
-                        <input type="text" value={formData.periode || ''} onChange={e => setFormData({...formData, periode: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" placeholder="Misal: Tahun 2024" />
+                        <label className={labelStandardClass}>Periode Laporan</label>
+                        <input type="text" value={formData.periode || ''} onChange={e => setFormData({...formData, periode: e.target.value})} className={inputStandardClass} placeholder="Misal: Tahun 2024" />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Deskripsi Singkat Laporan</label>
-                        <textarea rows="2" value={formData.deskripsiLaporan || ''} onChange={e => setFormData({...formData, deskripsiLaporan: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" />
+                        <label className={labelStandardClass}>Deskripsi Singkat Laporan</label>
+                        <textarea rows="2" value={formData.deskripsiLaporan || ''} onChange={e => setFormData({...formData, deskripsiLaporan: e.target.value})} className={inputStandardClass} />
                       </div>
                     </>
                   )}
@@ -699,12 +942,12 @@ export default function AdminAdministrasi() {
                   {activeTab === "presentasi" && (
                     <>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Judul Presentasi / Dokumen</label>
-                        <input type="text" required value={formData.judul || ''} onChange={e => setFormData({...formData, judul: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" placeholder="Contoh: Materi Kaderisasi Dasar" />
+                        <label className={labelStandardClass}>Judul Presentasi / Dokumen</label>
+                        <input type="text" required value={formData.judul || ''} onChange={e => setFormData({...formData, judul: e.target.value})} className={inputStandardClass} placeholder="Contoh: Materi Kaderisasi Dasar" />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Tipe Dokumen</label>
-                        <select value={formData.tipeDokumen || 'Canva'} onChange={e => setFormData({...formData, tipeDokumen: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white">
+                        <label className={labelStandardClass}>Tipe Dokumen</label>
+                        <select value={formData.tipeDokumen || 'Canva'} onChange={e => setFormData({...formData, tipeDokumen: e.target.value})} className={inputStandardClass}>
                           <option value="Canva">Presentasi Canva</option>
                           <option value="Google Docs">Google Docs (Word)</option>
                           <option value="Google Sheets">Google Sheets (Excel)</option>
@@ -713,16 +956,16 @@ export default function AdminAdministrasi() {
                         </select>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Deskripsi Singkat</label>
-                        <textarea rows="2" value={formData.deskripsi || ''} onChange={e => setFormData({...formData, deskripsi: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" placeholder="Bahas tentang materi apa dokumen ini..." />
+                        <label className={labelStandardClass}>Deskripsi Singkat</label>
+                        <textarea rows="2" value={formData.deskripsi || ''} onChange={e => setFormData({...formData, deskripsi: e.target.value})} className={inputStandardClass} placeholder="Bahas tentang materi apa dokumen ini..." />
                       </div>
                       <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Link Sematkan (Embed URL) - Wajib Untuk View Interaktif</label>
-                        <input type="url" value={formData.embedUrl || ''} onChange={e => setFormData({...formData, embedUrl: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white font-mono text-xs" placeholder="Masukkan link dari Bagikan > Sematkan (Embed)..." />
+                        <label className={labelStandardClass}>Link Sematkan (Embed URL) - Wajib Untuk View Interaktif</label>
+                        <input type="url" value={formData.embedUrl || ''} onChange={e => setFormData({...formData, embedUrl: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="Masukkan link dari Bagikan > Sematkan (Embed)..." />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Link File Unduhan (Opsional)</label>
-                        <input type="url" value={formData.downloadUrl || ''} onChange={e => setFormData({...formData, downloadUrl: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white font-mono text-xs" placeholder="Link Google Drive, Firebase Storage, dsb..." />
+                        <label className={labelStandardClass}>Link File Unduhan (Opsional)</label>
+                        <input type="url" value={formData.downloadUrl || ''} onChange={e => setFormData({...formData, downloadUrl: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="Link Google Drive, Firebase Storage, dsb..." />
                       </div>
                     </>
                   )}
@@ -730,28 +973,28 @@ export default function AdminAdministrasi() {
                   {activeTab === "inventaris" && (
                     <>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Nama Barang</label>
-                        <input type="text" required value={formData.namaBarang || ''} onChange={e => setFormData({...formData, namaBarang: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" placeholder="Contoh: Proyektor Epson, Sound System, dll" />
+                        <label className={labelStandardClass}>Nama Barang</label>
+                        <input type="text" required value={formData.namaBarang || ''} onChange={e => setFormData({...formData, namaBarang: e.target.value})} className={inputStandardClass} placeholder="Contoh: Proyektor Epson, Sound System, dll" />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Jumlah Stok Total</label>
-                        <input type="number" required min="1" value={formData.jumlah || ''} onChange={e => setFormData({...formData, jumlah: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" placeholder="Misal: 5" />
+                        <label className={labelStandardClass}>Jumlah Stok Total</label>
+                        <input type="number" required min="1" value={formData.jumlah || ''} onChange={e => setFormData({...formData, jumlah: e.target.value})} className={inputStandardClass} placeholder="Misal: 5" />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Kondisi Barang</label>
-                        <select value={formData.kondisi || 'Baik'} onChange={e => setFormData({...formData, kondisi: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white">
+                        <label className={labelStandardClass}>Kondisi Barang</label>
+                        <select value={formData.kondisi || 'Baik'} onChange={e => setFormData({...formData, kondisi: e.target.value})} className={inputStandardClass}>
                           <option value="Baik">Baik</option>
                           <option value="Rusak Ringan">Rusak Ringan</option>
                           <option value="Rusak Berat">Rusak Berat</option>
                         </select>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Deskripsi Detail</label>
-                        <textarea rows="2" value={formData.deskripsi || ''} onChange={e => setFormData({...formData, deskripsi: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white" placeholder="Kelengkapan barang (kabel, tas), merk, ciri khusus..." />
+                        <label className={labelStandardClass}>Deskripsi Detail</label>
+                        <textarea rows="2" value={formData.deskripsi || ''} onChange={e => setFormData({...formData, deskripsi: e.target.value})} className={inputStandardClass} placeholder="Kelengkapan barang (kabel, tas), merk, ciri khusus..." />
                       </div>
 
                       <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
-                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">Upload Foto Barang (Otomatis Kompres & Bisa Pilih Banyak)</label>
+                        <label className={labelStandardClass}>Upload Foto Barang (Otomatis Kompres & Bisa Pilih Banyak)</label>
                         <input 
                           type="file" 
                           multiple 
@@ -789,8 +1032,8 @@ export default function AdminAdministrasi() {
 
                   {activeTab !== "presentasi" && activeTab !== "inventaris" && (
                     <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
-                      <label className="text-xs font-semibold text-slate-700 block mb-1.5">Link File Arsip (G-Drive / PDF)</label>
-                      <input type="url" value={formData.linkFile || ''} onChange={e => setFormData({...formData, linkFile: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm bg-white font-mono text-xs" placeholder="https://drive.google.com/..." />
+                      <label className={labelStandardClass}>Link File Arsip (G-Drive / PDF)</label>
+                      <input type="url" value={formData.linkFile || ''} onChange={e => setFormData({...formData, linkFile: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="https://drive.google.com/..." />
                     </div>
                   )}
                </form>

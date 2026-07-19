@@ -44,14 +44,19 @@ export default function DetailInventarisPage({ params }) {
         const docRef = doc(db, "website_config", "database_administrasi");
         const docSnap = await getDoc(docRef);
         let foundItem = null;
+        
+        // Membaca URL saat ini dan menerjemahkannya
+        const urlParam = decodeURIComponent(itemId); 
+
         if (docSnap.exists()) {
           const listInventaris = docSnap.data().listInventaris || [];
-          foundItem = listInventaris.find(i => i.id === itemId);
+          // Cari barang berdasarkan Slug ATAU ID (agar kompatibel dengan data lama)
+          foundItem = listInventaris.find(i => i.slug === urlParam || i.id === urlParam);
           setItem(foundItem);
         }
 
         if (foundItem) {
-          const q = query(collection(db, "peminjaman_inventaris"), where("itemId", "==", itemId));
+          const q = query(collection(db, "peminjaman_inventaris"), where("itemId", "==", foundItem.id));
           const querySnapshot = await getDocs(q);
           const riwayat = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           riwayat.sort((a, b) => new Date(b.waktuPinjam) - new Date(a.waktuPinjam));
@@ -191,8 +196,9 @@ export default function DetailInventarisPage({ params }) {
                  </span>
                  {getKondisiBadge(item.kondisi)}
               </div>
-              <h1 className="text-3xl font-extrabold text-slate-900">{item.namaBarang}</h1>
-              <p className="text-slate-600 mt-2 max-w-2xl">{item.deskripsi}</p>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900">{item.namaBarang}</h1>
+              {/* Tambahan whitespace-pre-wrap agar enter terbaca */}
+              <p className="text-slate-600 mt-3 text-sm md:text-base leading-relaxed whitespace-pre-wrap max-w-2xl">{item.deskripsi}</p>
            </div>
            <div className="text-center bg-blue-50 px-6 py-4 rounded-xl border border-blue-100 shrink-0 w-full md:w-auto">
               <p className="text-xs font-bold text-blue-600 uppercase mb-1">Stok Hari Ini</p>
@@ -205,18 +211,14 @@ export default function DetailInventarisPage({ params }) {
            </div>
         </div>
 
-        {/* TABS MULTIFUNGSI */}
-        <div className="flex overflow-x-auto gap-2 border-b border-slate-200 pb-px scrollbar-none mb-6">
-          <button onClick={() => setActiveTab("foto")} className={`px-5 py-3 font-bold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "foto" ? "border-blue-600 text-blue-600 bg-white rounded-t-lg shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
-            <Camera size={16} /> Galeri Foto
-          </button>
-          <button onClick={() => setActiveTab("kalender")} className={`px-5 py-3 font-bold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "kalender" ? "border-purple-600 text-purple-600 bg-white rounded-t-lg shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
-            <CalendarDays size={16} /> Jadwal Kalender
-          </button>
-          <button onClick={() => setActiveTab("pengajuan")} className={`px-5 py-3 font-bold text-sm transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "pengajuan" ? "border-emerald-600 text-emerald-600 bg-white rounded-t-lg shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
-            <FileText size={16} /> Pengajuan Peminjaman
-          </button>
-        </div>
+        {/* TAB NAVIGATION DENGAN UKURAN TEXT LEBIH KECIL DI HP */}
+        <div className="flex gap-4 border-b border-slate-200 mb-6 overflow-x-auto hide-scrollbar">
+          {["foto", "kalender", "pengajuan"].map((tab) => (
+            <button key={tab} onClick={() => setActiveTab(tab)} className={`pb-3 font-bold text-xs md:text-sm capitalize whitespace-nowrap transition-colors ${activeTab === tab ? "border-b-2 border-blue-600 text-blue-600" : "text-slate-500 hover:text-slate-800"}`}>
+              {tab === "foto" ? "Galeri Foto" : tab === "kalender" ? "Jadwal Kalender" : "Pengajuan"}
+            </button>
+          ))}
+        </div>
 
         {/* KONTEN TAB */}
         {activeTab === "foto" && (
@@ -258,7 +260,7 @@ export default function DetailInventarisPage({ params }) {
                  <button onClick={() => setCalendarDate(new Date(year, month - 1, 1))} className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition shadow-sm">
                    <ChevronLeft size={20} className="text-slate-600"/>
                  </button>
-                 <h3 className="font-black text-slate-800 text-lg uppercase tracking-widest">
+                 <h3 className="font-black text-slate-800 text-base md:text-lg uppercase tracking-widest">
                    {calendarDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
                  </h3>
                  <button onClick={() => setCalendarDate(new Date(year, month + 1, 1))} className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition shadow-sm">
