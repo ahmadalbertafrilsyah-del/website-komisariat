@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-// 🔥 PERBAIKAN: Menambahkan 'Users' di daftar import ini
-import { Save, Plus, Trash2, GraduationCap, Search, Image as ImageIcon, UploadCloud, FileSpreadsheet, Download, Loader2, Info, Star, Briefcase, Users } from "lucide-react";
+// 🔥 PERBAIKAN: Menambahkan 'Users' & Chevron di daftar import ini
+import { Save, Plus, Trash2, GraduationCap, Search, Image as ImageIcon, UploadCloud, FileSpreadsheet, Download, Loader2, Info, Star, Briefcase, Users, ChevronDown, ChevronUp } from "lucide-react";
 import * as XLSX from "xlsx";
 
 const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
@@ -65,6 +65,8 @@ const EditTags = ({ data, onChange, placeholderText, theme = "blue" }) => {
 export default function AdminAlumni() {
   const [loading, setLoading] = useState(true);
   const [alumniData, setAlumniData] = useState([]);
+  
+  const [isFormOpen, setIsFormOpen] = useState(false); // State untuk Toggle Form
   
   const [newNama, setNewNama] = useState("");
   const [newTahun, setNewTahun] = useState("");
@@ -201,98 +203,112 @@ export default function AdminAlumni() {
         </div>
       </div>
 
-      {/* FORM TAMBAH ALUMNI */}
-      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-800 mb-5 flex items-center gap-2 border-b border-slate-100 pb-3">
-          <Plus size={18} className="text-blue-600" /> Tambah Data Alumni
-        </h2>
+      {/* FORM TAMBAH ALUMNI (DIBUAT COLLAPSEABLE AGAR TIDAK RIBET) */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm mb-6">
+        <button 
+          onClick={() => setIsFormOpen(!isFormOpen)}
+          className="w-full px-6 py-4 flex items-center justify-between font-semibold text-slate-800 hover:bg-slate-50 transition"
+        >
+          <span className="flex items-center gap-2"><Plus size={18} className="text-blue-600" /> Tambah Data Alumni Baru</span>
+          {isFormOpen ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
+        </button>
         
-        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-          
-          <div className="md:col-span-4 space-y-1">
-            <label className={labelStandardClass}>Nama Lengkap</label>
-            <input type="text" required value={newNama} onChange={e => setNewNama(e.target.value)} className={inputStandardClass} placeholder="Nama & Gelar"/>
-          </div>
-          
-          <div className="md:col-span-2 space-y-1">
-            <label className={labelStandardClass}>Tahun Mapaba</label>
-            <input type="text" value={newTahun} onChange={e => setNewTahun(e.target.value)} className={inputStandardClass} placeholder="Contoh: 2015"/>
-          </div>
-
-          <div className="md:col-span-3 space-y-1">
-            <label className={labelStandardClass}>Asal Rayon</label>
-            <select value={newRayon} onChange={e => setNewRayon(e.target.value)} className={`${inputStandardClass} bg-white appearance-none`}>
-              <option value="">Pilih Rayon</option>
-              {RAYON_OPTIONS.map(rayon => <option key={rayon} value={rayon}>{rayon}</option>)}
-            </select>
-          </div>
-
-          <div className="md:col-span-3 space-y-1">
-            <label className={labelStandardClass}>Foto Profil</label>
-            <div className="flex gap-2">
-               <input type="text" value={newFoto} onChange={e => setNewFoto(e.target.value)} className={`${inputStandardClass} flex-1 font-mono text-xs`} placeholder="URL Gambar..."/>
-               <label className="bg-slate-50 hover:bg-slate-100 text-slate-600 cursor-pointer px-3 border border-slate-300 rounded-md flex items-center justify-center transition-colors shadow-sm">
-                  {uploadingImage ? <Loader2 size={16} className="animate-spin"/> : <UploadCloud size={16}/>}
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadCloudinary(e.target.files[0])} disabled={uploadingImage}/>
-               </label>
+        {isFormOpen && (
+          <div className="p-6 border-t border-slate-200 animate-in slide-in-from-top-2">
+            {/* PANDUAN CEPAT ADMIN */}
+            <div className="mb-6 bg-blue-50 border border-blue-100 rounded-md p-4 text-xs text-blue-800 flex gap-2">
+              <Info size={16} className="shrink-0 mt-0.5" />
+              <p><strong>Panduan Cepat:</strong> Masukkan detail profil dasar melalui form ini. Setelah data terbuat, Anda bisa mengedit dan menambahkan rincian profesi (tag) atau bidang keahlian langsung dari daftar tabel di bawah secara praktis.</p>
             </div>
-          </div>
 
-          {/* Tags Section */}
-          <div className="md:col-span-6 space-y-1 bg-slate-50 p-4 rounded-md border border-slate-200">
-            <label className="text-xs font-semibold text-blue-700 flex items-center gap-1.5 mb-2"><Briefcase size={14}/> Profesi & Karir Saat Ini</label>
-            <div className="w-full min-h-[42px] p-2 border border-slate-300 bg-white rounded-md flex flex-wrap gap-1.5 items-center shadow-sm">
-               {newProfesi.map((p, i) => (
-                 <span key={i} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded border border-blue-200 flex items-center gap-1.5">
-                    {p} <button type="button" onClick={() => setNewProfesi(newProfesi.filter((_, idx) => idx !== i))} className="hover:text-red-500 font-bold">&times;</button>
-                 </span>
-               ))}
-               <input type="text" value={inputProfesi} onChange={(e) => setInputProfesi(e.target.value)} className="bg-transparent border-none outline-none text-sm flex-1 min-w-[120px] px-1" placeholder={newProfesi.length === 0 ? "Ketik lalu Enter..." : "Tambah profesi..."}
-                 onKeyDown={(e) => {
-                   if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); const val = inputProfesi.trim(); if (val && !newProfesi.includes(val)) { setNewProfesi([...newProfesi, val]); setInputProfesi(''); } } 
-                   else if (e.key === 'Backspace' && inputProfesi === '' && newProfesi.length > 0) setNewProfesi(newProfesi.slice(0, -1));
-                 }}
-               />
-            </div>
-          </div>
-
-          <div className="md:col-span-6 space-y-1 bg-slate-50 p-4 rounded-md border border-slate-200">
-             <label className="text-xs font-semibold text-violet-700 flex items-center gap-1.5 mb-2"><Star size={14}/> Bidang Keahlian Spesifik</label>
-             <div className="w-full min-h-[42px] p-2 border border-slate-300 bg-white rounded-md flex flex-wrap gap-1.5 items-center shadow-sm">
-               {newBidang.map((p, i) => (
-                 <span key={i} className="px-2 py-1 bg-violet-50 text-violet-700 text-xs font-medium rounded border border-violet-200 flex items-center gap-1.5">
-                    {p} <button type="button" onClick={() => setNewBidang(newBidang.filter((_, idx) => idx !== i))} className="hover:text-red-500 font-bold">&times;</button>
-                 </span>
-               ))}
-               <input type="text" value={inputBidang} onChange={(e) => setInputBidang(e.target.value)} className="bg-transparent border-none outline-none text-sm flex-1 min-w-[120px] px-1" placeholder={newBidang.length === 0 ? "Web Developer, Penulis..." : "Tambah keahlian..."}
-                 onKeyDown={(e) => {
-                   if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); const val = inputBidang.trim(); if (val && !newBidang.includes(val)) { setNewBidang([...newBidang, val]); setInputBidang(''); } } 
-                   else if (e.key === 'Backspace' && inputBidang === '' && newBidang.length > 0) setNewBidang(newBidang.slice(0, -1));
-                 }}
-               />
-             </div>
-          </div>
-
-          {newProfesi.length > 0 && (
-            <div className="md:col-span-12 space-y-2 mt-2">
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5"><Info size={14} className="text-blue-500"/> Keterangan/Deskripsi Profesi</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                 {newProfesi.map((p, idx) => (
-                   <div key={idx} className="bg-slate-50 border border-slate-200 rounded-md p-3">
-                      <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2"><Briefcase size={12} className="text-blue-500"/> {p}</span>
-                      <input type="text" value={newDeskripsiProfesi[p] || ""} onChange={e => setNewDeskripsiProfesi({...newDeskripsiProfesi, [p]: e.target.value})} className={inputStandardClass} placeholder={`Detail / Instansi untuk ${p}...`}/>
-                   </div>
-                 ))}
+            <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+              
+              <div className="md:col-span-4 space-y-1">
+                <label className={labelStandardClass}>Nama Lengkap</label>
+                <input type="text" required value={newNama} onChange={e => setNewNama(e.target.value)} className={inputStandardClass} placeholder="Nama & Gelar"/>
               </div>
-            </div>
-          )}
+              
+              <div className="md:col-span-2 space-y-1">
+                <label className={labelStandardClass}>Tahun Mapaba</label>
+                <input type="text" value={newTahun} onChange={e => setNewTahun(e.target.value)} className={inputStandardClass} placeholder="Contoh: 2015"/>
+              </div>
 
-          <div className="md:col-span-12 mt-2">
-            <button type="submit" className="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 px-6 rounded-md text-sm transition shadow-sm flex items-center justify-center gap-2">
-              <Plus size={16} /> Simpan Data Alumni Baru
-            </button>
+              <div className="md:col-span-3 space-y-1">
+                <label className={labelStandardClass}>Asal Rayon</label>
+                <select value={newRayon} onChange={e => setNewRayon(e.target.value)} className={`${inputStandardClass} bg-white appearance-none`}>
+                  <option value="">Pilih Rayon</option>
+                  {RAYON_OPTIONS.map(rayon => <option key={rayon} value={rayon}>{rayon}</option>)}
+                </select>
+              </div>
+
+              <div className="md:col-span-3 space-y-1">
+                <label className={labelStandardClass}>Foto Profil</label>
+                <div className="flex gap-2">
+                   <input type="text" value={newFoto} onChange={e => setNewFoto(e.target.value)} className={`${inputStandardClass} flex-1 font-mono text-xs`} placeholder="URL Gambar..."/>
+                   <label className="bg-slate-50 hover:bg-slate-100 text-slate-600 cursor-pointer px-3 border border-slate-300 rounded-md flex items-center justify-center transition-colors shadow-sm">
+                      {uploadingImage ? <Loader2 size={16} className="animate-spin"/> : <UploadCloud size={16}/>}
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadCloudinary(e.target.files[0])} disabled={uploadingImage}/>
+                   </label>
+                </div>
+              </div>
+
+              {/* Tags Section */}
+              <div className="md:col-span-6 space-y-1 bg-slate-50 p-4 rounded-md border border-slate-200">
+                <label className="text-xs font-semibold text-blue-700 flex items-center gap-1.5 mb-2"><Briefcase size={14}/> Profesi & Karir Saat Ini</label>
+                <div className="w-full min-h-[42px] p-2 border border-slate-300 bg-white rounded-md flex flex-wrap gap-1.5 items-center shadow-sm">
+                   {newProfesi.map((p, i) => (
+                     <span key={i} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded border border-blue-200 flex items-center gap-1.5">
+                        {p} <button type="button" onClick={() => setNewProfesi(newProfesi.filter((_, idx) => idx !== i))} className="hover:text-red-500 font-bold">&times;</button>
+                     </span>
+                   ))}
+                   <input type="text" value={inputProfesi} onChange={(e) => setInputProfesi(e.target.value)} className="bg-transparent border-none outline-none text-sm flex-1 min-w-[120px] px-1" placeholder={newProfesi.length === 0 ? "Ketik lalu Enter..." : "Tambah profesi..."}
+                     onKeyDown={(e) => {
+                       if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); const val = inputProfesi.trim(); if (val && !newProfesi.includes(val)) { setNewProfesi([...newProfesi, val]); setInputProfesi(''); } } 
+                       else if (e.key === 'Backspace' && inputProfesi === '' && newProfesi.length > 0) setNewProfesi(newProfesi.slice(0, -1));
+                     }}
+                   />
+                </div>
+              </div>
+
+              <div className="md:col-span-6 space-y-1 bg-slate-50 p-4 rounded-md border border-slate-200">
+                 <label className="text-xs font-semibold text-violet-700 flex items-center gap-1.5 mb-2"><Star size={14}/> Bidang Keahlian Spesifik</label>
+                 <div className="w-full min-h-[42px] p-2 border border-slate-300 bg-white rounded-md flex flex-wrap gap-1.5 items-center shadow-sm">
+                   {newBidang.map((p, i) => (
+                     <span key={i} className="px-2 py-1 bg-violet-50 text-violet-700 text-xs font-medium rounded border border-violet-200 flex items-center gap-1.5">
+                        {p} <button type="button" onClick={() => setNewBidang(newBidang.filter((_, idx) => idx !== i))} className="hover:text-red-500 font-bold">&times;</button>
+                     </span>
+                   ))}
+                   <input type="text" value={inputBidang} onChange={(e) => setInputBidang(e.target.value)} className="bg-transparent border-none outline-none text-sm flex-1 min-w-[120px] px-1" placeholder={newBidang.length === 0 ? "Web Developer, Penulis..." : "Tambah keahlian..."}
+                     onKeyDown={(e) => {
+                       if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); const val = inputBidang.trim(); if (val && !newBidang.includes(val)) { setNewBidang([...newBidang, val]); setInputBidang(''); } } 
+                       else if (e.key === 'Backspace' && inputBidang === '' && newBidang.length > 0) setNewBidang(newBidang.slice(0, -1));
+                     }}
+                   />
+                 </div>
+              </div>
+
+              {newProfesi.length > 0 && (
+                <div className="md:col-span-12 space-y-2 mt-2">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5"><Info size={14} className="text-blue-500"/> Keterangan/Deskripsi Profesi</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                     {newProfesi.map((p, idx) => (
+                       <div key={idx} className="bg-slate-50 border border-slate-200 rounded-md p-3">
+                          <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2"><Briefcase size={12} className="text-blue-500"/> {p}</span>
+                          <input type="text" value={newDeskripsiProfesi[p] || ""} onChange={e => setNewDeskripsiProfesi({...newDeskripsiProfesi, [p]: e.target.value})} className={inputStandardClass} placeholder={`Detail / Instansi untuk ${p}...`}/>
+                       </div>
+                     ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="md:col-span-12 mt-2">
+                <button type="submit" className="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 px-6 rounded-md text-sm transition shadow-sm flex items-center justify-center gap-2">
+                  <Plus size={16} /> Simpan Data Alumni Baru
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
+        )}
       </div>
 
       {/* DAFTAR KARTU ALUMNI (EDIT) */}

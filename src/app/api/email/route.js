@@ -22,28 +22,60 @@ export async function POST(request) {
       to: email,
       subject: `Notifikasi ${status} Peminjaman - ${namaBarang}`,
       html: `
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; max-width: 600px; margin: auto;">
-          <h2 style="color: ${status === 'Disetujui' ? '#059669' : '#dc2626'}; text-align: center;">Pengajuan Peminjaman ${status}!</h2>
-          <p>Halo, pengurus/panitia dari <strong>${namaOrganisasi}</strong>,</p>
-          <p>Pengajuan peminjaman inventaris Anda untuk kegiatan <strong>${kegiatan}</strong> telah direspon oleh Admin PMII.</p>
-          
-          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0 0 10px 0;"><strong>Barang:</strong> ${namaBarang}</p>
-            <p style="margin: 0 0 10px 0;"><strong>Tanggal Pinjam:</strong> ${waktuPinjam}</p>
-            <p style="margin: 0;"><strong>Tenggat Pengembalian:</strong> ${waktuSelesai}</p>
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f2f5f7; padding: 30px 10px; margin: 0;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.05);">
+            
+            <!-- Header E-Ticket -->
+            <div style="background-color: ${status === 'Disetujui' ? '#1ba0e2' : '#dc2626'}; color: #ffffff; padding: 25px 30px; text-align: center;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 1px;">E-TICKET PEMINJAMAN</h1>
+              <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">Status: <strong>${status.toUpperCase()}</strong></p>
+            </div>
+
+            <!-- Body E-Ticket -->
+            <div style="padding: 30px;">
+              <p style="color: #475569; font-size: 15px; margin-top: 0;">Halo, Pengurus/Panitia <strong>${namaOrganisasi}</strong>,</p>
+              <p style="color: #475569; font-size: 15px; line-height: 1.6;">Pengajuan peminjaman inventaris Anda untuk kegiatan <strong>${kegiatan}</strong> telah diperbarui oleh Admin.</p>
+
+              <!-- Ticket Details -->
+              <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                      <span style="font-size: 12px; color: #64748b; text-transform: uppercase;">Barang Dipinjam</span><br/>
+                      <strong style="font-size: 16px; color: #1e293b;">${namaBarang}</strong>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                      <span style="font-size: 12px; color: #64748b; text-transform: uppercase;">Tanggal & Waktu Pengambilan</span><br/>
+                      <strong style="font-size: 15px; color: #1e293b;">${waktuPinjam}</strong>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0;">
+                      <span style="font-size: 12px; color: #64748b; text-transform: uppercase;">Tenggat Pengembalian</span><br/>
+                      <strong style="font-size: 15px; color: #1e293b;">${waktuSelesai}</strong>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              ${status === 'Disetujui' ? `
+                <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; border-radius: 4px;">
+                   <p style="margin: 0; color: #047857; font-size: 14px;"><strong>PENTING:</strong> Tunjukkan e-ticket ini kepada admin saat pengambilan barang sebagai bukti sah penyewaan/peminjaman.</p>
+                </div>
+              ` : `
+                <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 4px;">
+                   <p style="margin: 0; color: #b91c1c; font-size: 14px;">Mohon maaf, pengajuan Anda tidak dapat diproses. Jadwal mungkin bentrok atau syarat tidak terpenuhi.</p>
+                </div>
+              `}
+            </div>
+            
+            <!-- Footer E-Ticket -->
+            <div style="background-color: #f1f5f9; padding: 15px; text-align: center; border-top: 1px dashed #cbd5e1;">
+              <p style="color: #64748b; font-size: 11px; margin: 0;">Sistem Administrasi Otomatis &bull; PMII Sunan Ampel Malang</p>
+            </div>
           </div>
-
-          ${status === 'Disetujui' ? `
-            <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin-bottom: 20px;">
-               <p style="margin: 0; color: #047857;"><strong>PENTING:</strong> Harap tunjukkan email ini kepada pengurus/admin saat pengambilan barang sebagai bukti sah bahwa peminjaman Anda telah di-ACC.</p>
-            </div>
-          ` : `
-            <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 20px;">
-               <p style="margin: 0; color: #b91c1c;">Mohon maaf, pengajuan peminjaman Anda ditolak atau jadwal sedang bentrok. Silakan hubungi admin untuk konfirmasi lebih lanjut.</p>
-            </div>
-          `}
-
-          <p style="color: #64748b; font-size: 12px; text-align: center; margin-top: 30px;">Ini adalah pesan otomatis dari Sistem Administrasi PMII Sunan Ampel Malang. Harap tidak membalas email ini.</p>
         </div>
       `,
     };

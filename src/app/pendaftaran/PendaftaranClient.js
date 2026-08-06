@@ -132,11 +132,26 @@ function PendaftaranContent() {
     }
   }
 
-  const handleShare = (form) => {
+  const handleShare = async (form) => {
     const identifier = form.slug || form.id;
     const link = `${window.location.origin}/pendaftaran?form=${identifier}`;
-    navigator.clipboard.writeText(link);
-    alert("Link pendaftaran berhasil disalin! Silakan bagikan via WhatsApp.");
+    
+    const shareData = {
+      title: `Pendaftaran: ${form.judul}`,
+      text: `Mari bergabung dalam program kaderisasi/kepanitiaan: ${form.judul}. Klik tautan berikut untuk mendaftar:`,
+      url: link,
+    };
+
+    if (navigator.share) {
+      try { 
+        await navigator.share(shareData); 
+      } catch (err) { 
+        console.log("Error sharing:", err); 
+      }
+    } else {
+      navigator.clipboard.writeText(`${shareData.title}\n\n${shareData.text}\n${shareData.url}`);
+      alert("Detail dan Link pendaftaran berhasil disalin! Silakan paste di WhatsApp.");
+    }
   };
 
   const handleOpenForm = (form) => {
