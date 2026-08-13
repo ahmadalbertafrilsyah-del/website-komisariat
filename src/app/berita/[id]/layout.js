@@ -57,20 +57,20 @@ export async function generateMetadata({ params }) {
       title: article.title,
       description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
       siteName: "PMII Sunan Ampel Malang",
-      images: [
-        {
-          url: coverImage, 
-          width: 800,   // Mengikuti ukuran kompresi
-          height: 418,  // Mengikuti ukuran kompresi
-          alt: article.title,
-        },
-      ],
+      // Ganti bagian images di dalam generateMetadata
+      images: [{url: `${siteUrl}/api/og?title=${encodeURIComponent(article.title)}`,
+        width: 1200,
+        height: 630,
+        alt: article.title}],
     },
     twitter: {
       card: "summary_large_image",
       title: article.title,
       description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
-      images: [coverImage],
+      images: [{url: `${siteUrl}/api/og?title=${encodeURIComponent(article.title)}`,
+        width: 1200,
+        height: 630,
+        alt: article.title}],
     },
   };
 }

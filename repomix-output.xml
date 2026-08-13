@@ -43,6 +43,8 @@ The content is organized as follows:
 public/
   file.svg
   globe.svg
+  logo.png
+  manifest.json
   next.svg
   vercel.svg
   window.svg
@@ -89,6 +91,8 @@ src/
     api/
       email/
         route.js
+      og/
+        route.js
       upload/
         route.js
     apresiasi/
@@ -120,6 +124,7 @@ src/
     sitemap.js
   components/
     Footer.jsx
+    GridSkeleton.jsx
     LoadingScreen.jsx
     Navbar.jsx
   data/
@@ -139,6 +144,87 @@ README.md
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="public/manifest.json">
+{
+  "name": "PMII Komisariat Sunan Ampel Malang",
+  "short_name": "PMII Malang",
+  "description": "Website Resmi PK. PMII Sunan Ampel Malang.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e293b",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+</file>
+
+<file path="src/app/api/og/route.js">
+import { ImageResponse } from 'next/og';
+
+export const runtime = 'edge';
+
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const title = searchParams.get('title') || 'Portal Berita PMII';
+
+    return new ImageResponse(
+      (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#0f172a', color: 'white', padding: '60px', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+            <span style={{ fontSize: '30px', fontWeight: 'bold', color: '#60a5fa' }}>PMII Sunan Ampel Malang</span>
+          </div>
+          <h1 style={{ fontSize: '64px', fontWeight: 'black', lineHeight: 1.2, margin: 0, maxWidth: '900px' }}>
+            {title}
+          </h1>
+        </div>
+      ),
+      { width: 1200, height: 630 }
+    );
+  } catch (e) {
+    return new Response(`Gagal menghasilkan gambar`, { status: 500 });
+  }
+}
+</file>
+
+<file path="src/components/GridSkeleton.jsx">
+import React from "react";
+
+export default function GridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
+      {/* Menampilkan 8 kotak kosong sebagai kerangka muat */}
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
+        <div key={item} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col animate-pulse">
+          {/* Kerangka Gambar */}
+          <div className="h-40 sm:h-48 w-full bg-slate-200"></div>
+          
+          {/* Kerangka Teks */}
+          <div className="p-5 flex flex-col flex-grow">
+            <div className="h-5 bg-slate-200 rounded w-3/4 mb-3"></div>
+            <div className="h-4 bg-slate-200 rounded w-1/2 mb-6"></div>
+            <div className="mt-auto space-y-2">
+              <div className="h-3 bg-slate-200 rounded w-full"></div>
+              <div className="h-3 bg-slate-200 rounded w-5/6"></div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+</file>
 
 <file path="public/file.svg">
 <svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
@@ -439,9 +525,10 @@ export default function DetailDokumenPage({ params }) {
 <file path="src/app/alumni/AlumniClient.js">
 "use client";
 import React, { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
+import GridSkeleton from "@/components/GridSkeleton";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import LoadingScreen from "@/components/LoadingScreen";
 import { Search, GraduationCap, MapPin, Briefcase, Calendar, User, X, Share2, Info, Star, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -549,8 +636,6 @@ export default function AlumniClient() {
     }
   };
 
-  if (loading) return <LoadingScreen text="Memuat Direktori Alumni" />;
-
   const getSafeArray = (data) => {
     if (Array.isArray(data)) return data;
     if (typeof data === 'string' && data.trim() !== '') return data.split(',').map(s => s.trim());
@@ -599,7 +684,9 @@ export default function AlumniClient() {
       </section>
 
       <section className="py-10 md:py-16 px-3 md:px-5 max-w-7xl mx-auto w-full flex-grow flex flex-col">
-        {filteredData.length === 0 ? (
+        {loading ? (
+          <GridSkeleton />
+        ) : filteredData.length === 0 ? (
            <div className="text-center text-slate-400 py-20 flex flex-col items-center">
               <div className="bg-slate-100 p-4 rounded-full mb-4"><Search size={32} className="opacity-50"/></div>
               <p className="font-medium text-sm">Tidak ada data alumni yang ditemukan.</p>
@@ -621,9 +708,15 @@ export default function AlumniClient() {
                    </div>
 
                    <div className="relative -mt-10 md:-mt-12 mx-auto">
-                      <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white shadow-md bg-slate-100 overflow-hidden group-hover:scale-105 transition-transform duration-300 flex items-center justify-center">
+                      <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white shadow-md bg-slate-100 overflow-hidden group-hover:scale-105 transition-transform duration-300 flex items-center justify-center relative">
                         {alumni.foto ? (
-                          <img src={alumni.foto} alt={alumni.nama} className="w-full h-full object-cover" />
+                          <Image 
+                            src={alumni.foto} 
+                            alt={alumni.nama} 
+                            fill 
+                            className="object-cover" 
+                            sizes="96px"
+                          />
                         ) : (
                           <User className="w-8 h-8 text-slate-300" />
                         )}
@@ -716,7 +809,13 @@ export default function AlumniClient() {
                  
                  <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-xl bg-slate-100 overflow-hidden flex items-center justify-center mb-6 relative z-10">
                     {selectedAlumni.foto ? (
-                      <img src={selectedAlumni.foto} alt={selectedAlumni.nama} className="w-full h-full object-cover" />
+                      <Image 
+                        src={selectedAlumni.foto} 
+                        alt={selectedAlumni.nama} 
+                        fill 
+                        className="object-cover" 
+                        sizes="160px"
+                      />
                     ) : (
                       <User className="w-16 h-16 text-slate-300" />
                     )}
@@ -1381,12 +1480,30 @@ export default eslintConfig;
 </file>
 
 <file path="next.config.mjs">
+import withPWAInit from 'next-pwa';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  reactStrictMode: true,
+  turbopack: {}, // Mencegah error terminal
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: 'i.ibb.co.com' },
+      { protocol: 'https', hostname: 'i.ibb.co' },
+      { protocol: 'https', hostname: 'api.qrserver.com' }
+    ],
+  },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);
 </file>
 
 <file path="postcss.config.mjs">
@@ -1831,6 +1948,9 @@ export default function HasilPendaftaranPage() {
 @tailwind components;
 @tailwind utilities;
 
+/* Memberi tahu Tailwind v4 agar menggunakan class .dark dari next-themes */
+@variant dark (&:where(.dark, .dark *));
+
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -1848,9 +1968,15 @@ export default function HasilPendaftaranPage() {
   background: #94a3b8; 
 }
 
+/* Mengubah Variabel Warna agar otomatis beradaptasi dengan mode */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+.dark {
+  --background: #0f172a; /* Latar belakang slate-900 */
+  --foreground: #f8fafc; /* Teks slate-50 */
 }
 
 @theme inline {
@@ -1860,64 +1986,10 @@ export default function HasilPendaftaranPage() {
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-}
-</file>
-
-<file path="src/components/LoadingScreen.jsx">
-"use client";
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-
-const LOGO_URL = "https://i.ibb.co.com/nNhTXzYD/Asset-6-4x.png";
-
-export default function LoadingScreen({ text = "Memuat Sistem" }) {
-  const [globalConfig, setGlobalConfig] = useState(null);
-
-  useEffect(() => {
-    const cachedGlobal = localStorage.getItem('pmii_global_config');
-    if (cachedGlobal) {
-      setGlobalConfig(JSON.parse(cachedGlobal));
-    }
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center overflow-hidden">
-       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 md:w-64 h-48 md:h-64 bg-blue-600/30 rounded-full blur-[80px] animate-pulse"></div>
-       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 md:w-48 h-32 md:h-48 bg-yellow-500/20 rounded-full blur-[60px] animate-pulse delay-75"></div>
-       
-       <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }} className="relative z-10 flex flex-col items-center">
-         <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center mb-8 relative z-20">
-            {LOGO_URL ? (
-               <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
-            ) : (
-               <div className="w-full h-full bg-blue-600 rounded-2xl shadow-[0_0_50px_rgba(37,99,235,0.4)] border border-blue-400/30 flex items-center justify-center">
-                  <span className="text-yellow-400 font-extrabold text-2xl md:text-3xl tracking-widest">{globalConfig?.logoText || "PMII"}</span>
-               </div>
-            )}
-         </motion.div>
-         
-         <div className="flex items-center gap-2 text-slate-300 font-semibold text-xs md:text-sm tracking-widest uppercase">
-            <span>{text}</span>
-            <div className="flex gap-1 mt-0.5">
-               <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></motion.div>
-               <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></motion.div>
-               <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></motion.div>
-            </div>
-         </div>
-       </motion.div>
-    </div>
-  );
 }
 </file>
 
@@ -2142,6 +2214,53 @@ export async function generateMetadata({ searchParams }) {
 // Memanggil kodingan visual Client Component yang tadi kita pisah
 export default function AlumniPage() {
   return <AlumniClient />;
+}
+</file>
+
+<file path="src/components/LoadingScreen.jsx">
+"use client";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+
+const LOGO_URL = "/logo.png";
+
+export default function LoadingScreen({ text = "Memuat Sistem" }) {
+  const [globalConfig, setGlobalConfig] = useState(null);
+
+  useEffect(() => {
+    const cachedGlobal = localStorage.getItem('pmii_global_config');
+    if (cachedGlobal) {
+      setGlobalConfig(JSON.parse(cachedGlobal));
+    }
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center overflow-hidden">
+       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 md:w-64 h-48 md:h-64 bg-blue-600/30 rounded-full blur-[80px] animate-pulse"></div>
+       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 md:w-48 h-32 md:h-48 bg-yellow-500/20 rounded-full blur-[60px] animate-pulse delay-75"></div>
+       
+       <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }} className="relative z-10 flex flex-col items-center">
+         <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center mb-8 relative z-20">
+            {LOGO_URL ? (
+               <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
+            ) : (
+               <div className="w-full h-full bg-blue-600 rounded-2xl shadow-[0_0_50px_rgba(37,99,235,0.4)] border border-blue-400/30 flex items-center justify-center">
+                  <span className="text-yellow-400 font-extrabold text-2xl md:text-3xl tracking-widest">{globalConfig?.logoText || "PMII"}</span>
+               </div>
+            )}
+         </motion.div>
+         
+         <div className="flex items-center gap-2 text-slate-300 font-semibold text-xs md:text-sm tracking-widest uppercase">
+            <span>{text}</span>
+            <div className="flex gap-1 mt-0.5">
+               <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></motion.div>
+               <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></motion.div>
+               <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></motion.div>
+            </div>
+         </div>
+       </motion.div>
+    </div>
+  );
 }
 </file>
 
@@ -2980,9 +3099,9 @@ export default function DetailInventarisPage({ params }) {
 <file path="src/app/anggota/page.js">
 "use client";
 import React, { useState, useEffect } from "react";
+import GridSkeleton from "@/components/GridSkeleton";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import LoadingScreen from "@/components/LoadingScreen";
 import { Search, Filter, Users, MapPin, Hash, GraduationCap, ChevronDown } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -3033,7 +3152,7 @@ export default function AnggotaPage() {
     return matchSearch && matchRayon && matchAngkatan;
   });
 
-  if (loading) return <LoadingScreen text="Memuat Database Kader" />;
+  // HAPUS EARLY RETURN LOADING SCREEN DISINI AGAR HEADER TETAP MUNCUL
 
   return (
     <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 w-full overflow-x-hidden flex flex-col">
@@ -3107,7 +3226,9 @@ export default function AnggotaPage() {
       {/* ================= 3. AREA GRID KARTU ANGGOTA ================= */}
       <section className="pt-12 pb-20 px-5 max-w-7xl mx-auto w-full flex-grow">
         
-        {!isSearching ? (
+        {loading ? (
+          <GridSkeleton />
+        ) : !isSearching ? (
           <div className="text-center max-w-md mx-auto mt-10">
             <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
               <Search size={32} />
@@ -3205,9 +3326,10 @@ export default function AnggotaPage() {
 <file path="src/app/apresiasi/ApresiasiClient.js">
 "use client";
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import GridSkeleton from "@/components/GridSkeleton";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import LoadingScreen from "@/components/LoadingScreen";
 import { Search, Trophy, Award, BookOpen, ExternalLink, Calendar, Medal, Share2, Sparkles, FileText } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -3249,17 +3371,14 @@ export default function ApresiasiClient() {
     fetchApresiasi();
   }, []);
 
-  // ================= PERBAIKAN: FILTER CERDAS (FUZZY MATCH) =================
   const processedData = kaderData
     .map(kader => {
       const filteredPrestasi = kader.prestasi.filter(p => {
         const tipeLower = (p.tipe || p.kategori || "").toLowerCase();
         
         if (activeTab === "akademik") {
-          // Masuk Akademik JIKA ada kata 'akad' (tapi bukan non-akad), atau 'kaderisasi', 'jurnal', dll
           return (tipeLower.includes("akad") && !tipeLower.includes("non")) || tipeLower.includes("kaderisasi") || tipeLower.includes("jurnal");
         } else {
-          // Masuk Non-Akademik JIKA ada kata 'non', 'lomba', 'minat', atau 'bakat'
           return tipeLower.includes("non") || tipeLower.includes("lomba") || tipeLower.includes("minat") || tipeLower.includes("bakat");
         }
       });
@@ -3290,8 +3409,6 @@ export default function ApresiasiClient() {
       alert("Link berhasil disalin ke clipboard!");
     }
   };
-
-  if (loading) return <LoadingScreen text="Memuat Galeri Apresiasi" />;
 
   return (
     <main className="min-h-screen bg-[#f1f5f9] font-sans text-slate-800 flex flex-col">
@@ -3346,7 +3463,9 @@ export default function ApresiasiClient() {
 
       {/* Grid Profil */}
       <section className="pb-16 px-4 max-w-7xl mx-auto w-full flex-grow">
-        {processedData.length === 0 ? (
+        {loading ? (
+          <GridSkeleton />
+        ) : processedData.length === 0 ? (
            <div className="text-center text-slate-400 py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
              <Trophy size={56} className="mx-auto mb-4 opacity-30 text-slate-300"/>
              <p className="font-medium text-slate-500">Belum ada rekam data {activeTab === 'akademik' ? 'Akademik/Kaderisasi' : 'Lomba/Kejuaraan'} ditemukan.</p>
@@ -3367,14 +3486,22 @@ export default function ApresiasiClient() {
                       </div>
                    </div>
 
-                   {/* Foto Profil */}
+                   {/* Foto Profil Menggunakan Image Next.js */}
                    <div className="relative px-4 flex justify-center -mt-10 mb-2">
-                      <div className="w-20 h-20 bg-white rounded-full p-1 shadow-md">
-                        {kader.fotoKader ? (
-                          <img src={kader.fotoKader} alt={kader.namaLengkap} className="w-full h-full rounded-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full rounded-full bg-slate-100 flex items-center justify-center"><Trophy size={28} className="text-slate-300"/></div>
-                        )}
+                      <div className="w-20 h-20 bg-white rounded-full p-1 shadow-md relative">
+                        <div className="relative w-full h-full rounded-full overflow-hidden">
+                          {kader.fotoKader ? (
+                            <Image 
+                              src={kader.fotoKader} 
+                              alt={kader.namaLengkap} 
+                              fill 
+                              className="object-cover" 
+                              sizes="80px"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-slate-100 flex items-center justify-center"><Trophy size={28} className="text-slate-300"/></div>
+                          )}
+                        </div>
                       </div>
                    </div>
 
@@ -3413,8 +3540,18 @@ export default function ApresiasiClient() {
               
               <div className="bg-white p-5 md:p-6 flex flex-col sm:flex-row sm:items-center gap-4 shrink-0 relative border-b border-slate-100 z-20">
                  <div className="flex items-center gap-4">
-                   <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-slate-50 shadow-sm overflow-hidden shrink-0">
-                     {activeKader.fotoKader ? <img src={activeKader.fotoKader} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-slate-100 flex items-center justify-center"><Trophy size={24} className="text-slate-400"/></div>}
+                   <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-slate-50 shadow-sm overflow-hidden shrink-0 relative">
+                     {activeKader.fotoKader ? (
+                        <Image 
+                          src={activeKader.fotoKader} 
+                          alt={activeKader.namaLengkap} 
+                          fill 
+                          className="object-cover" 
+                          sizes="80px"
+                        />
+                     ) : (
+                        <div className="w-full h-full bg-slate-100 flex items-center justify-center"><Trophy size={24} className="text-slate-400"/></div>
+                     )}
                    </div>
                    <div>
                      <h2 className="text-lg md:text-2xl font-extrabold text-slate-800">{activeKader.namaLengkap}</h2>
@@ -3439,20 +3576,26 @@ export default function ApresiasiClient() {
                  </div>
 
                  {activeKader.prestasi.map((p, idx) => {
-                   // PERBAIKAN: Deteksi tipe di dalam modal agar warnanya akurat
                    const tipeLower = (p.tipe || p.kategori || "").toLowerCase();
                    const isAkad = (tipeLower.includes("akad") && !tipeLower.includes("non")) || tipeLower.includes("kaderisasi");
                    
-                   // Deteksi Cerdas: Apakah linkOrFoto berisi Gambar atau Tautan Biasa (Google Drive dll)?
                    const hasMedia = p.linkOrFoto && p.linkOrFoto.trim() !== "";
                    const isImage = hasMedia && (p.linkOrFoto.match(/\.(jpeg|jpg|gif|png|webp)$/i) || p.linkOrFoto.includes("res.cloudinary.com") || p.linkOrFoto.includes("ibb.co") || p.linkOrFoto.includes("imgbb"));
 
                    return (
                      <div key={idx} className="bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-4 md:gap-5 items-start hover:border-slate-200 transition">
                         
-                        {/* Area Tampilan Media / Ikon */}
+                        {/* Area Tampilan Media Menggunakan Image Next.js */}
                         {isImage ? (
-                          <img src={p.linkOrFoto} alt="Dokumentasi" className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0 bg-slate-50 border border-slate-100" />
+                          <div className="relative w-full sm:w-40 h-32 shrink-0">
+                             <Image 
+                               src={p.linkOrFoto} 
+                               alt="Dokumentasi Prestasi" 
+                               fill 
+                               className="object-cover rounded-xl bg-slate-50 border border-slate-100" 
+                               sizes="(max-width: 640px) 100vw, 160px"
+                             />
+                          </div>
                         ) : (
                           <div className={`w-full sm:w-32 h-24 rounded-xl flex items-center justify-center shrink-0 border ${isAkad ? 'bg-emerald-50/50 border-emerald-100 text-emerald-400' : 'bg-amber-50/50 border-amber-100 text-amber-400'}`}>
                              {isAkad ? <BookOpen size={40} strokeWidth={1.5}/> : <Award size={40} strokeWidth={1.5}/>}
@@ -3474,7 +3617,6 @@ export default function ApresiasiClient() {
                              <span className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Medal size={12}/> {p.tingkat || "-"}</span>
                              <span className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Calendar size={12}/> {p.tahun || "-"}</span>
                              
-                             {/* Jika memiliki link tapi bukan format gambar, munculkan sebagai tombol */}
                              {hasMedia && !isImage && (
                                <a href={p.linkOrFoto} target="_blank" rel="noopener noreferrer" className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5">
                                  {isAkad ? <FileText size={12}/> : <ExternalLink size={12}/>} 
@@ -3558,20 +3700,20 @@ export async function generateMetadata({ params }) {
       title: article.title,
       description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
       siteName: "PMII Sunan Ampel Malang",
-      images: [
-        {
-          url: coverImage, 
-          width: 800,   // Mengikuti ukuran kompresi
-          height: 418,  // Mengikuti ukuran kompresi
-          alt: article.title,
-        },
-      ],
+      // Ganti bagian images di dalam generateMetadata
+      images: [{url: `${siteUrl}/api/og?title=${encodeURIComponent(article.title)}`,
+        width: 1200,
+        height: 630,
+        alt: article.title}],
     },
     twitter: {
       card: "summary_large_image",
       title: article.title,
       description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
-      images: [coverImage],
+      images: [{url: `${siteUrl}/api/og?title=${encodeURIComponent(article.title)}`,
+        width: 1200,
+        height: 630,
+        alt: article.title}],
     },
   };
 }
@@ -4037,6 +4179,7 @@ import { MapPin, Users, BookOpen, ArrowLeft, Shield, ExternalLink, Hash, Compass
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
+import Image from 'next/image';
 
 export default function DetailRayonPage() {
   const params = useParams();
@@ -4250,7 +4393,7 @@ export default function DetailRayonPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
             {anggotaRayon.map((kader, index) => (
-              <motion.div key={kader.id || index} initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3 }} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-blue-100 transition-all duration-300 flex flex-col">
+              <motion.div key={`${kader.id || 'kader'}-${index}`} initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3 }} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-blue-100 transition-all duration-300 flex flex-col">
                 <div className="flex items-start gap-3 mb-4">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-inner">{kader.nama.charAt(0).toUpperCase()}</div>
                   <div>
@@ -4276,9 +4419,10 @@ export default function DetailRayonPage() {
 <file path="src/app/struktur/page.js">
 "use client";
 import React, { useState, useEffect } from "react";
+import Image from "next/image"; // Mengimpor komponen Image dari next
+import GridSkeleton from "@/components/GridSkeleton"; // Mengimpor komponen skeleton
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import LoadingScreen from "@/components/LoadingScreen";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageSquare, Hash, MapPin, Calendar, Award, Shield, Users, Briefcase } from "lucide-react";
 import { db } from "@/lib/firebase";
@@ -4318,8 +4462,6 @@ export default function StrukturPage() {
     return <Briefcase size={22} className="text-blue-600" />;
   };
 
-  if (loading) return <LoadingScreen text="Menarik Data Kepengurusan" />;
-
   return (
     <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 w-full overflow-x-hidden">
       <Navbar />
@@ -4345,7 +4487,9 @@ export default function StrukturPage() {
       {/* 2. AREA KONTEN (RENDERING NYATA DARI FIREBASE) */}
       <section className="py-12 md:py-16 px-5 max-w-6xl mx-auto min-h-[50vh]">
         
-        {strukturData.length === 0 ? (
+        {loading ? (
+          <GridSkeleton /> // Pemuatan kerangka animasi pengganti loading screen penuh
+        ) : strukturData.length === 0 ? (
           <div className="bg-white rounded-[2rem] p-12 text-center border border-slate-100 shadow-sm max-w-xl mx-auto">
              <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
              <h3 className="font-bold text-slate-700 text-lg">Data Struktur Kosong</h3>
@@ -4375,22 +4519,23 @@ export default function StrukturPage() {
                     transition={{ duration: 0.5, delay: memberIndex * 0.05 }}
                     className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
                   >
-                    {/* Area Foto Profil */}
+                    {/* Area Foto Profil dengan komponen Image Next.js */}
                     <div className="relative h-44 sm:h-56 w-full bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden shrink-0">
                       {item.foto ? (
-                        <img 
+                        <Image 
                           src={item.foto} 
-                          alt={item.nama} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          loading="lazy"
+                          alt={item.nama || "Foto Pengurus"} 
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                         />
                       ) : (
                         <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 text-2xl font-bold uppercase shadow-sm">
                           {item.nama ? item.nama.charAt(0) : "?"}
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-slate-900/5 group-hover:bg-transparent transition-colors duration-300"></div>
-                      <span className="absolute bottom-2 right-2 text-[9px] font-bold uppercase tracking-wider bg-slate-900/70 text-white px-2.5 py-1 rounded-md backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 bg-slate-900/5 group-hover:bg-transparent transition-colors duration-300 z-10"></div>
+                      <span className="absolute bottom-2 right-2 text-[9px] font-bold uppercase tracking-wider bg-slate-900/70 text-white px-2.5 py-1 rounded-md backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity z-20">
                         Detail Profil
                       </span>
                     </div>
@@ -4437,9 +4582,15 @@ export default function StrukturPage() {
               {/* Konten Scrollable */}
               <div className="p-5 md:p-6 space-y-4 overflow-y-auto hide-scrollbar">
                 <div className="flex flex-col items-center border-b border-slate-100 pb-4 text-center">
-                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-slate-50 mb-3 shadow-md border-4 border-white shadow-slate-200 flex items-center justify-center text-3xl font-black text-white bg-gradient-to-br from-blue-500 to-indigo-600 shrink-0">
+                  <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-slate-50 mb-3 shadow-md border-4 border-white shadow-slate-200 flex items-center justify-center text-3xl font-black text-white bg-gradient-to-br from-blue-500 to-indigo-600 shrink-0">
                     {selectedPengurus.foto ? (
-                      <img src={selectedPengurus.foto} alt={selectedPengurus.nama} className="w-full h-full object-cover" />
+                      <Image 
+                        src={selectedPengurus.foto} 
+                        alt={selectedPengurus.nama || "Foto Profil"} 
+                        fill
+                        className="object-cover"
+                        sizes="96px"
+                      />
                     ) : (
                       selectedPengurus.nama ? selectedPengurus.nama.charAt(0) : "?"
                     )}
@@ -4503,6 +4654,7 @@ export default function StrukturPage() {
 
 <file path="src/app/layout.js">
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from 'next-themes';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -4536,7 +4688,6 @@ export const metadata = {
     title: "PMII Sunan Ampel Malang",
     description: "Website Resmi PK. PMII Sunan Ampel Malang.",
     siteName: "PMII Sunan Ampel Malang",
-    // Anda bisa mengganti link gambar di bawah dengan logo PMII Sunan Ampel asli di Cloudinary Anda
     images: [
       {
         url: "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png", 
@@ -4550,7 +4701,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "PMII Sunan Ampel Malang",
     description: "Website Resmi PK. PMII Sunan Ampel Malang.",
-    images: ["https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png"], // Ganti dengan URL gambar Cloudinary Anda
+    images: ["https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png"],
   },
   robots: {
     index: true,
@@ -4571,10 +4722,15 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html
-      lang="id" // Diganti ke "id" agar Google tahu ini website berbahasa Indonesia
+      lang="id" 
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning // Penting agar next-themes tidak error saat memuat tema awal
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col transition-colors duration-300 dark:bg-[#0a0a0a] dark:text-[#ededed]">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
@@ -5699,7 +5855,7 @@ export default function Page() {
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -5711,6 +5867,8 @@ export default function Page() {
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
     "next-cloudinary": "^6.17.5",
+    "next-pwa": "^5.6.0",
+    "next-themes": "^0.4.6",
     "nodemailer": "^9.0.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -6618,14 +6776,15 @@ export default function Page() {
 <file path="src/app/rayon/page.js">
 "use client";
 import React, { useState, useEffect } from "react";
+import GridSkeleton from "@/components/GridSkeleton";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import LoadingScreen from "@/components/LoadingScreen";
 import { MapPin, BookOpen, ExternalLink, Shield, ArrowRight, Compass, Map } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
+import Image from 'next/image';
 
 export default function RayonPage() {
   const router = useRouter();
@@ -6649,8 +6808,6 @@ export default function RayonPage() {
     fetchRayon();
   }, []);
 
-  if (loading) return <LoadingScreen text="Memuat Data Rayon" />;
-
   return (
     <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 w-full overflow-x-hidden flex flex-col">
       <Navbar />
@@ -6671,9 +6828,11 @@ export default function RayonPage() {
         </div>
       </section>
 
-      {/* GRID KARTU RAYON */}
+      {/* GRID KARTU RAYON DENGAN LOGIKA LOADING SKELETON */}
       <section className="py-16 px-5 max-w-7xl mx-auto w-full flex-grow relative z-20 -mt-8">
-        {rayonData.length === 0 ? (
+        {loading ? (
+          <GridSkeleton />
+        ) : rayonData.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center max-w-xl mx-auto">
              <MapPin className="w-12 h-12 text-slate-300 mx-auto mb-4" />
              <h3 className="font-bold text-slate-800 text-lg mb-2">Data Rayon Belum Tersedia</h3>
@@ -6762,127 +6921,11 @@ export default function RayonPage() {
 }
 </file>
 
-<file path="src/components/Navbar.jsx">
-"use client";
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, X, ExternalLink } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
-
-const LOGO_URL = "https://i.ibb.co.com/nNhTXzYD/Asset-6-4x.png";
-
-export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const pathname = usePathname();
-  
-  const [globalConfig, setGlobalConfig] = useState({
-    logoText: "PMII",
-    komisariatName: "SUNAN AMPEL MALANG"
-  });
-
-  useEffect(() => {
-    async function fetchGlobalConfig() {
-      try {
-        const docRef = doc(db, "website_config", "global");
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setGlobalConfig(docSnap.data());
-        }
-      } catch (error) {
-        console.error("Gagal memuat konfigurasi global navbar:", error);
-      }
-    }
-    fetchGlobalConfig();
-  }, []);
-
-  const isActive = (path) => {
-    return pathname === path 
-      ? "text-[#facc15] border-b-2 border-[#facc15] pb-1 font-bold" 
-      : "text-white hover:text-[#facc15] transition border-b-2 border-transparent pb-1 font-medium";
-  };
-
-  const isActiveMobile = (path) => {
-    return pathname === path ? "text-[#facc15] font-bold" : "text-white hover:text-[#facc15] transition";
-  };
-
-  return (
-    <div className="fixed w-full z-50">
-      <nav className="bg-[#111827] text-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="flex justify-between items-center h-16 md:h-20">
-            <div className="flex items-center gap-2 md:gap-3">
-              {LOGO_URL ? (
-                <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
-                  <img src={LOGO_URL} alt="Logo PMII" className="w-full h-full object-contain drop-shadow-md" />
-                </div>
-              ) : (
-                <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-500 rounded flex items-center justify-center shadow-inner">
-                  <span className="text-yellow-300 font-bold text-[10px] md:text-xs">{globalConfig.logoText}</span>
-                </div>
-              )}
-              <div>
-                <h1 className="font-bold text-sm md:text-xl leading-none">
-                  PMII <span className="text-[#facc15]">{globalConfig.komisariatName.replace("Komisariat ", "")}</span>
-                </h1>
-                <p className="font-light text-[8px] md:text-xs text-slate-300 mt-0.5 md:mt-1">
-                  Pergerakan Mahasiswa Islam Indonesia
-                </p>
-              </div>
-            </div>
-
-            <div className="hidden xl:flex items-center space-x-5 text-sm">
-              <Link href="/" className={isActive("/")}>Beranda</Link>
-              <Link href="/struktur" className={isActive("/struktur")}>Struktur</Link>
-              <Link href="/anggota" className={isActive("/anggota")}>Anggota</Link>
-              <Link href="/rayon" className={isActive("/rayon")}>Rayon</Link>
-              <Link href="/alumni" className={isActive("/alumni")}>Alumni</Link>
-              <Link href="/apresiasi" className={isActive("/apresiasi")}>Apresiasi</Link>
-              <Link href="/berita" className={isActive("/berita")}>Berita</Link>
-              <Link href="/administrasi" className={isActive("/administrasi")}>Administrasi</Link>
-              
-              <Link href="/pendaftaran" className="bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 px-5 py-2 rounded-full font-bold transition shadow-md shadow-blue-500/20 ml-2 whitespace-nowrap">
-                Pendaftaran
-              </Link>
-            </div>
-
-            <button className="xl:hidden text-white p-1" onClick={() => setIsOpen(!isOpen)}>
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-        </div>
-
-        {isOpen && (
-          <div className="xl:hidden bg-[#1f2937] p-4 flex flex-col space-y-4 text-sm border-t border-slate-700 shadow-xl pb-6 h-screen overflow-y-auto">
-            <Link href="/" onClick={() => setIsOpen(false)} className={isActiveMobile("/")}>Beranda</Link>
-            <Link href="/struktur" onClick={() => setIsOpen(false)} className={isActiveMobile("/struktur")}>Struktur Kepengurusan</Link>
-            <Link href="/anggota" onClick={() => setIsOpen(false)} className={isActiveMobile("/anggota")}>Database Anggota</Link>
-            <Link href="/rayon" onClick={() => setIsOpen(false)} className={isActiveMobile("/rayon")}>Daftar Rayon</Link>
-            <Link href="/alumni" onClick={() => setIsOpen(false)} className={isActiveMobile("/alumni")}>Jejaring Alumni</Link>
-            <Link href="/apresiasi" onClick={() => setIsOpen(false)} className={isActiveMobile("/apresiasi")}>Apresiasi Kader</Link>
-            <Link href="/berita" onClick={() => setIsOpen(false)} className={isActiveMobile("/berita")}>Berita & Artikel</Link>
-            <Link href="/administrasi" onClick={() => setIsOpen(false)} className={isActiveMobile("/administrasi")}>Data Administrasi</Link>
-            
-            <a href="https://siakad.pmii-uinmalang.or.id/" target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)} className="text-emerald-400 hover:text-emerald-300 transition font-bold flex items-center gap-2 pt-2 border-t border-slate-700">
-              Portal Siakad PMII <ExternalLink size={14} />
-            </a>
-            
-            <Link href="/pendaftaran" onClick={() => setIsOpen(false)} className="bg-blue-600 text-white text-center py-3 rounded-lg font-bold mt-2">
-              Pendaftaran Kader
-            </Link>
-          </div>
-        )}
-      </nav>
-    </div>
-  );
-}
-</file>
-
 <file path="src/app/berita/page.js">
 "use client";
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import GridSkeleton from "@/components/GridSkeleton";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -6964,21 +7007,12 @@ export default function Berita() {
 
   const categories = ["Semua", "Berita Utama", "Opini Kader", "Kajian & Artikel", "Pengumuman"];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center font-sans text-slate-800">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600 mb-4"></div>
-        <p className="font-bold text-slate-500 tracking-widest text-xs animate-pulse uppercase">Memuat Redaksi...</p>
-      </div>
-    );
-  }
-
   return (
     <main className="min-h-screen bg-[#f8fafc] font-sans flex flex-col">
       <Navbar />
 
       <div className="flex-grow">
-        {/* BANNER HERO (CLEAN & EDITORIAL) */}
+        {/* BANNER HERO */}
         <section className="pt-32 pb-24 px-5 bg-slate-900 text-center relative border-b border-slate-800">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
           <div className="relative z-10 max-w-3xl mx-auto">
@@ -6996,7 +7030,7 @@ export default function Berita() {
           </div>
         </section>
 
-        {/* FILTER BAR (CLEAN) */}
+        {/* FILTER BAR */}
         <section className="px-5 max-w-6xl mx-auto w-full -mt-7 relative z-20">
           <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-2 items-center">
             <div className="flex gap-1 overflow-x-auto w-full md:w-auto p-1 hide-scrollbar">
@@ -7026,7 +7060,9 @@ export default function Berita() {
 
         {/* GRID BERITA */}
         <section className="py-12 px-5 max-w-6xl mx-auto mb-16">
-          {filteredArticles.length === 0 ? (
+          {loading ? (
+            <GridSkeleton />
+          ) : filteredArticles.length === 0 ? (
             <div className="bg-white rounded-2xl p-16 text-center border border-slate-200 shadow-sm">
               <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <p className="text-slate-800 font-bold text-lg">Belum ada arsip berita.</p>
@@ -7038,7 +7074,7 @@ export default function Berita() {
               {filteredArticles.slice(0, visibleCount).map((item, idx) => {
                 const articleSlug = createSlug(item.title);
                 
-                // HEADLINE UTAMA (Besar di Atas)
+                // HEADLINE UTAMA
                 if (idx === 0) {
                   const snippetText = extractSnippet(item.content, 200);
                   return (
@@ -7046,7 +7082,13 @@ export default function Berita() {
                       <Link href={`/berita/${articleSlug}`} className="flex flex-col md:flex-row bg-white rounded-2xl overflow-hidden border border-slate-200 hover:border-blue-300 transition-colors h-full">
                         <div className="md:w-3/5 relative h-64 md:h-[420px] bg-slate-100 overflow-hidden">
                           {item.imageUrl ? (
-                             <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                             <Image 
+                               src={item.imageUrl} 
+                               alt={item.title} 
+                               fill 
+                               className="object-cover group-hover:scale-105 transition-transform duration-700" 
+                               sizes="(max-width: 768px) 100vw, 60vw"
+                             />
                           ) : (
                              <div className="absolute inset-0 flex items-center justify-center text-slate-300"><ImageIcon size={48}/></div>
                           )}
@@ -7082,7 +7124,13 @@ export default function Berita() {
                       <Link href={`/berita/${articleSlug}`} className="flex flex-col bg-white rounded-2xl overflow-hidden border border-slate-200 hover:border-blue-300 transition-colors h-full">
                         <div className="relative h-56 bg-slate-100 overflow-hidden">
                           {item.imageUrl ? (
-                             <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                             <Image 
+                               src={item.imageUrl} 
+                               alt={item.title} 
+                               fill 
+                               className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                               sizes="(max-width: 768px) 100vw, 50vw"
+                             />
                           ) : (
                              <div className="absolute inset-0 flex items-center justify-center text-slate-300"><ImageIcon size={32}/></div>
                           )}
@@ -7111,7 +7159,13 @@ export default function Berita() {
                       <Link href={`/berita/${articleSlug}`} className="flex flex-col sm:flex-row bg-white rounded-2xl overflow-hidden border border-slate-200 hover:border-blue-300 transition-colors">
                         <div className="sm:w-1/4 relative h-48 sm:h-auto bg-slate-100 overflow-hidden shrink-0">
                           {item.imageUrl ? (
-                             <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                             <Image 
+                               src={item.imageUrl} 
+                               alt={item.title} 
+                               fill 
+                               className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                               sizes="(max-width: 640px) 100vw, 25vw"
+                             />
                           ) : (
                              <div className="absolute inset-0 flex items-center justify-center text-slate-300"><ImageIcon size={24}/></div>
                           )}
@@ -7152,22 +7206,52 @@ export default function Berita() {
 }
 </file>
 
-<file path="src/components/Footer.jsx">
-// src/components/Footer.jsx
+<file path="src/components/Navbar.jsx">
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
+import { Menu, X, ExternalLink, Sun, Moon } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { ChevronRight, Clock, Lock, MapPin, Heart } from "lucide-react";
 
-export default function Footer() {
-  const [config, setConfig] = useState({
-    tentangPmii: "PMII Komisariat adalah organisasi mahasiswa Islam yang berkomitmen untuk membangun intelektual muslim yang berkarakter dan berakhlak mulia berdasarkan nilai-nilai Ahlussunnah Wal Jama'ah.",
-    jamSeninJumat: "08:00 - 16:00 WIB",
-    jamSabtuMinggu: "09:00 - 14:00 WIB",
-    lokasi: "Jl. Gajayana No. 50\nKota Malang, Jawa Timur",
-    footerText: "© 2026 PMII Komisariat. Powered by Divisi Kominfo."
+const LOGO_URL = "/logo.png";
+
+// Komponen Toggle Tema agar bisa dipakai di mode Desktop dan Mobile
+const ThemeToggle = ({ className }) => {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Mencegah error hidrasi (ketidaksesuaian render awal antara server & client)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className={`w-8 h-8 rounded-full ${className}`}></div>; // Placeholder
+  }
+
+  return (
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className={`p-2 rounded-full transition-colors ${
+        theme === "dark" ? "bg-slate-800 text-yellow-400 hover:bg-slate-700" : "bg-blue-800 text-yellow-200 hover:bg-blue-700"
+      } ${className}`}
+      aria-label="Toggle Dark Mode"
+    >
+      {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+    </button>
+  );
+};
+
+export default function Navbar() {
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  
+  const [globalConfig, setGlobalConfig] = useState({
+    logoText: "PMII",
+    komisariatName: "SUNAN AMPEL MALANG"
   });
 
   useEffect(() => {
@@ -7176,90 +7260,101 @@ export default function Footer() {
         const docRef = doc(db, "website_config", "global");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setConfig({ ...config, ...docSnap.data() });
+          setGlobalConfig(docSnap.data());
         }
       } catch (error) {
-        console.error("Gagal memuat data footer:", error);
+        console.error("Gagal memuat konfigurasi global navbar:", error);
       }
     }
     fetchGlobalConfig();
   }, []);
 
+  const isActive = (path) => {
+    return pathname === path 
+      ? "text-[#facc15] border-b-2 border-[#facc15] pb-1 font-bold" 
+      : "text-white hover:text-[#facc15] transition border-b-2 border-transparent pb-1 font-medium";
+  };
+
+  const isActiveMobile = (path) => {
+    return pathname === path ? "text-[#facc15] font-bold" : "text-white hover:text-[#facc15] transition";
+  };
+
   return (
-    <footer className="bg-[#0f172a] text-slate-300 pt-16 pb-8 border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12 mb-12">
+    <div className="fixed w-full z-50">
+      <nav className="bg-[#111827] text-white shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="sm:col-span-2 lg:col-span-1 space-y-6">
-            <div>
-              <h3 className="text-xl font-bold text-yellow-400 mb-4">Tentang PMII Komisariat</h3>
-              <p className="text-sm leading-relaxed text-slate-400 whitespace-pre-line">
-                {config.tentangPmii}
-              </p>
-            </div>
-            <div>
-              <h4 className="font-bold text-slate-200 mb-2 flex items-center gap-2">
-                <MapPin size={16} className="text-yellow-400" /> Lokasi Kami
-              </h4>
-              <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-line">
-                {config.lokasi}
-              </p>
-            </div>
-          </div>
-          
-          <div>
-            <h3 className="text-xl font-bold text-yellow-400 mb-5 md:mb-6">Menu Kategori</h3>
-            <ul className="space-y-3 text-sm">
-              <li><Link href="/" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Beranda</Link></li>
-              <li><Link href="/struktur" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Struktur Kepengurusan</Link></li>
-              <li><Link href="/anggota" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Cari Anggota</Link></li>
-              <li><Link href="/rayon" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Daftar Rayon</Link></li>
-              <li><Link href="/administrasi" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Administrasi Surat</Link></li>
-              <li><Link href="https://siakad.pmii-uinmalang.or.id/" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Portal Siakad</Link></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h3 className="text-xl font-bold text-yellow-400 mb-5 md:mb-6">Jam Operasional</h3>
-            <div className="space-y-4 text-sm text-slate-400 mb-8">
-              <div className="flex items-start gap-3">
-                <Clock size={18} className="text-yellow-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-slate-200">Senin - Jumat</p>
-                  <p>{config.jamSeninJumat}</p>
+          <div className="flex justify-between items-center h-16 md:h-20">
+            <div className="flex items-center gap-2 md:gap-3">
+              {LOGO_URL ? (
+                <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
+                  <img src={LOGO_URL} alt="Logo PMII" className="w-full h-full object-contain drop-shadow-md" />
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Clock size={18} className="text-yellow-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-slate-200">Sabtu - Minggu</p>
-                  <p>{config.jamSabtuMinggu}</p>
+              ) : (
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-500 rounded flex items-center justify-center shadow-inner">
+                  <span className="text-yellow-300 font-bold text-[10px] md:text-xs">{globalConfig.logoText}</span>
                 </div>
+              )}
+              <div>
+                <h1 className="font-bold text-sm md:text-xl leading-none">
+                  PMII <span className="text-[#facc15]">{globalConfig.komisariatName.replace("Komisariat ", "")}</span>
+                </h1>
+                <p className="font-light text-[8px] md:text-xs text-slate-300 mt-0.5 md:mt-1">
+                  Pergerakan Mahasiswa Islam Indonesia
+                </p>
               </div>
             </div>
 
-            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-               <h4 className="font-bold text-slate-200 mb-2 flex items-center gap-2">
-                 <Heart size={16} className="text-pink-500" /> Dukung Pengembangan
-               </h4>
-               <p className="text-xs text-slate-400 mb-3 leading-relaxed">Mari berkontribusi membangun kemandirian organisasi lewat donasi digital.</p>
-               <Link href="/donasi" className="block w-full text-center bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold py-2 rounded-lg text-sm transition shadow-sm">
-                 Donasi Sekarang
-               </Link>
+            <div className="hidden xl:flex items-center space-x-5 text-sm">
+              <Link href="/" className={isActive("/")}>Beranda</Link>
+              <Link href="/struktur" className={isActive("/struktur")}>Struktur</Link>
+              <Link href="/anggota" className={isActive("/anggota")}>Anggota</Link>
+              <Link href="/rayon" className={isActive("/rayon")}>Rayon</Link>
+              <Link href="/alumni" className={isActive("/alumni")}>Alumni</Link>
+              <Link href="/apresiasi" className={isActive("/apresiasi")}>Apresiasi</Link>
+              <Link href="/berita" className={isActive("/berita")}>Berita</Link>
+              <Link href="/administrasi" className={isActive("/administrasi")}>Administrasi</Link>
+              
+              <Link href="/pendaftaran" className="bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 px-5 py-2 rounded-full font-bold transition shadow-md shadow-blue-500/20 mx-2 whitespace-nowrap">
+                Pendaftaran
+              </Link>
+              
+              {/* Tombol Tema untuk Desktop */}
+              <ThemeToggle />
+            </div>
+
+            {/* Area Kanan untuk Mode Mobile (Tombol Tema + Hamburger) */}
+            <div className="flex items-center gap-3 xl:hidden">
+              <ThemeToggle />
+              <button className="text-white p-1" onClick={() => setIsOpen(!isOpen)}>
+                {isOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-slate-500 text-center md:text-left">
-            {config.footerText}
-          </p>
-          <Link href="/admin/login" className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-yellow-400 transition group">
-            <Lock size={12} className="group-hover:-translate-y-0.5 transition-transform" /> Portal Pengurus
-          </Link>
-        </div>
-      </div>
-    </footer>
+        {isOpen && (
+          <div className="xl:hidden bg-[#1f2937] p-4 flex flex-col space-y-4 text-sm border-t border-slate-700 shadow-xl pb-6 h-screen overflow-y-auto">
+            <Link href="/" onClick={() => setIsOpen(false)} className={isActiveMobile("/")}>Beranda</Link>
+            <Link href="/struktur" onClick={() => setIsOpen(false)} className={isActiveMobile("/struktur")}>Struktur Kepengurusan</Link>
+            <Link href="/anggota" onClick={() => setIsOpen(false)} className={isActiveMobile("/anggota")}>Database Anggota</Link>
+            <Link href="/rayon" onClick={() => setIsOpen(false)} className={isActiveMobile("/rayon")}>Daftar Rayon</Link>
+            <Link href="/alumni" onClick={() => setIsOpen(false)} className={isActiveMobile("/alumni")}>Jejaring Alumni</Link>
+            <Link href="/apresiasi" onClick={() => setIsOpen(false)} className={isActiveMobile("/apresiasi")}>Apresiasi Kader</Link>
+            <Link href="/berita" onClick={() => setIsOpen(false)} className={isActiveMobile("/berita")}>Berita & Artikel</Link>
+            <Link href="/administrasi" onClick={() => setIsOpen(false)} className={isActiveMobile("/administrasi")}>Data Administrasi</Link>
+            
+            <a href="https://siakad.pmii-uinmalang.or.id/" target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)} className="text-emerald-400 hover:text-emerald-300 transition font-bold flex items-center gap-2 pt-2 border-t border-slate-700">
+              Portal Siakad PMII <ExternalLink size={14} />
+            </a>
+            
+            <Link href="/pendaftaran" onClick={() => setIsOpen(false)} className="bg-blue-600 text-white text-center py-3 rounded-lg font-bold mt-2">
+              Pendaftaran Kader
+            </Link>
+          </div>
+        )}
+      </nav>
+    </div>
   );
 }
 </file>
@@ -9184,6 +9279,117 @@ export default function DetailBerita() {
       </div>
       <Footer />
     </main>
+  );
+}
+</file>
+
+<file path="src/components/Footer.jsx">
+"use client";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { ChevronRight, Clock, Lock, MapPin, Heart } from "lucide-react";
+
+export default function Footer() {
+  const [config, setConfig] = useState({
+    tentangPmii: "PMII Komisariat adalah organisasi mahasiswa Islam yang berkomitmen untuk membangun intelektual muslim yang berkarakter dan berakhlak mulia berdasarkan nilai-nilai Ahlussunnah Wal Jama'ah.",
+    jamSeninJumat: "08:00 - 16:00 WIB",
+    jamSabtuMinggu: "09:00 - 14:00 WIB",
+    lokasi: "Jl. Gajayana No. 50\nKota Malang, Jawa Timur",
+    footerText: "© 2026 PMII Komisariat. Powered by Divisi Kominfo."
+  });
+
+  useEffect(() => {
+    async function fetchGlobalConfig() {
+      try {
+        const docRef = doc(db, "website_config", "global");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setConfig({ ...config, ...docSnap.data() });
+        }
+      } catch (error) {
+        console.error("Gagal memuat data footer:", error);
+      }
+    }
+    fetchGlobalConfig();
+  }, []);
+
+  return (
+    <footer className="bg-[#0f172a] text-slate-300 pt-16 pb-8 border-t border-slate-800">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12 mb-12">
+          
+          <div className="sm:col-span-2 lg:col-span-1 space-y-6">
+            <div>
+              <h3 className="text-xl font-bold text-yellow-400 mb-4">Tentang PMII Komisariat</h3>
+              <p className="text-sm leading-relaxed text-slate-400 whitespace-pre-line">
+                {config.tentangPmii}
+              </p>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-200 mb-2 flex items-center gap-2">
+                <MapPin size={16} className="text-yellow-400" /> Lokasi Kami
+              </h4>
+              <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-line">
+                {config.lokasi}
+              </p>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-xl font-bold text-yellow-400 mb-5 md:mb-6">Menu Kategori</h3>
+            <ul className="space-y-3 text-sm">
+              <li><Link href="/" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Beranda</Link></li>
+              <li><Link href="/struktur" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Struktur Kepengurusan</Link></li>
+              <li><Link href="/anggota" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Cari Anggota</Link></li>
+              <li><Link href="/rayon" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Daftar Rayon</Link></li>
+              <li><Link href="/administrasi" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Administrasi Surat</Link></li>
+              <li><Link href="https://siakad.pmii-uinmalang.or.id/" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Portal Siakad</Link></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h3 className="text-xl font-bold text-yellow-400 mb-5 md:mb-6">Jam Operasional</h3>
+            <div className="space-y-4 text-sm text-slate-400 mb-8">
+              <div className="flex items-start gap-3">
+                <Clock size={18} className="text-yellow-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-200">Senin - Jumat</p>
+                  <p>{config.jamSeninJumat}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Clock size={18} className="text-yellow-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-200">Sabtu - Minggu</p>
+                  <p>{config.jamSabtuMinggu}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+               <h4 className="font-bold text-slate-200 mb-2 flex items-center gap-2">
+                 <Heart size={16} className="text-pink-500" /> Dukung Pengembangan
+               </h4>
+               <p className="text-xs text-slate-400 mb-3 leading-relaxed">Mari berkontribusi membangun kemandirian organisasi lewat donasi digital.</p>
+               <Link href="/donasi" className="block w-full text-center bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold py-2 rounded-lg text-sm transition shadow-sm">
+                 Donasi Sekarang
+               </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-slate-500 text-center md:text-left">
+            {config.footerText}
+          </p>
+          <Link href="/admin/login" className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-yellow-400 transition group">
+            <Lock size={12} className="group-hover:-translate-y-0.5 transition-transform" /> Portal Pengurus
+          </Link>
+        </div>
+      </div>
+    </footer>
   );
 }
 </file>

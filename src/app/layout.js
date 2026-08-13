@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from 'next-themes';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,7 +33,6 @@ export const metadata = {
     title: "PMII Sunan Ampel Malang",
     description: "Website Resmi PK. PMII Sunan Ampel Malang.",
     siteName: "PMII Sunan Ampel Malang",
-    // Anda bisa mengganti link gambar di bawah dengan logo PMII Sunan Ampel asli di Cloudinary Anda
     images: [
       {
         url: "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png", 
@@ -46,7 +46,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "PMII Sunan Ampel Malang",
     description: "Website Resmi PK. PMII Sunan Ampel Malang.",
-    images: ["https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png"], // Ganti dengan URL gambar Cloudinary Anda
+    images: ["https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png"],
   },
   robots: {
     index: true,
@@ -67,10 +67,15 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html
-      lang="id" // Diganti ke "id" agar Google tahu ini website berbahasa Indonesia
+      lang="id" 
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning // Penting agar next-themes tidak error saat memuat tema awal
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col transition-colors duration-300 dark:bg-[#0a0a0a] dark:text-[#ededed]">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

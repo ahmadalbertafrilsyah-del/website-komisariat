@@ -3,6 +3,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Memberi tahu Tailwind v4 agar menggunakan class .dark dari next-themes */
+@variant dark (&:where(.dark, .dark *));
+
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -20,9 +23,15 @@
   background: #94a3b8; 
 }
 
+/* Mengubah Variabel Warna agar otomatis beradaptasi dengan mode */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+.dark {
+  --background: #0f172a; /* Latar belakang slate-900 */
+  --foreground: #f8fafc; /* Teks slate-50 */
 }
 
 @theme inline {
@@ -30,13 +39,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

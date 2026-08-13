@@ -2,11 +2,39 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, ExternalLink } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Menu, X, ExternalLink, Sun, Moon } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 const LOGO_URL = "/logo.png";
+
+// Komponen Toggle Tema agar bisa dipakai di mode Desktop dan Mobile
+const ThemeToggle = ({ className }) => {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Mencegah error hidrasi (ketidaksesuaian render awal antara server & client)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className={`w-8 h-8 rounded-full ${className}`}></div>; // Placeholder
+  }
+
+  return (
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className={`p-2 rounded-full transition-colors ${
+        theme === "dark" ? "bg-slate-800 text-yellow-400 hover:bg-slate-700" : "bg-blue-800 text-yellow-200 hover:bg-blue-700"
+      } ${className}`}
+      aria-label="Toggle Dark Mode"
+    >
+      {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+    </button>
+  );
+};
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -78,14 +106,21 @@ export default function Navbar() {
               <Link href="/berita" className={isActive("/berita")}>Berita</Link>
               <Link href="/administrasi" className={isActive("/administrasi")}>Administrasi</Link>
               
-              <Link href="/pendaftaran" className="bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 px-5 py-2 rounded-full font-bold transition shadow-md shadow-blue-500/20 ml-2 whitespace-nowrap">
+              <Link href="/pendaftaran" className="bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 px-5 py-2 rounded-full font-bold transition shadow-md shadow-blue-500/20 mx-2 whitespace-nowrap">
                 Pendaftaran
               </Link>
+              
+              {/* Tombol Tema untuk Desktop */}
+              <ThemeToggle />
             </div>
 
-            <button className="xl:hidden text-white p-1" onClick={() => setIsOpen(!isOpen)}>
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            {/* Area Kanan untuk Mode Mobile (Tombol Tema + Hamburger) */}
+            <div className="flex items-center gap-3 xl:hidden">
+              <ThemeToggle />
+              <button className="text-white p-1" onClick={() => setIsOpen(!isOpen)}>
+                {isOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
         </div>
 

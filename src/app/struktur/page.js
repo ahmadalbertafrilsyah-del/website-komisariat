@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Image from "next/image"; // Mengimpor komponen Image dari next
+import GridSkeleton from "@/components/GridSkeleton"; // Mengimpor komponen skeleton
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import LoadingScreen from "@/components/LoadingScreen";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageSquare, Hash, MapPin, Calendar, Award, Shield, Users, Briefcase } from "lucide-react";
 import { db } from "@/lib/firebase";
@@ -42,8 +43,6 @@ export default function StrukturPage() {
     return <Briefcase size={22} className="text-blue-600" />;
   };
 
-  if (loading) return <LoadingScreen text="Menarik Data Kepengurusan" />;
-
   return (
     <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 w-full overflow-x-hidden">
       <Navbar />
@@ -69,7 +68,9 @@ export default function StrukturPage() {
       {/* 2. AREA KONTEN (RENDERING NYATA DARI FIREBASE) */}
       <section className="py-12 md:py-16 px-5 max-w-6xl mx-auto min-h-[50vh]">
         
-        {strukturData.length === 0 ? (
+        {loading ? (
+          <GridSkeleton /> // Pemuatan kerangka animasi pengganti loading screen penuh
+        ) : strukturData.length === 0 ? (
           <div className="bg-white rounded-[2rem] p-12 text-center border border-slate-100 shadow-sm max-w-xl mx-auto">
              <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
              <h3 className="font-bold text-slate-700 text-lg">Data Struktur Kosong</h3>
@@ -99,22 +100,23 @@ export default function StrukturPage() {
                     transition={{ duration: 0.5, delay: memberIndex * 0.05 }}
                     className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
                   >
-                    {/* Area Foto Profil */}
+                    {/* Area Foto Profil dengan komponen Image Next.js */}
                     <div className="relative h-44 sm:h-56 w-full bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden shrink-0">
                       {item.foto ? (
-                        <img 
+                        <Image 
                           src={item.foto} 
-                          alt={item.nama} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          loading="lazy"
+                          alt={item.nama || "Foto Pengurus"} 
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                         />
                       ) : (
                         <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 text-2xl font-bold uppercase shadow-sm">
                           {item.nama ? item.nama.charAt(0) : "?"}
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-slate-900/5 group-hover:bg-transparent transition-colors duration-300"></div>
-                      <span className="absolute bottom-2 right-2 text-[9px] font-bold uppercase tracking-wider bg-slate-900/70 text-white px-2.5 py-1 rounded-md backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 bg-slate-900/5 group-hover:bg-transparent transition-colors duration-300 z-10"></div>
+                      <span className="absolute bottom-2 right-2 text-[9px] font-bold uppercase tracking-wider bg-slate-900/70 text-white px-2.5 py-1 rounded-md backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity z-20">
                         Detail Profil
                       </span>
                     </div>
@@ -161,9 +163,15 @@ export default function StrukturPage() {
               {/* Konten Scrollable */}
               <div className="p-5 md:p-6 space-y-4 overflow-y-auto hide-scrollbar">
                 <div className="flex flex-col items-center border-b border-slate-100 pb-4 text-center">
-                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-slate-50 mb-3 shadow-md border-4 border-white shadow-slate-200 flex items-center justify-center text-3xl font-black text-white bg-gradient-to-br from-blue-500 to-indigo-600 shrink-0">
+                  <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-slate-50 mb-3 shadow-md border-4 border-white shadow-slate-200 flex items-center justify-center text-3xl font-black text-white bg-gradient-to-br from-blue-500 to-indigo-600 shrink-0">
                     {selectedPengurus.foto ? (
-                      <img src={selectedPengurus.foto} alt={selectedPengurus.nama} className="w-full h-full object-cover" />
+                      <Image 
+                        src={selectedPengurus.foto} 
+                        alt={selectedPengurus.nama || "Foto Profil"} 
+                        fill
+                        className="object-cover"
+                        sizes="96px"
+                      />
                     ) : (
                       selectedPengurus.nama ? selectedPengurus.nama.charAt(0) : "?"
                     )}

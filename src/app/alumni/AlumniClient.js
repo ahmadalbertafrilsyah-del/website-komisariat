@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
+import GridSkeleton from "@/components/GridSkeleton";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import LoadingScreen from "@/components/LoadingScreen";
 import { Search, GraduationCap, MapPin, Briefcase, Calendar, User, X, Share2, Info, Star, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -110,8 +111,6 @@ export default function AlumniClient() {
     }
   };
 
-  if (loading) return <LoadingScreen text="Memuat Direktori Alumni" />;
-
   const getSafeArray = (data) => {
     if (Array.isArray(data)) return data;
     if (typeof data === 'string' && data.trim() !== '') return data.split(',').map(s => s.trim());
@@ -119,7 +118,7 @@ export default function AlumniClient() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 flex flex-col relative">
+    <main className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-200 flex flex-col relative">
       <Navbar />
 
       <section className="pt-28 md:pt-36 pb-20 md:pb-28 px-4 md:px-5 bg-slate-900 text-center relative overflow-hidden">
@@ -144,25 +143,27 @@ export default function AlumniClient() {
       <section className="px-4 md:px-5 max-w-4xl mx-auto w-full -mt-6 md:-mt-8 relative z-20">
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="bg-white/80 backdrop-blur-xl p-1.5 md:p-2 rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 flex items-center relative transition-all focus-within:shadow-xl focus-within:shadow-blue-100/50"
+          className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl p-1.5 md:p-2 rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-none border border-slate-200/60 dark:border-slate-700 flex items-center relative transition-all focus-within:shadow-xl focus-within:shadow-blue-100/50 dark:focus-within:shadow-blue-900/20"
         >
           <div className="relative w-full flex items-center">
-            <Search className="absolute left-3 md:left-4 h-4 w-4 md:h-5 md:w-5 text-slate-400" />
+            <Search className="absolute left-3 md:left-4 h-4 w-4 md:h-5 md:w-5 text-slate-400 dark:text-slate-500" />
             <input
               type="text" 
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari nama, profesi, atau keahlian..."
-              className="w-full pl-10 md:pl-12 pr-4 py-3 md:py-3.5 bg-transparent border-none rounded-xl text-xs md:text-sm focus:outline-none text-slate-700 placeholder:text-slate-400 font-medium"
+              className="w-full pl-10 md:pl-12 pr-4 py-3 md:py-3.5 bg-transparent border-none rounded-xl text-xs md:text-sm focus:outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium"
             />
           </div>
         </motion.div>
       </section>
 
       <section className="py-10 md:py-16 px-3 md:px-5 max-w-7xl mx-auto w-full flex-grow flex flex-col">
-        {filteredData.length === 0 ? (
-           <div className="text-center text-slate-400 py-20 flex flex-col items-center">
-              <div className="bg-slate-100 p-4 rounded-full mb-4"><Search size={32} className="opacity-50"/></div>
+        {loading ? (
+          <GridSkeleton />
+        ) : filteredData.length === 0 ? (
+           <div className="text-center text-slate-400 dark:text-slate-500 py-20 flex flex-col items-center">
+              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full mb-4"><Search size={32} className="opacity-50"/></div>
               <p className="font-medium text-sm">Tidak ada data alumni yang ditemukan.</p>
            </div>
         ) : (
@@ -175,30 +176,36 @@ export default function AlumniClient() {
                   whileInView={{ opacity: 1, scale: 1, y: 0 }} 
                   viewport={{ once: true }} 
                   transition={{ duration: 0.4, delay: idx * 0.05 }}
-                  className="bg-white rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 border border-slate-100 group flex flex-col"
+                  className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 border border-slate-100 dark:border-slate-700 group flex flex-col"
                 >
                    <div className="h-16 md:h-20 w-full bg-gradient-to-r from-blue-600 to-indigo-700 relative overflow-hidden">
                       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
                    </div>
 
                    <div className="relative -mt-10 md:-mt-12 mx-auto">
-                      <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white shadow-md bg-slate-100 overflow-hidden group-hover:scale-105 transition-transform duration-300 flex items-center justify-center">
+                      <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white dark:border-slate-800 shadow-md bg-slate-100 dark:bg-slate-700 overflow-hidden group-hover:scale-105 transition-transform duration-300 flex items-center justify-center relative">
                         {alumni.foto ? (
-                          <img src={alumni.foto} alt={alumni.nama} className="w-full h-full object-cover" />
+                          <Image 
+                            src={alumni.foto} 
+                            alt={alumni.nama} 
+                            fill 
+                            className="object-cover" 
+                            sizes="96px"
+                          />
                         ) : (
-                          <User className="w-8 h-8 text-slate-300" />
+                          <User className="w-8 h-8 text-slate-300 dark:text-slate-500" />
                         )}
                       </div>
                    </div>
 
                    <div className="pt-3 pb-5 px-4 flex flex-col items-center flex-grow text-center">
-                      <h3 className="text-slate-800 font-bold text-sm md:text-base leading-tight mb-4 line-clamp-2 min-h-[40px] flex items-center">
+                      <h3 className="text-slate-800 dark:text-slate-100 font-bold text-sm md:text-base leading-tight mb-4 line-clamp-2 min-h-[40px] flex items-center">
                         {alumni.nama}
                       </h3>
                       
                       <button 
                         onClick={() => handleOpenModal(alumni)}
-                        className="mt-auto w-full bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-100 hover:border-blue-600 transition-colors duration-300 font-semibold py-2 rounded-xl text-xs md:text-sm flex justify-center items-center gap-1.5"
+                        className="mt-auto w-full bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-600 dark:hover:bg-blue-600 text-blue-600 dark:text-blue-400 hover:text-white border border-blue-100 dark:border-blue-800/50 hover:border-blue-600 transition-colors duration-300 font-semibold py-2 rounded-xl text-xs md:text-sm flex justify-center items-center gap-1.5"
                       >
                         <Info size={16} /> Lihat Profil
                       </button>
@@ -212,7 +219,7 @@ export default function AlumniClient() {
                 <button
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="p-2 md:p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition shadow-sm"
+                  className="p-2 md:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent transition shadow-sm bg-white dark:bg-slate-800"
                 >
                   <ChevronLeft size={20} />
                 </button>
@@ -227,8 +234,8 @@ export default function AlumniClient() {
                         pageNum === currentPage
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                           : pageNum === '...'
-                          ? 'text-slate-400 cursor-default bg-transparent'
-                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-blue-300'
+                          ? 'text-slate-400 dark:text-slate-500 cursor-default bg-transparent'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-blue-300'
                       }`}
                     >
                       {pageNum}
@@ -236,14 +243,14 @@ export default function AlumniClient() {
                   ))}
                 </div>
 
-                <div className="md:hidden px-4 text-sm font-bold text-slate-600">
-                  Hal <span className="text-blue-600">{currentPage}</span> / {totalPages}
+                <div className="md:hidden px-4 text-sm font-bold text-slate-600 dark:text-slate-300">
+                  Hal <span className="text-blue-600 dark:text-blue-400">{currentPage}</span> / {totalPages}
                 </div>
 
                 <button
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-2 md:p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition shadow-sm"
+                  className="p-2 md:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent transition shadow-sm bg-white dark:bg-slate-800"
                 >
                   <ChevronRight size={20} />
                 </button>
@@ -266,55 +273,61 @@ export default function AlumniClient() {
             
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col md:flex-row my-auto max-h-[90vh] md:max-h-[85vh]"
+              className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col md:flex-row my-auto max-h-[90vh] md:max-h-[85vh]"
             >
-              <button onClick={handleCloseModal} className="absolute top-4 right-4 z-20 bg-black/10 hover:bg-black/30 text-slate-800 hover:text-white p-2 rounded-full backdrop-blur-md transition-colors">
+              <button onClick={handleCloseModal} className="absolute top-4 right-4 z-20 bg-black/10 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/30 text-slate-800 dark:text-slate-200 hover:text-white p-2 rounded-full backdrop-blur-md transition-colors">
                  <X size={20} />
               </button>
 
-              <div className="w-full md:w-2/5 lg:w-1/3 bg-slate-50 border-r border-slate-100 flex flex-col items-center pt-10 md:pt-14 pb-8 px-6 relative shrink-0">
+              <div className="w-full md:w-2/5 lg:w-1/3 bg-slate-50 dark:bg-slate-800/50 border-r border-slate-100 dark:border-slate-700 flex flex-col items-center pt-10 md:pt-14 pb-8 px-6 relative shrink-0">
                  <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-blue-600 to-indigo-700 opacity-10 rounded-b-[50%]"></div>
                  
-                 <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-xl bg-slate-100 overflow-hidden flex items-center justify-center mb-6 relative z-10">
+                 <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-slate-800 shadow-xl bg-slate-100 dark:bg-slate-700 overflow-hidden flex items-center justify-center mb-6 relative z-10">
                     {selectedAlumni.foto ? (
-                      <img src={selectedAlumni.foto} alt={selectedAlumni.nama} className="w-full h-full object-cover" />
+                      <Image 
+                        src={selectedAlumni.foto} 
+                        alt={selectedAlumni.nama} 
+                        fill 
+                        className="object-cover" 
+                        sizes="160px"
+                      />
                     ) : (
-                      <User className="w-16 h-16 text-slate-300" />
+                      <User className="w-16 h-16 text-slate-300 dark:text-slate-500" />
                     )}
                  </div>
 
-                 <h2 className="text-xl md:text-2xl font-black text-slate-800 text-center leading-tight mb-6">
+                 <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 text-center leading-tight mb-6">
                    {selectedAlumni.nama}
                  </h2>
 
                  <div className="w-full space-y-3 mt-auto">
-                    <div className="flex items-center p-3.5 bg-white shadow-sm border border-slate-100 rounded-2xl gap-3">
-                       <div className="bg-blue-100 p-2 rounded-xl text-blue-600"><Calendar size={18}/></div>
+                    <div className="flex items-center p-3.5 bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 rounded-2xl gap-3">
+                       <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-xl text-blue-600 dark:text-blue-400"><Calendar size={18}/></div>
                        <div>
                          <p className="text-[10px] font-bold text-slate-400 uppercase">Tahun Mapaba</p>
-                         <p className="text-sm font-bold text-slate-700">{selectedAlumni.tahunMapaba || "Tidak diketahui"}</p>
+                         <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{selectedAlumni.tahunMapaba || "Tidak diketahui"}</p>
                        </div>
                     </div>
-                    <div className="flex items-center p-3.5 bg-white shadow-sm border border-slate-100 rounded-2xl gap-3">
-                       <div className="bg-amber-100 p-2 rounded-xl text-amber-600"><MapPin size={18}/></div>
+                    <div className="flex items-center p-3.5 bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 rounded-2xl gap-3">
+                       <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-xl text-amber-600 dark:text-amber-400"><MapPin size={18}/></div>
                        <div className="overflow-hidden">
                          <p className="text-[10px] font-bold text-slate-400 uppercase">Asal Rayon</p>
-                         <p className="text-sm font-bold text-slate-700 truncate" title={selectedAlumni.asalRayon}>{selectedAlumni.asalRayon || "Tidak diketahui"}</p>
+                         <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={selectedAlumni.asalRayon}>{selectedAlumni.asalRayon || "Tidak diketahui"}</p>
                        </div>
                     </div>
                  </div>
 
                  <button 
                    onClick={handleShare}
-                   className="w-full mt-6 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl transition flex justify-center items-center gap-2 shadow-lg shadow-slate-900/20"
+                   className="w-full mt-6 bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition flex justify-center items-center gap-2 shadow-lg shadow-slate-900/20"
                  >
                    <Share2 size={18} /> Bagikan Profil
                  </button>
               </div>
 
               <div className="w-full md:w-3/5 lg:w-2/3 p-6 md:p-8 lg:p-10 overflow-y-auto">
-                 <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <Briefcase className="text-blue-600"/> Informasi Profesional
+                 <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
+                    <Briefcase className="text-blue-600 dark:text-blue-400"/> Informasi Profesional
                  </h3>
 
                  <div className="mb-8">
@@ -329,16 +342,16 @@ export default function AlumniClient() {
                               : null;
                               
                             return (
-                              <div key={idx} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                              <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-bold">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm font-bold">
                                       <Briefcase size={14} /> {p}
                                     </span>
                                  </div>
                                  {descText && (
                                    <div className="flex gap-2.5 items-start mt-2">
                                       <FileText className="text-slate-400 shrink-0 mt-0.5" size={16}/>
-                                      <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                                      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
                                         {descText}
                                       </p>
                                    </div>
@@ -347,7 +360,7 @@ export default function AlumniClient() {
                             );
                           })
                         ) : (
-                          <span className="text-sm font-medium text-slate-500 italic bg-slate-50 px-4 py-3 rounded-xl block border border-slate-100 text-center">
+                          <span className="text-sm font-medium text-slate-500 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 px-4 py-3 rounded-xl block border border-slate-100 dark:border-slate-700 text-center">
                             Belum mengisi data profesi.
                           </span>
                         );
@@ -362,12 +375,12 @@ export default function AlumniClient() {
                         const bidangList = getSafeArray(selectedAlumni.bidang);
                         return bidangList.length > 0 ? (
                           bidangList.map((b, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 text-violet-700 border border-violet-100/50 rounded-lg text-sm font-bold">
-                              <Star size={14} className="text-violet-500" /> {b}
+                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border border-violet-100/50 dark:border-violet-800/50 rounded-lg text-sm font-bold">
+                              <Star size={14} className="text-violet-500 dark:text-violet-400" /> {b}
                             </span>
                           ))
                         ) : (
-                          <span className="text-sm font-medium text-slate-500 italic bg-slate-50 px-4 py-3 rounded-xl w-full text-center block border border-slate-100">
+                          <span className="text-sm font-medium text-slate-500 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 px-4 py-3 rounded-xl w-full text-center block border border-slate-100 dark:border-slate-700">
                             Data keahlian belum ditambahkan.
                           </span>
                         );
