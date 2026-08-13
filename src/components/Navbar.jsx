@@ -6,25 +6,24 @@ import { useTheme } from "next-themes";
 import { 
   Menu, X, ExternalLink, Sun, Moon, 
   Home, Newspaper, UserPlus, Users, 
-  Compass, GraduationCap, Award, Archive 
+  Compass, GraduationCap, Award, Archive, ShieldCheck
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 const LOGO_URL = "/logo.png";
 
-// Komponen Toggle Tema agar bisa dipakai di mode Desktop dan Mobile
+// Komponen Toggle Tema
 const ThemeToggle = ({ className }) => {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Mencegah error hidrasi (ketidaksesuaian render awal antara server & client)
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) {
-    return <div className={`w-8 h-8 rounded-full ${className}`}></div>; // Placeholder
+    return <div className={`w-8 h-8 rounded-full ${className}`}></div>; 
   }
 
   return (
@@ -71,11 +70,11 @@ export default function Navbar() {
       : "text-white hover:text-[#facc15] transition border-b-2 border-transparent pb-1 font-medium";
   };
 
-  // Styling Menu Interaktif ala Aplikasi (Mobile Sheet)
+  // Styling Menu Interaktif ala Aplikasi (Mobile Sheet - Diperkecil Paddingnya)
   const isActiveMobile = (path) => {
     return pathname === path 
-        ? "text-[#facc15] font-bold bg-white/10 p-3 rounded-xl flex items-center gap-3" 
-        : "text-slate-300 hover:text-[#facc15] transition p-3 hover:bg-white/5 rounded-xl flex items-center gap-3";
+        ? "text-[#facc15] font-bold bg-white/10 px-3 py-2.5 rounded-xl flex items-center gap-3" 
+        : "text-slate-300 hover:text-[#facc15] transition px-3 py-2.5 hover:bg-white/5 rounded-xl flex items-center gap-3";
   };
 
   // Mematikan scroll body ketika Bottom Sheet terbuka di HP
@@ -134,8 +133,15 @@ export default function Navbar() {
                 <ThemeToggle />
               </div>
 
-              {/* MOBILE TOP BUTTONS (Hanya ada Toggle Tema) */}
-              <div className="flex items-center gap-3 xl:hidden">
+              {/* MOBILE TOP BUTTONS (Tombol Login Admin & Toggle Tema) */}
+              <div className="flex items-center gap-2 xl:hidden">
+                <Link 
+                  href="/admin/login" 
+                  className="p-2 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+                  aria-label="Login Admin"
+                >
+                  <ShieldCheck size={18} />
+                </Link>
                 <ThemeToggle />
               </div>
             </div>
@@ -143,41 +149,44 @@ export default function Navbar() {
         </nav>
       </div>
 
-      {/* ==================== 2. MOBILE BOTTOM APP BAR ==================== */}
-      <div className="xl:hidden fixed bottom-0 left-0 w-full bg-[#111827] border-t border-slate-800 shadow-[0_-4px_10px_rgba(0,0,0,0.3)] z-50 flex justify-around items-center h-16 px-2 pb-[env(safe-area-inset-bottom)]">
-          <Link href="/" onClick={() => setIsOpen(false)} className={`flex flex-col items-center gap-1 w-1/4 ${pathname === '/' ? 'text-yellow-400' : 'text-slate-400 hover:text-yellow-400 transition-colors'}`}>
-              <Home size={22} />
-              <span className="text-[10px] font-medium">Beranda</span>
+      {/* ==================== 2. MOBILE BOTTOM APP BAR (5 IKON) ==================== */}
+      <div className="xl:hidden fixed bottom-0 left-0 w-full bg-[#111827] border-t border-slate-800 shadow-[0_-4px_10px_rgba(0,0,0,0.3)] z-50 flex justify-around items-center h-16 px-1 pb-[env(safe-area-inset-bottom)]">
+          <Link href="/" onClick={() => setIsOpen(false)} className={`flex flex-col items-center gap-1 w-1/5 ${pathname === '/' ? 'text-yellow-400' : 'text-slate-400 hover:text-yellow-400 transition-colors'}`}>
+              <Home size={20} />
+              <span className="text-[9px] font-medium truncate w-full text-center">Beranda</span>
           </Link>
-          <Link href="/berita" onClick={() => setIsOpen(false)} className={`flex flex-col items-center gap-1 w-1/4 ${pathname.startsWith('/berita') ? 'text-yellow-400' : 'text-slate-400 hover:text-yellow-400 transition-colors'}`}>
-              <Newspaper size={22} />
-              <span className="text-[10px] font-medium">Berita</span>
+          <Link href="/berita" onClick={() => setIsOpen(false)} className={`flex flex-col items-center gap-1 w-1/5 ${pathname.startsWith('/berita') ? 'text-yellow-400' : 'text-slate-400 hover:text-yellow-400 transition-colors'}`}>
+              <Newspaper size={20} />
+              <span className="text-[9px] font-medium truncate w-full text-center">Berita</span>
           </Link>
-          <Link href="/pendaftaran" onClick={() => setIsOpen(false)} className={`flex flex-col items-center gap-1 w-1/4 ${pathname.startsWith('/pendaftaran') ? 'text-yellow-400' : 'text-slate-400 hover:text-yellow-400 transition-colors'}`}>
-              <UserPlus size={22} />
-              <span className="text-[10px] font-medium">Daftar</span>
+          <Link href="/administrasi" onClick={() => setIsOpen(false)} className={`flex flex-col items-center gap-1 w-1/5 ${pathname.startsWith('/administrasi') ? 'text-yellow-400' : 'text-slate-400 hover:text-yellow-400 transition-colors'}`}>
+              <Archive size={20} />
+              <span className="text-[9px] font-medium truncate w-full text-center">Data Adm</span>
+          </Link>
+          <Link href="/pendaftaran" onClick={() => setIsOpen(false)} className={`flex flex-col items-center gap-1 w-1/5 ${pathname.startsWith('/pendaftaran') ? 'text-yellow-400' : 'text-slate-400 hover:text-yellow-400 transition-colors'}`}>
+              <UserPlus size={20} />
+              <span className="text-[9px] font-medium truncate w-full text-center">Daftar</span>
           </Link>
           
-          {/* Tombol Pemanggil Bottom Sheet */}
-          <button onClick={() => setIsOpen(!isOpen)} className={`flex flex-col items-center gap-1 w-1/4 ${isOpen ? 'text-yellow-400' : 'text-slate-400 hover:text-yellow-400 transition-colors'}`}>
-              {isOpen ? <X size={22} /> : <Menu size={22} />}
-              <span className="text-[10px] font-medium">Menu</span>
+          <button onClick={() => setIsOpen(!isOpen)} className={`flex flex-col items-center gap-1 w-1/5 ${isOpen ? 'text-yellow-400' : 'text-slate-400 hover:text-yellow-400 transition-colors'}`}>
+              {isOpen ? <X size={20} /> : <Menu size={20} />}
+              <span className="text-[9px] font-medium truncate w-full text-center">Menu</span>
           </button>
       </div>
 
-      {/* ==================== 3. MOBILE BOTTOM MENU SHEET ==================== */}
+      {/* ==================== 3. MOBILE BOTTOM MENU SHEET (DIPERKECIL) ==================== */}
       {isOpen && (
         <>
           {/* Backdrop (Latar Belakang Gelap) */}
           <div className="fixed inset-0 bg-black/60 z-40 xl:hidden backdrop-blur-sm transition-opacity" onClick={() => setIsOpen(false)}></div>
           
-          {/* Laci Konten Menu */}
-          <div className="xl:hidden fixed bottom-16 left-0 w-full bg-[#1f2937] p-5 flex flex-col space-y-2 text-sm rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] max-h-[75vh] overflow-y-auto z-40 border-t border-slate-700 animate-in slide-in-from-bottom-full duration-300">
+          {/* Laci Konten Menu - Lebih Kecil dan Padat */}
+          <div className="xl:hidden fixed bottom-16 left-0 w-full bg-[#1f2937] p-4 flex flex-col space-y-1 text-sm rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] max-h-[60vh] overflow-y-auto z-40 border-t border-slate-700 animate-in slide-in-from-bottom-full duration-300">
             
             {/* Pull Indicator (Garis abu-abu di atas modal) */}
-            <div className="w-12 h-1.5 bg-slate-600 rounded-full mx-auto mb-4 shrink-0"></div> 
+            <div className="w-10 h-1.5 bg-slate-600 rounded-full mx-auto mb-3 shrink-0"></div> 
             
-            {/* Daftar Tautan Menu */}
+            {/* Daftar Tautan Menu Pendukung */}
             <Link href="/struktur" onClick={() => setIsOpen(false)} className={isActiveMobile("/struktur")}>
               <Users size={18} /> Struktur Kepengurusan
             </Link>
@@ -193,13 +202,10 @@ export default function Navbar() {
             <Link href="/apresiasi" onClick={() => setIsOpen(false)} className={isActiveMobile("/apresiasi")}>
               <Award size={18} /> Apresiasi Kader
             </Link>
-            <Link href="/administrasi" onClick={() => setIsOpen(false)} className={isActiveMobile("/administrasi")}>
-              <Archive size={18} /> Data Administrasi
-            </Link>
             
             {/* Tautan Eksternal */}
-            <div className="pt-3 mt-2 border-t border-slate-700">
-              <a href="https://siakad.pmii-uinmalang.or.id/" target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)} className="text-emerald-400 hover:text-emerald-300 bg-emerald-400/10 hover:bg-emerald-400/20 p-3 rounded-xl transition font-bold flex items-center justify-between">
+            <div className="pt-2 mt-1 border-t border-slate-700">
+              <a href="https://siakad.pmii-uinmalang.or.id/" target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)} className="text-emerald-400 hover:text-emerald-300 bg-emerald-400/10 hover:bg-emerald-400/20 p-2.5 rounded-xl transition font-bold flex items-center justify-between">
                 <span className="flex items-center gap-3"><ExternalLink size={18} /> Portal Siakad PMII</span>
               </a>
             </div>
