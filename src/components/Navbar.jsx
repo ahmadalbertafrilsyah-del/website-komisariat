@@ -6,7 +6,7 @@ import { Menu, X, ExternalLink } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-const LOGO_URL = "https://i.ibb.co.com/nNhTXzYD/Asset-6-4x.png";
+const LOGO_URL = "/logo.png";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);

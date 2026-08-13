@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
-const LOGO_URL = "https://i.ibb.co.com/nNhTXzYD/Asset-6-4x.png";
+const LOGO_URL = "/logo.png";
 
 export default function LoadingScreen({ text = "Memuat Sistem" }) {
   const [globalConfig, setGlobalConfig] = useState(null);
