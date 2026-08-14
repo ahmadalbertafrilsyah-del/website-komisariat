@@ -9,7 +9,6 @@ import { Loader2, ArrowLeft, Share2, Download, MonitorPlay } from "lucide-react"
 import Link from "next/link";
 
 export default function DetailDokumenPage({ params }) {
-  // Unwrap params menggunakan React.use() sesuai standar Next.js terbaru
   const unwrappedParams = use(params);
   const documentId = unwrappedParams.id;
   
@@ -25,7 +24,6 @@ export default function DetailDokumenPage({ params }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           const listPresentasi = data.listPresentasi || [];
-          // Cari dokumen yang ID-nya cocok dengan URL
           const foundDoc = listPresentasi.find(item => item.id === documentId);
           setDokumen(foundDoc);
         }
@@ -41,17 +39,13 @@ export default function DetailDokumenPage({ params }) {
     }
   }, [documentId]);
 
-  // 🔥 PENYEMBUH LINK OTOMATIS 🔥
-  // Mencegah error "Sad Face" jika Admin salah memasukkan link biasa (bukan link embed)
   const getSafeEmbedUrl = (url) => {
     if (!url) return "";
     let safeUrl = url;
     
-    // Jika link Canva tapi tidak ada '?embed'
     if (safeUrl.includes("canva.com") && !safeUrl.includes("embed")) {
       safeUrl = safeUrl.split("?")[0] + "?embed";
     }
-    // Jika link Google Docs/Sheets/Slides tapi pakai '/edit'
     if (safeUrl.includes("docs.google.com") && safeUrl.includes("/edit")) {
       safeUrl = safeUrl.replace("/edit", "/preview");
     }
@@ -67,10 +61,10 @@ export default function DetailDokumenPage({ params }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+      <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 flex flex-col">
         <Navbar />
         <div className="flex-grow flex items-center justify-center pt-24">
-          <Loader2 size={40} className="text-blue-600 animate-spin" />
+          <Loader2 size={40} className="text-blue-600 dark:text-blue-400 animate-spin" />
         </div>
         <Footer />
       </div>
@@ -79,13 +73,13 @@ export default function DetailDokumenPage({ params }) {
 
   if (!dokumen) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+      <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 flex flex-col">
         <Navbar />
         <div className="flex-grow flex flex-col items-center justify-center pt-24 text-center px-4">
-          <MonitorPlay size={60} className="text-slate-300 mb-4" />
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Dokumen Tidak Ditemukan</h1>
-          <p className="text-slate-500 mb-6">Materi atau presentasi yang Anda cari mungkin sudah dihapus oleh Admin.</p>
-          <Link href="/administrasi" className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition">
+          <MonitorPlay size={60} className="text-slate-300 dark:text-slate-600 mb-4" />
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Dokumen Tidak Ditemukan</h1>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">Materi atau presentasi yang Anda cari mungkin sudah dihapus oleh Admin.</p>
+          <Link href="/administrasi" className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-semibold transition">
             Kembali ke Pusat Administrasi
           </Link>
         </div>
@@ -95,36 +89,36 @@ export default function DetailDokumenPage({ params }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 flex flex-col font-sans text-slate-800 dark:text-slate-200">
       <Navbar />
 
       <main className="flex-grow pt-28 md:pt-36 pb-16 px-4 md:px-8 max-w-6xl mx-auto w-full">
         
-        <Link href="/administrasi" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600 transition mb-6">
+        <Link href="/administrasi" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition mb-6">
           <ArrowLeft size={16} /> Kembali
         </Link>
 
         {/* HEADER DOKUMEN */}
-        <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 mb-8">
+        <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 mb-8">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
             <div>
-              <span className="inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest mb-3">
+              <span className="inline-block bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest mb-3">
                 {dokumen.tipeDokumen || "Presentasi"}
               </span>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-3 leading-snug">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-3 leading-snug">
                 {dokumen.judul}
               </h1>
-              <p className="text-slate-600 text-sm md:text-base leading-relaxed max-w-3xl">
+              <p className="text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed max-w-3xl">
                 {dokumen.deskripsi}
               </p>
             </div>
             
             <div className="flex flex-row md:flex-col gap-3 shrink-0">
-              <button onClick={handleShare} className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-5 py-2.5 rounded-lg font-bold text-sm transition shadow-sm border border-emerald-100 hover:border-emerald-600 w-full md:w-auto">
+              <button onClick={handleShare} className="flex items-center justify-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 dark:hover:bg-emerald-600 hover:text-white px-5 py-2.5 rounded-lg font-bold text-sm transition shadow-sm border border-emerald-100 dark:border-emerald-800/50 hover:border-emerald-600 w-full md:w-auto">
                 <Share2 size={16} /> Bagikan
               </button>
               {dokumen.downloadUrl && (
-                <a href={dokumen.downloadUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-5 py-2.5 rounded-lg font-bold text-sm transition shadow-sm w-full md:w-auto">
+                <a href={dokumen.downloadUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 px-5 py-2.5 rounded-lg font-bold text-sm transition shadow-sm w-full md:w-auto">
                   <Download size={16} /> Unduh Berkas
                 </a>
               )}
@@ -133,8 +127,7 @@ export default function DetailDokumenPage({ params }) {
         </div>
 
         {/* PEMUTAR DOKUMEN (IFRAME) */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden w-full relative pt-[56.25%] (16:9 Aspect Ratio)">
-           {/* Aspect Ratio Container */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden w-full relative pt-[56.25%]">
            <iframe
              loading="lazy"
              className="absolute top-0 left-0 w-full h-full border-0"

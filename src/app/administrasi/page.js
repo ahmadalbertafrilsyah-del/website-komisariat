@@ -1,6 +1,7 @@
 // app/administrasi/page.js
 "use client";
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -120,9 +121,7 @@ export default function AdministrasiPage() {
     return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   };
 
-  // 🔥 3. PEMISAHAN DATA: PERSURATAN & PROKER DIPISAH, SISANYA GLOBAL 🔥
   const currentSuratMasuk = filterByLembaga(masterSuratMasuk).sort((a, b) => {
-    // Ascending: Tanggal terlama/awal di atas, persis seperti format Admin
     return getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang); 
   });
   
@@ -140,7 +139,6 @@ export default function AdministrasiPage() {
 
   const currentProker = filterByLembaga(masterProker);
   
-  // Data ini sekarang bersifat GLOBAL, tidak terpengaruh dropdown Lembaga
   const currentProdukHukum = masterProdukHukum;
   const currentLpj = masterLpj;
   const currentPresentasi = masterPresentasi;
@@ -271,29 +269,34 @@ export default function AdministrasiPage() {
   if (loading) return <LoadingScreen text={`Memuat Bank Data Arsip`} />;
 
   const DocumentCard = ({ item, isHukum }) => (
-    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col h-full">
-      <div className="relative w-full pt-[141.4%] bg-slate-100 border-b border-slate-200 overflow-hidden">
+    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col h-full">
+      <div className="relative w-full pt-[141.4%] bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 overflow-hidden">
         {item.thumbnailUrl ? (
-          <img src={item.thumbnailUrl} alt="Cover" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <Image 
+            src={item.thumbnailUrl} 
+            alt="Cover" 
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500" 
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+          />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 bg-gradient-to-br from-slate-50 to-slate-200"><FileText size={48} className="mb-2 drop-shadow-sm" /><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pratinjau PDF</span></div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 dark:text-slate-500 bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-800 dark:to-slate-700"><FileText size={48} className="mb-2 drop-shadow-sm" /><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Pratinjau PDF</span></div>
         )}
-        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-md shadow-sm border border-slate-100/50"><span className={`text-[9px] font-black uppercase tracking-widest ${isHukum ? 'text-purple-600' : 'text-amber-600'}`}>{isHukum ? 'Produk Hukum' : 'Laporan'}</span></div>
+        <div className="absolute top-3 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-md shadow-sm border border-slate-100/50 dark:border-slate-700"><span className={`text-[9px] font-black uppercase tracking-widest ${isHukum ? 'text-purple-600 dark:text-purple-400' : 'text-amber-600 dark:text-amber-400'}`}>{isHukum ? 'Produk Hukum' : 'Laporan'}</span></div>
         <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
            {item.linkFile ? (<a href={item.linkFile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-blue-600 text-white p-4 rounded-full hover:scale-110 hover:bg-blue-500 transition-all shadow-xl shadow-blue-500/30"><Download size={24} /></a>) : (<span className="bg-slate-800 text-slate-300 px-4 py-2 rounded-full text-xs font-bold">File Kosong</span>)}
         </div>
       </div>
-      <div className="p-4 flex flex-col flex-grow bg-white">
-         <span className="text-[10px] font-mono font-bold text-slate-400 mb-1.5 line-clamp-1">{isHukum ? (item.nomorSK || "Tanpa Nomor") : (item.periode || "Tanpa Periode")}</span>
-         <h3 className="font-bold text-slate-800 text-sm leading-snug line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">{isHukum ? (item.tentangHukum || "Dokumen Hukum") : (item.namaLaporan || "Laporan Kepengurusan")}</h3>
-         {/* Format Deskripsi Support Enter */}
-         <p className="text-xs text-slate-500 line-clamp-2 mt-auto whitespace-pre-wrap">{isHukum ? (item.deskripsiHukum || "-") : (item.deskripsiLaporan || "-")}</p>
+      <div className="p-4 flex flex-col flex-grow bg-white dark:bg-slate-800">
+         <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 mb-1.5 line-clamp-1">{isHukum ? (item.nomorSK || "Tanpa Nomor") : (item.periode || "Tanpa Periode")}</span>
+         <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-snug line-clamp-2 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{isHukum ? (item.tentangHukum || "Dokumen Hukum") : (item.namaLaporan || "Laporan Kepengurusan")}</h3>
+         <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-auto whitespace-pre-wrap">{isHukum ? (item.deskripsiHukum || "-") : (item.deskripsiLaporan || "-")}</p>
       </div>
     </motion.div>
   );
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 w-full overflow-x-hidden flex flex-col">
+    <main className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-200 w-full overflow-x-hidden flex flex-col transition-colors duration-300">
       <Navbar />
 
       <section className="pt-28 md:pt-36 pb-16 md:pb-24 px-5 bg-[#0f172a] text-center relative overflow-hidden">
@@ -309,11 +312,10 @@ export default function AdministrasiPage() {
 
       <section className="px-5 max-w-7xl mx-auto w-full -mt-10 md:-mt-12 relative z-20 space-y-4">
         
-        {/* Hanya tampilkan dropdown pada Tab Persuratan & Proker */}
         {(activeTab === "persuratan" || activeTab === "proker") && (
-          <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100 flex items-center justify-between relative z-30">
+          <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700 flex items-center justify-between relative z-30 transition-colors duration-300">
              <div className="flex items-center gap-3 w-full">
-                 <div className="bg-blue-100 p-2 rounded-lg text-blue-600 hidden sm:flex">
+                 <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400 hidden sm:flex">
                      <Building2 size={20} />
                  </div>
                  <div className="flex-grow">
@@ -321,7 +323,7 @@ export default function AdministrasiPage() {
                      <select
                        value={activeLembaga}
                        onChange={handleLembagaChange}
-                       className="w-full text-sm sm:text-base font-black text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
+                       className="w-full text-sm sm:text-base font-black text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
                      >
                         <option value="Komisariat">Administrasi Komisariat</option>
                         <option value="KOPRI">Administrasi KOPRI</option>
@@ -334,7 +336,7 @@ export default function AdministrasiPage() {
           </div>
         )}
 
-        <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-2xl flex flex-row gap-1 shadow-xl backdrop-blur-md overflow-x-auto whitespace-nowrap scrollbar-none w-full">
+        <div className="bg-slate-900/90 dark:bg-slate-950/90 border border-slate-800 p-2 rounded-2xl flex flex-row gap-1 shadow-xl backdrop-blur-md overflow-x-auto whitespace-nowrap scrollbar-none w-full">
           <button onClick={() => handleTabChange("persuratan")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "persuratan" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Mail size={16} /> Arsip Persuratan</button>
           <button onClick={() => handleTabChange("proker")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "proker" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Briefcase size={16} /> Program Kerja</button>
           <button onClick={() => handleTabChange("produkhukum")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "produkhukum" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Scale size={16} /> Produk Hukum</button>
@@ -343,25 +345,25 @@ export default function AdministrasiPage() {
           <button onClick={() => handleTabChange("inventaris")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "inventaris" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Package size={16} /> Inventaris Barang</button>
         </div>
 
-        <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100 flex items-center relative">
-          <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={activeTab === "persuratan" ? "Cari nomor surat, perihal, atau tujuan/asal..." : activeTab === "proker" ? "Cari nama program kerja atau divisi pelaksana..." : activeTab === "presentasi" ? "Cari judul presentasi atau tipe dokumen..." : activeTab === "inventaris" ? "Cari nama barang atau kondisinya..." : activeTab === "produkhukum" ? "Cari nomor SK atau tentang ketetapan..." : "Cari judul laporan atau periode..."} className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium" />
+        <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700 flex items-center relative transition-colors duration-300">
+          <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={activeTab === "persuratan" ? "Cari nomor surat, perihal, atau tujuan/asal..." : activeTab === "proker" ? "Cari nama program kerja atau divisi pelaksana..." : activeTab === "presentasi" ? "Cari judul presentasi atau tipe dokumen..." : activeTab === "inventaris" ? "Cari nama barang atau kondisinya..." : activeTab === "produkhukum" ? "Cari nomor SK atau tentang ketetapan..." : "Cari judul laporan atau periode..."} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400" />
           <Search className="absolute left-7 h-5 w-5 text-slate-400" />
         </div>
       </section>
 
       <section className="pb-24 px-5 max-w-7xl mx-auto w-full flex-grow mt-6">
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-700 pb-4">
           <p className="text-xs font-bold text-slate-400 px-1 flex-1">
-            Kategori: <span className="text-blue-600 uppercase tracking-wider">{activeTab}</span> 
+            Kategori: <span className="text-blue-600 dark:text-blue-400 uppercase tracking-wider">{activeTab}</span> 
             {activeTab !== "persuratan" && ` (${currentListData.length} Data)`}
             {activeTab === "persuratan" && ` (Total ${currentListData.length} Surat)`}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3">
             {activeTab === "persuratan" && (
-              <div className="flex bg-slate-100 p-1 rounded-lg self-start sm:self-auto shadow-inner">
-                <button onClick={() => handleSuratTabChange("masuk")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeSuratTab === "masuk" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}><Inbox size={14} /> Surat Masuk ({currentSuratMasuk.length})</button>
-                <button onClick={() => handleSuratTabChange("keluar")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeSuratTab === "keluar" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}><Send size={14} /> Surat Keluar ({currentSuratKeluar.length})</button>
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg self-start sm:self-auto shadow-inner border border-slate-200 dark:border-slate-700">
+                <button onClick={() => handleSuratTabChange("masuk")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeSuratTab === "masuk" ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}><Inbox size={14} /> Surat Masuk ({currentSuratMasuk.length})</button>
+                <button onClick={() => handleSuratTabChange("keluar")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeSuratTab === "keluar" ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}><Send size={14} /> Surat Keluar ({currentSuratKeluar.length})</button>
               </div>
             )}
             
@@ -372,9 +374,9 @@ export default function AdministrasiPage() {
         </div>
 
         {currentListData.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center shadow-sm mt-4">
-             <FileText className="w-14 h-14 text-slate-300 mx-auto mb-3" />
-             <h3 className="font-bold text-slate-700 text-lg">Data Belum Tersedia</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-16 text-center shadow-sm mt-4">
+             <FileText className="w-14 h-14 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+             <h3 className="font-bold text-slate-700 dark:text-slate-300 text-lg">Data Belum Tersedia</h3>
              <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">Admin belum menginput data untuk kategori ini di ruang kerja <b>{activeLembaga}</b>, atau kata kunci pencarian Anda tidak ditemukan.</p>
           </div>
         ) : (
@@ -383,64 +385,64 @@ export default function AdministrasiPage() {
               
               {/* ================= SUB 1: PERSURATAN ================= */}
               {activeTab === "persuratan" && (
-                <div className="bg-white border border-amber-300 rounded-xl shadow-md overflow-hidden flex flex-col">
+                <div className="bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-xl shadow-md overflow-hidden flex flex-col">
                   
-                  <div className="bg-amber-50 px-4 py-3 border-b border-amber-300 flex items-center justify-between">
-                    <h3 className="font-black text-amber-800 uppercase tracking-wide text-sm underline underline-offset-4">
+                  <div className="bg-amber-50 dark:bg-amber-900/20 px-4 py-3 border-b border-amber-300 dark:border-amber-700 flex items-center justify-between">
+                    <h3 className="font-black text-amber-800 dark:text-amber-500 uppercase tracking-wide text-sm underline underline-offset-4">
                       {activeSuratTab === "masuk" ? "ARSIP SURAT MASUK" : "ARSIP SURAT KELUAR"}
                     </h3>
-                    <span className="text-[10px] font-bold text-amber-600 bg-amber-200/50 px-2 py-1 rounded">Hal. {currentPage} / {totalPages || 1}</span>
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-200/50 dark:bg-amber-900/50 px-2 py-1 rounded">Hal. {currentPage} / {totalPages || 1}</span>
                   </div>
 
                   <div className="overflow-x-auto flex-grow">
                     <table className="w-full text-left border-collapse min-w-[1200px]">
-                      <thead className="bg-amber-500 text-white text-[11px] uppercase tracking-wider text-center">
+                      <thead className="bg-amber-500 dark:bg-amber-700 text-white text-[11px] uppercase tracking-wider text-center">
                         <tr>
-                          <th rowSpan={2} className="py-2 px-3 w-10 font-bold border border-amber-600">No</th>
-                          <th rowSpan={2} className="py-2 px-4 w-64 lg:w-56 font-bold border border-amber-600">No. Surat</th>
-                          <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</th>
-                          <th colSpan={2} className="py-1.5 border border-amber-600 font-bold">Tgl Surat</th>
-                          <th rowSpan={2} className="py-2 px-4 w-20 font-bold border border-amber-600">Hal</th>
-                          <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600">Ket</th>
-                          <th rowSpan={2} className="py-2 px-3 w-20 font-bold border border-amber-600 bg-amber-600">Berkas</th>
+                          <th rowSpan={2} className="py-2 px-3 w-10 font-bold border border-amber-600 dark:border-amber-800">No</th>
+                          <th rowSpan={2} className="py-2 px-4 w-64 lg:w-56 font-bold border border-amber-600 dark:border-amber-800">No. Surat</th>
+                          <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600 dark:border-amber-800">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</th>
+                          <th colSpan={2} className="py-1.5 border border-amber-600 dark:border-amber-800 font-bold">Tgl Surat</th>
+                          <th rowSpan={2} className="py-2 px-4 w-20 font-bold border border-amber-600 dark:border-amber-800">Hal</th>
+                          <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600 dark:border-amber-800">Ket</th>
+                          <th rowSpan={2} className="py-2 px-3 w-20 font-bold border border-amber-600 dark:border-amber-800 bg-amber-600 dark:bg-amber-800">Berkas</th>
                         </tr>
                         <tr>
-                          <th className="py-1.5 px-3 w-24 font-bold border border-amber-600 bg-amber-500/90">Buat</th>
-                          <th className="py-1.5 px-3 w-24 font-bold border border-amber-600 bg-amber-500/90">{activeSuratTab === "masuk" ? "Datang" : "Kirim"}</th>
+                          <th className="py-1.5 px-3 w-24 font-bold border border-amber-600 dark:border-amber-800 bg-amber-500/90 dark:bg-amber-700/90">Buat</th>
+                          <th className="py-1.5 px-3 w-24 font-bold border border-amber-600 dark:border-amber-800 bg-amber-500/90 dark:bg-amber-700/90">{activeSuratTab === "masuk" ? "Datang" : "Kirim"}</th>
                         </tr>
                     </thead>
                       
-                      <tbody className="divide-y divide-amber-200 text-sm bg-white">
+                      <tbody className="divide-y divide-amber-200 dark:divide-amber-800/50 text-sm bg-white dark:bg-slate-800">
                         {paginatedSuratData.map((doc, index) => {
                           const realNumber = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
                           return (
-                            <tr key={index} className="hover:bg-amber-50 transition-colors">
-                              <td className="py-1.5 px-3 text-center border-r border-amber-200 font-bold text-slate-500">{realNumber}</td>
+                            <tr key={index} className="hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+                              <td className="py-1.5 px-3 text-center border-r border-amber-200 dark:border-amber-800/50 font-bold text-slate-500 dark:text-slate-400">{realNumber}</td>
                               
-                              <td className="py-1.5 px-4 border-r border-amber-200 max-w-[160px] md:max-w-[220px]">
-                                <div className="w-full overflow-x-auto whitespace-nowrap pb-1.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-amber-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-amber-400">
-                                  <span className="font-mono text-[11px] md:text-xs font-bold text-slate-800 px-1">
+                              <td className="py-1.5 px-4 border-r border-amber-200 dark:border-amber-800/50 max-w-[160px] md:max-w-[220px]">
+                                <div className="w-full overflow-x-auto whitespace-nowrap pb-1.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-amber-300 dark:[&::-webkit-scrollbar-thumb]:bg-amber-700 [&::-webkit-scrollbar-thumb]:rounded-full">
+                                  <span className="font-mono text-[11px] md:text-xs font-bold text-slate-800 dark:text-slate-300 px-1">
                                     {doc.nomorSurat || "-"}
                                   </span>
                                 </div>
                               </td>
                               
-                              <td className="py-1.5 px-4 border-r border-amber-200 text-xs font-semibold text-slate-700 leading-snug">{activeSuratTab === "masuk" ? (doc.asalSurat || "-") : (doc.tujuanSurat || "-")}</td>
+                              <td className="py-1.5 px-4 border-r border-amber-200 dark:border-amber-800/50 text-xs font-semibold text-slate-700 dark:text-slate-300 leading-snug">{activeSuratTab === "masuk" ? (doc.asalSurat || "-") : (doc.tujuanSurat || "-")}</td>
                               
-                              <td className="py-1.5 px-3 border-r border-amber-200 text-[11px] text-center text-slate-600 font-mono whitespace-nowrap">{formatDisplayDate(doc.tglBuat)}</td>
-                              <td className="py-1.5 px-3 border-r border-amber-200 text-[11px] text-center text-slate-600 font-mono whitespace-nowrap">{activeSuratTab === "masuk" ? formatDisplayDate(doc.tglDatang) : formatDisplayDate(doc.tglKirim)}</td>
+                              <td className="py-1.5 px-3 border-r border-amber-200 dark:border-amber-800/50 text-[11px] text-center text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap">{formatDisplayDate(doc.tglBuat)}</td>
+                              <td className="py-1.5 px-3 border-r border-amber-200 dark:border-amber-800/50 text-[11px] text-center text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap">{activeSuratTab === "masuk" ? formatDisplayDate(doc.tglDatang) : formatDisplayDate(doc.tglKirim)}</td>
                               
-                              <td className="py-1.5 px-4 border-r border-amber-200">
-                                <div className="font-bold text-slate-800 text-xs leading-snug w-48">{doc.hal || doc.perihalSurat || "-"}</div>
+                              <td className="py-1.5 px-4 border-r border-amber-200 dark:border-amber-800/50">
+                                <div className="font-bold text-slate-800 dark:text-slate-200 text-xs leading-snug w-48">{doc.hal || doc.perihalSurat || "-"}</div>
                               </td>
-                              <td className="py-1.5 px-4 border-r border-amber-200">
-                                <div className="text-slate-500 text-[11px] leading-snug">{doc.ket || doc.deskripsiSurat || "-"}</div>
+                              <td className="py-1.5 px-4 border-r border-amber-200 dark:border-amber-800/50">
+                                <div className="text-slate-500 dark:text-slate-400 text-[11px] leading-snug">{doc.ket || doc.deskripsiSurat || "-"}</div>
                               </td>
                               <td className="py-1.5 px-3 text-center">
                                 {doc.linkFile ? (
-                                  <a href={doc.linkFile} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1 w-full bg-slate-900 hover:bg-amber-600 text-white font-bold px-2 py-1.5 rounded text-[10px] uppercase tracking-wider transition-colors"><Download size={12} /> Buka</a>
+                                  <a href={doc.linkFile} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1 w-full bg-slate-900 dark:bg-slate-700 hover:bg-amber-600 dark:hover:bg-amber-600 text-white font-bold px-2 py-1.5 rounded text-[10px] uppercase tracking-wider transition-colors"><Download size={12} /> Buka</a>
                                 ) : (
-                                  <span className="text-slate-400 bg-slate-100 px-2 py-1.5 rounded text-[10px] uppercase tracking-wider block text-center font-bold">Kosong</span>
+                                  <span className="text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-2 py-1.5 rounded text-[10px] uppercase tracking-wider block text-center font-bold">Kosong</span>
                                 )}
                               </td>
                             </tr>
@@ -451,19 +453,19 @@ export default function AdministrasiPage() {
                   </div>
 
                   {totalPages > 1 && (
-                    <div className="bg-amber-50 border-t border-amber-200 p-3 flex justify-center items-center gap-2">
-                      <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-1.5 rounded-md bg-white border border-amber-300 text-amber-700 hover:bg-amber-200 disabled:opacity-50 transition"><ChevronLeft size={16}/></button>
+                    <div className="bg-amber-50 dark:bg-slate-800 border-t border-amber-200 dark:border-amber-800/50 p-3 flex justify-center items-center gap-2">
+                      <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-1.5 rounded-md bg-white dark:bg-slate-700 border border-amber-300 dark:border-slate-600 text-amber-700 dark:text-amber-500 hover:bg-amber-200 dark:hover:bg-slate-600 disabled:opacity-50 transition"><ChevronLeft size={16}/></button>
                       
                       {Array.from({ length: totalPages }, (_, i) => i + 1).map(num => (
                         <button 
                           key={num} onClick={() => setCurrentPage(num)} 
-                          className={`w-8 h-8 rounded-md text-xs font-bold transition-colors ${currentPage === num ? 'bg-amber-500 text-white shadow-sm border border-amber-600' : 'bg-white border border-amber-300 text-amber-700 hover:bg-amber-200'}`}
+                          className={`w-8 h-8 rounded-md text-xs font-bold transition-colors ${currentPage === num ? 'bg-amber-500 text-white shadow-sm border border-amber-600 dark:border-amber-500' : 'bg-white dark:bg-slate-700 border border-amber-300 dark:border-slate-600 text-amber-700 dark:text-amber-500 hover:bg-amber-200 dark:hover:bg-slate-600'}`}
                         >
                           {num}
                         </button>
                       ))}
 
-                      <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="p-1.5 rounded-md bg-white border border-amber-300 text-amber-700 hover:bg-amber-200 disabled:opacity-50 transition"><ChevronRight size={16}/></button>
+                      <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="p-1.5 rounded-md bg-white dark:bg-slate-700 border border-amber-300 dark:border-slate-600 text-amber-700 dark:text-amber-500 hover:bg-amber-200 dark:hover:bg-slate-600 disabled:opacity-50 transition"><ChevronRight size={16}/></button>
                     </div>
                   )}
                 </div>
@@ -481,44 +483,44 @@ export default function AdministrasiPage() {
                     }, {});
 
                     return Object.keys(groupedProker).map((biroName, idx) => (
-                      <div key={idx} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div className="bg-emerald-600 px-5 py-3.5 text-white flex items-center gap-2">
+                      <div key={idx} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
+                        <div className="bg-emerald-600 dark:bg-emerald-700 px-5 py-3.5 text-white flex items-center gap-2">
                           <Briefcase size={18} />
                           <h3 className="font-bold text-sm uppercase tracking-wider">{biroName}</h3>
                         </div>
                         <div className="overflow-x-auto">
                           <table className="w-full text-left border-collapse min-w-[1250px]">
-                            <thead className="bg-emerald-50 border-b border-slate-200 text-slate-700 text-[11px] uppercase tracking-wider">
+                            <thead className="bg-emerald-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] uppercase tracking-wider">
                               <tr>
-                                <th className="py-3 px-3 border-r border-slate-200 w-12 text-center font-bold">No</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-48 text-center font-bold">Nama Kegiatan</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-48 text-center font-bold">Tujuan</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-40 text-center font-bold">Indikator</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-32 text-center font-bold">Sasaran</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-36 text-center font-bold">Waktu Pelaksanaan</th>
-                                <th className="py-3 px-4 border-r border-slate-200 w-36 text-center font-bold">Penanggung Jawab</th>
-                                <th className="py-3 px-4 border-r border-slate-200 text-center font-bold">Estimasi Dana</th>
+                                <th className="py-3 px-3 border-r border-slate-200 dark:border-slate-700 w-12 text-center font-bold">No</th>
+                                <th className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 w-48 text-center font-bold">Nama Kegiatan</th>
+                                <th className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 w-48 text-center font-bold">Tujuan</th>
+                                <th className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 w-40 text-center font-bold">Indikator</th>
+                                <th className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 w-32 text-center font-bold">Sasaran</th>
+                                <th className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 w-36 text-center font-bold">Waktu Pelaksanaan</th>
+                                <th className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 w-36 text-center font-bold">Penanggung Jawab</th>
+                                <th className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 text-center font-bold">Estimasi Dana</th>
                                 <th className="py-3 px-4 font-bold text-center w-24">Berkas</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 text-sm">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-sm">
                               {groupedProker[biroName].map((doc, docIdx) => (
-                                <tr key={docIdx} className="hover:bg-emerald-50/30 transition-colors">
-                                  <td className="py-3 px-3 border-r border-slate-100 text-center font-bold text-slate-400">{docIdx + 1}</td>
-                                  <td className="py-3 px-4 border-r border-slate-100 font-bold text-slate-800 text-xs leading-relaxed">{doc.namaProker || "-"}</td>
-                                  <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{doc.tujuan || "-"}</td>
-                                  <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{doc.indikator || "-"}</td>
-                                  <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{doc.sasaran || "-"}</td>
-                                  <td className="py-3 px-4 border-r border-slate-100 text-slate-600 text-xs leading-relaxed">{formatDisplayDate(doc.waktuPelaksanaan)}</td>
-                                  <td className="py-3 px-4 border-r border-slate-100 font-semibold text-emerald-700 text-xs leading-relaxed">{doc.penanggungJawab || "-"}</td>
-                                  <td className="py-3 px-4 border-r border-slate-100 text-center font-mono text-xs font-bold text-slate-700 bg-slate-50/50">{doc.estimasiDana || "-"}</td>
+                                <tr key={docIdx} className="hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 transition-colors">
+                                  <td className="py-3 px-3 border-r border-slate-100 dark:border-slate-700 text-center font-bold text-slate-400 dark:text-slate-500">{docIdx + 1}</td>
+                                  <td className="py-3 px-4 border-r border-slate-100 dark:border-slate-700 font-bold text-slate-800 dark:text-slate-200 text-xs leading-relaxed">{doc.namaProker || "-"}</td>
+                                  <td className="py-3 px-4 border-r border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs leading-relaxed">{doc.tujuan || "-"}</td>
+                                  <td className="py-3 px-4 border-r border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs leading-relaxed">{doc.indikator || "-"}</td>
+                                  <td className="py-3 px-4 border-r border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs leading-relaxed">{doc.sasaran || "-"}</td>
+                                  <td className="py-3 px-4 border-r border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs leading-relaxed">{formatDisplayDate(doc.waktuPelaksanaan)}</td>
+                                  <td className="py-3 px-4 border-r border-slate-100 dark:border-slate-700 font-semibold text-emerald-700 dark:text-emerald-500 text-xs leading-relaxed">{doc.penanggungJawab || "-"}</td>
+                                  <td className="py-3 px-4 border-r border-slate-100 dark:border-slate-700 text-center font-mono text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-900/50">{doc.estimasiDana || "-"}</td>
                                   <td className="py-3 px-4 text-center">
                                     {doc.linkFile ? (
-                                      <a href={doc.linkFile} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1 w-full bg-emerald-100 hover:bg-emerald-600 text-emerald-700 hover:text-white font-bold px-3 py-1.5 rounded-lg transition text-[10px] uppercase tracking-wider shadow-sm">
+                                      <a href={doc.linkFile} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1 w-full bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-600 dark:hover:bg-emerald-600 text-emerald-700 dark:text-emerald-400 hover:text-white font-bold px-3 py-1.5 rounded-lg transition text-[10px] uppercase tracking-wider shadow-sm">
                                         <ExternalLink size={12} /> Buka
                                       </a>
                                     ) : (
-                                      <span className="text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider block text-center font-bold">Kosong</span>
+                                      <span className="text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider block text-center font-bold">Kosong</span>
                                     )}
                                   </td>
                                 </tr>
@@ -550,32 +552,32 @@ export default function AdministrasiPage() {
               {activeTab === "presentasi" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {currentListData.map((docItem, index) => (
-                    <div key={index} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col group">
-                      <a href={`/administrasi/dokumen/${docItem.id}`} className="relative w-full pt-[56.25%] bg-slate-50 border-b border-slate-200 flex items-center justify-center overflow-hidden cursor-pointer">
-                        <MonitorPlay className="w-16 h-16 text-slate-300 group-hover:scale-110 group-hover:text-blue-500 transition-all duration-500" />
-                        <div className="absolute inset-0 bg-blue-900/0 group-hover:bg-blue-900/5 transition-colors duration-300"></div>
-                        <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm text-[11px] font-bold text-blue-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                    <div key={index} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col group">
+                      <a href={`/administrasi/dokumen/${docItem.id}`} className="relative w-full pt-[56.25%] bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600 flex items-center justify-center overflow-hidden cursor-pointer">
+                        <MonitorPlay className="w-16 h-16 text-slate-300 dark:text-slate-500 group-hover:scale-110 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all duration-500" />
+                        <div className="absolute inset-0 bg-blue-900/0 group-hover:bg-blue-900/5 dark:group-hover:bg-blue-400/10 transition-colors duration-300"></div>
+                        <div className="absolute bottom-3 right-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600 text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
                            <ExternalLink size={12} /> Buka Presentasi
                         </div>
                       </a>
                       <div className="p-5 flex flex-col flex-1">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-2 bg-blue-50 w-max px-2.5 py-1 rounded-md">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-200/50 dark:border-blue-800/50 w-max px-2.5 py-1 rounded-md">
                           {docItem.tipeDokumen || "Presentasi Canva"}
                         </span>
-                        <h3 className="text-base font-bold text-slate-800 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                        <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           <a href={`/administrasi/dokumen/${docItem.id}`}>{docItem.judul}</a>
                         </h3>
-                        <p className="text-slate-500 text-sm line-clamp-3 flex-1 mb-4 whitespace-pre-wrap">{docItem.deskripsi}</p>
-                        <div className="flex items-center gap-3 mt-auto pt-4 border-t border-slate-100">
-                           <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('Lihat Dokumen PMII: ' + docItem.judul + '\n' + window.location.origin + '/administrasi/dokumen/' + docItem.id)}`, '_blank')} className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold text-xs py-2 rounded-md transition-colors flex items-center justify-center gap-2">
+                        <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 flex-1 mb-4 whitespace-pre-wrap">{docItem.deskripsi}</p>
+                        <div className="flex items-center gap-3 mt-auto pt-4 border-t border-slate-100 dark:border-slate-700">
+                           <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('Lihat Dokumen PMII: ' + docItem.judul + '\n' + window.location.origin + '/administrasi/dokumen/' + docItem.id)}`, '_blank')} className="flex-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white font-bold text-xs py-2 rounded-md transition-colors flex items-center justify-center gap-2 border border-emerald-200/50 dark:border-emerald-800/50">
                              <Share2 size={14}/> Bagikan
                            </button>
                            {docItem.downloadUrl ? (
-                             <a href={docItem.downloadUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-slate-50 text-slate-700 hover:bg-blue-600 hover:text-white border border-slate-200 hover:border-blue-600 font-bold text-xs py-2 rounded-md transition-colors flex items-center justify-center gap-2">
+                             <a href={docItem.downloadUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-slate-50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 border border-slate-200 dark:border-slate-600 hover:border-blue-600 font-bold text-xs py-2 rounded-md transition-colors flex items-center justify-center gap-2">
                                <Download size={14}/> Unduh
                              </a>
                            ) : (
-                             <span className="flex-1 bg-slate-50 text-slate-400 font-bold text-xs py-2 rounded-md flex items-center justify-center gap-2 cursor-not-allowed border border-slate-100">
+                             <span className="flex-1 bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 font-bold text-xs py-2 rounded-md flex items-center justify-center gap-2 cursor-not-allowed border border-slate-100 dark:border-slate-700">
                                File Kosong
                              </span>
                            )}
@@ -586,43 +588,48 @@ export default function AdministrasiPage() {
                 </div>
               )}
 
-              {/* 🔥 ================= SUB 6: INVENTARIS (RESPONSIF KOTAK 2 BARIS DI HP) ================= 🔥 */}
+              {/* 🔥 ================= SUB 6: INVENTARIS ================= 🔥 */}
               {activeTab === "inventaris" && (
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                   {currentListData.map((item, index) => (
-                    <div key={index} className="bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col group">
+                    <div key={index} className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col group">
                       
                       {/* Thumbnail Gambar */}
-                      <div className="relative w-full pt-[75%] bg-slate-100 border-b border-slate-200 overflow-hidden">
+                      <div className="relative w-full pt-[75%] bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 overflow-hidden">
                         {item.fotoGroup && item.fotoGroup[0] ? (
-                          <img src={item.fotoGroup[0]} alt={item.namaBarang} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          <Image 
+                            src={item.fotoGroup[0]} 
+                            alt={item.namaBarang} 
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                            sizes="(max-width: 640px) 50vw, 33vw"
+                          />
                         ) : (
-                          <Package size={36} className="absolute inset-0 m-auto text-slate-300" />
+                          <Package size={36} className="absolute inset-0 m-auto text-slate-300 dark:text-slate-500" />
                         )}
-                        <span className={`absolute top-2 left-2 text-[8px] md:text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm ${item.kondisi === 'Baik' ? 'bg-emerald-100 text-emerald-700' : item.kondisi === 'Rusak Ringan' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                        <span className={`absolute top-2 left-2 text-[8px] md:text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm border ${item.kondisi === 'Baik' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:border-emerald-800' : item.kondisi === 'Rusak Ringan' ? 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/50 dark:text-amber-400 dark:border-amber-800' : 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/50 dark:text-red-400 dark:border-red-800'}`}>
                            {item.kondisi || "Baik"}
                         </span>
                       </div>
 
                       <div className="p-3 md:p-5 flex flex-col flex-1">
-                        <h3 className="text-sm md:text-lg font-bold text-slate-800 line-clamp-2 leading-snug mb-1.5">{item.namaBarang}</h3>
+                        <h3 className="text-sm md:text-lg font-bold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug mb-1.5">{item.namaBarang}</h3>
                         
                         <div className="mb-2">
-                           <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] md:text-xs font-bold border border-slate-200">
+                           <span className="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded text-[10px] md:text-xs font-bold border border-slate-200 dark:border-slate-600">
                              Stok: {item.jumlah}
                            </span>
                         </div>
                         
-                        {/* Deskripsi Pre-Wrap */}
-                        <p className="text-slate-500 text-[10px] md:text-sm line-clamp-3 md:line-clamp-4 flex-1 mb-4 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-slate-500 dark:text-slate-400 text-[10px] md:text-sm line-clamp-3 md:line-clamp-4 flex-1 mb-4 leading-relaxed whitespace-pre-wrap">
                           {item.deskripsi || "Tidak ada detail untuk barang ini."}
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-2 mt-auto">
-                           <a href={`/administrasi/inventaris/${item.id}?tab=foto`} className="flex-1 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 font-bold text-[10px] md:text-xs py-2 md:py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                           <a href={`/administrasi/inventaris/${item.id}?tab=foto`} className="flex-1 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-bold text-[10px] md:text-xs py-2 md:py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5">
                              <Camera size={14}/> Galeri
                            </a>
-                           <a href={`/administrasi/inventaris/${item.id}?tab=pengajuan`} className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-[10px] md:text-xs py-2 md:py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                           <a href={`/administrasi/inventaris/${item.id}?tab=pengajuan`} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] md:text-xs py-2 md:py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
                              <FileText size={14}/> Pinjam
                            </a>
                         </div>

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Landmark, Target, Handshake, Calendar, ArrowRight, 
   ShieldCheck, Sparkles, Newspaper, User, Image as ImageIcon,
@@ -13,7 +14,7 @@ import Footer from "@/components/Footer";
 import { db } from "@/lib/firebase"; 
 import { doc, getDoc, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 
-// IMPORT FRAMER MOTION (Ditambah AnimatePresence untuk Slider)
+// IMPORT FRAMER MOTION
 import { motion, useInView, AnimatePresence } from "framer-motion";
 
 // ================= KOMPONEN ANIMASI ANGKA MENGHITUNG =================
@@ -47,7 +48,7 @@ const AnimatedCounter = ({ value, suffix = "" }) => {
   return (
     <span ref={ref}>
       {displayCount}
-      {count > 0 && <span className="text-blue-600">{suffix}</span>}
+      {count > 0 && <span className="text-blue-600 dark:text-blue-400">{suffix}</span>}
     </span>
   );
 };
@@ -192,8 +193,8 @@ export default function Home() {
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.1 }}
-        className={`relative group bg-white rounded-xl md:rounded-3xl p-2 md:p-6 shadow-xl border border-slate-100 flex flex-col items-center justify-between transition-transform duration-300
-        ${isFirst ? 'scale-105 md:scale-105 z-10 border-amber-200' : 'scale-95 md:scale-95 opacity-95 hover:opacity-100'}`}
+        className={`relative group bg-white dark:bg-slate-800 rounded-xl md:rounded-3xl p-2 md:p-6 shadow-xl border flex flex-col items-center justify-between transition-transform duration-300
+        ${isFirst ? 'scale-105 md:scale-105 z-10 border-amber-200 dark:border-amber-700/50' : 'scale-95 md:scale-95 opacity-95 hover:opacity-100 border-slate-100 dark:border-slate-700'}`}
       >
         <div className={`absolute -top-2.5 md:-top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r ${colors[index]} text-white px-2 md:px-4 py-0.5 md:py-1 rounded-full text-[8px] md:text-xs font-black shadow-lg flex items-center gap-1 whitespace-nowrap`}>
           {isFirst ? <Trophy className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" /> : <Award className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />}
@@ -202,11 +203,17 @@ export default function Home() {
 
         <div className="relative mt-2 md:mt-4 mb-2 md:mb-4 shrink-0">
           <div className={`w-12 h-12 md:w-24 md:h-24 rounded-full p-[2px] md:p-1 bg-gradient-to-tr ${colors[index]} overflow-hidden`}>
-            <div className="w-full h-full rounded-full bg-white overflow-hidden flex items-center justify-center border-[1.5px] md:border-2 border-white">
+            <div className="relative w-full h-full rounded-full bg-white dark:bg-slate-900 overflow-hidden flex items-center justify-center border-[1.5px] md:border-2 border-white dark:border-slate-800">
               {data.foto ? (
-                <img src={data.foto} alt={data.nama} className="w-full h-full object-cover" />
+                <Image 
+                  src={data.foto} 
+                  alt={data.nama} 
+                  fill
+                  className="object-cover"
+                  sizes="96px"
+                />
               ) : (
-                <User className="w-6 h-6 md:w-10 md:h-10 text-slate-300" />
+                <User className="w-6 h-6 md:w-10 md:h-10 text-slate-300 dark:text-slate-600" />
               )}
             </div>
           </div>
@@ -220,15 +227,15 @@ export default function Home() {
         </div>
 
         <div className="flex flex-col items-center flex-grow justify-start w-full px-0.5 text-center mb-2 md:mb-4">
-          <h4 className="text-slate-900 font-bold text-[10px] md:text-base line-clamp-2 leading-tight mb-0.5 md:mb-1" title={data.nama}>{data.nama}</h4>
-          <p className="text-slate-500 text-[7px] md:text-xs font-bold uppercase tracking-widest line-clamp-1" title={data.asalRayon || "Kader PMII"}>{data.asalRayon || "Kader PMII"}</p>
+          <h4 className="text-slate-900 dark:text-slate-100 font-bold text-[10px] md:text-base line-clamp-2 leading-tight mb-0.5 md:mb-1" title={data.nama}>{data.nama}</h4>
+          <p className="text-slate-500 dark:text-slate-400 text-[7px] md:text-xs font-bold uppercase tracking-widest line-clamp-1" title={data.asalRayon || "Kader PMII"}>{data.asalRayon || "Kader PMII"}</p>
         </div>
 
-        <div className="w-full bg-slate-50 rounded-lg md:rounded-xl p-1.5 md:p-4 flex flex-col md:flex-row justify-center md:justify-between items-center mb-2 md:mb-4 shrink-0 border border-slate-100 text-center md:text-left gap-0 md:gap-2">
+        <div className="w-full bg-slate-50 dark:bg-slate-700/50 rounded-lg md:rounded-xl p-1.5 md:p-4 flex flex-col md:flex-row justify-center md:justify-between items-center mb-2 md:mb-4 shrink-0 border border-slate-100 dark:border-slate-600 text-center md:text-left gap-0 md:gap-2">
           <div className="flex flex-col">
-            <span className="hidden md:block text-xs font-bold text-slate-400 uppercase leading-none mb-1">Total {category}</span>
+            <span className="hidden md:block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase leading-none mb-1">Total {category}</span>
             <span className={`text-[12px] md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r ${colors[index]} leading-none flex items-center justify-center md:justify-start gap-1`}>
-              {data.jumlahPrestasi || 0} <span className="text-[8px] md:text-sm font-bold text-slate-600 md:mt-0.5">Prestasi</span>
+              {data.jumlahPrestasi || 0} <span className="text-[8px] md:text-sm font-bold text-slate-600 dark:text-slate-400 md:mt-0.5">Prestasi</span>
             </span>
           </div>
           <div className={`hidden md:block p-2 rounded-xl bg-gradient-to-br ${colors[index]} text-white shadow-sm shrink-0`}>
@@ -239,7 +246,7 @@ export default function Home() {
         <Link 
           href={`/apresiasi?kader=${encodeURIComponent(data.nama)}`}
           className={`w-full py-1.5 md:py-2.5 rounded-lg md:rounded-xl font-bold text-[9px] md:text-sm flex items-center justify-center gap-1 md:gap-2 transition-all border shrink-0
-          ${isFirst ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+          ${isFirst ? 'bg-slate-900 dark:bg-blue-600 text-white border-slate-900 dark:border-blue-600 hover:bg-slate-800 dark:hover:bg-blue-500' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
         >
           Lihat <span className="hidden md:inline">Profil</span> <ChevronRight className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />
         </Link>
@@ -254,7 +261,7 @@ export default function Home() {
          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }} className="relative z-10 flex flex-col items-center">
            <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} className={`w-20 h-20 md:w-28 md:h-28 flex items-center justify-center mb-8 relative z-20 ${globalConfig?.logoUrl ? '' : 'bg-blue-600 rounded-2xl shadow-[0_0_50px_rgba(37,99,235,0.4)] border border-blue-400/30'}`}>
               {globalConfig?.logoUrl ? (
-                 <img src={globalConfig.logoUrl} alt="Logo" className="w-full h-full object-contain drop-shadow-2xl" />
+                 <Image src={globalConfig.logoUrl} alt="Logo" fill className="object-contain drop-shadow-2xl" sizes="112px"/>
               ) : (
                  <span className="text-yellow-400 font-extrabold text-2xl tracking-widest">{globalConfig?.logoText || "PMII"}</span>
               )}
@@ -268,16 +275,14 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 overflow-x-hidden w-full">
+    <main className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-200 overflow-x-hidden w-full transition-colors duration-300">
       <Navbar />
 
       {/* ================= HERO SLIDER SECTION ================= */}
-      {/* Background Section berubah dinamis mengikuti HERO_SLIDES[currentSlide].bgColor */}
       <section className={`relative pt-24 pb-12 md:pt-28 md:pb-16 flex flex-col items-center bg-gradient-to-br ${HERO_SLIDES[currentSlide]?.bgColor || 'from-[#0f172a] to-[#1e293b]'} overflow-hidden w-full transition-colors duration-1000`}>
         <div className="absolute top-[-10%] left-[-10%] w-[80%] md:w-[50%] h-[50%] bg-blue-600/30 rounded-full blur-[100px] pointer-events-none"></div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-5 w-full">
-          {/* AnimatePresence mengontrol animasi keluar masuk antar slide */}
           <AnimatePresence mode="wait">
             <motion.div 
               key={currentSlide}
@@ -312,7 +317,14 @@ export default function Home() {
 
               <div className="relative w-full flex justify-center lg:justify-end items-end h-[240px] sm:h-[350px] lg:h-[450px]">
                 {HERO_SLIDES[currentSlide]?.image ? (
-                    <img src={HERO_SLIDES[currentSlide].image} alt="Hero Image" className="max-h-full w-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.4)] z-10" />
+                    <Image 
+                      src={HERO_SLIDES[currentSlide].image} 
+                      alt="Hero Image" 
+                      fill
+                      className="object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.4)] z-10" 
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      priority
+                    />
                 ) : (
                     <div className="w-full h-full bg-white/5 rounded-3xl flex flex-col items-center justify-center text-white/30 border border-white/10 backdrop-blur-sm"><ImageIcon size={64} /></div>
                 )}
@@ -337,22 +349,22 @@ export default function Home() {
 
       {/* ================= STATS SECTION ================= */}
       <section className="relative z-20 max-w-6xl mx-auto px-4 sm:px-5 -mt-6 md:-mt-10 mb-16 sm:mb-20 w-full">
-        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-100 grid grid-cols-2 lg:grid-cols-4 gap-y-8 lg:divide-x divide-slate-100">
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-100 dark:border-slate-700 grid grid-cols-2 lg:grid-cols-4 gap-y-8 lg:divide-x divide-slate-100 dark:divide-slate-700">
           <div className="text-center px-2 sm:px-4">
-            <h3 className="text-3xl md:text-5xl font-black text-slate-900 mb-1"><AnimatedCounter value={stats.kader} suffix="" /></h3>
-            <p className="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-widest">Total Kader</p>
+            <h3 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-slate-100 mb-1"><AnimatedCounter value={stats.kader} suffix="" /></h3>
+            <p className="text-[10px] md:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Total Kader</p>
           </div>
-          <div className="text-center px-2 sm:px-4 border-l lg:border-none border-slate-100">
-            <h3 className="text-3xl md:text-5xl font-black text-slate-900 mb-1"><AnimatedCounter value={stats.rayon} /></h3>
-            <p className="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-widest">Total Rayon</p>
+          <div className="text-center px-2 sm:px-4 border-l lg:border-none border-slate-100 dark:border-slate-700">
+            <h3 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-slate-100 mb-1"><AnimatedCounter value={stats.rayon} /></h3>
+            <p className="text-[10px] md:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Total Rayon</p>
           </div>
           <div className="text-center px-2 sm:px-4">
-            <h3 className="text-3xl md:text-5xl font-black text-slate-900 mb-1"><AnimatedCounter value={stats.proker} suffix="" /></h3>
-            <p className="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-widest">Proker Komisariat</p>
+            <h3 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-slate-100 mb-1"><AnimatedCounter value={stats.proker} suffix="" /></h3>
+            <p className="text-[10px] md:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Proker Komisariat</p>
           </div>
-          <div className="text-center px-2 sm:px-4 border-l lg:border-none border-slate-100">
-            <h3 className="text-3xl md:text-5xl font-black text-slate-900 mb-1"><AnimatedCounter value={stats.alumni} suffix="" /></h3>
-            <p className="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-widest">Jaringan Alumni</p>
+          <div className="text-center px-2 sm:px-4 border-l lg:border-none border-slate-100 dark:border-slate-700">
+            <h3 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-slate-100 mb-1"><AnimatedCounter value={stats.alumni} suffix="" /></h3>
+            <p className="text-[10px] md:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Jaringan Alumni</p>
           </div>
         </motion.div>
       </section>
@@ -360,22 +372,22 @@ export default function Home() {
       {/* ================= APRESIASI KADER ================= */}
       <section className="py-12 md:py-20 px-2 md:px-5 max-w-7xl mx-auto w-full">
         <div className="text-center mb-8 md:mb-16">
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-[10px] md:text-xs font-black uppercase tracking-[0.1em] md:tracking-[0.2em] mb-4">
+          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] md:text-xs font-black uppercase tracking-[0.1em] md:tracking-[0.2em] mb-4 border border-amber-200 dark:border-amber-800/50">
             <Star className="w-3.5 h-3.5" fill="currentColor" /> Hall of Fame
           </motion.div>
-          <h2 className="text-2xl md:text-5xl font-extrabold text-slate-900 mb-2 md:mb-3 tracking-tight">Apresiasi <span className="text-blue-600">Kader</span></h2>
-          <p className="text-xs md:text-base text-slate-500 font-medium">Periode: <span className="text-slate-800 font-bold">{getCurrentMonth()}</span></p>
+          <h2 className="text-2xl md:text-5xl font-extrabold text-slate-900 dark:text-slate-100 mb-2 md:mb-3 tracking-tight">Apresiasi <span className="text-blue-600 dark:text-blue-400">Kader</span></h2>
+          <p className="text-xs md:text-base text-slate-500 dark:text-slate-400 font-medium">Periode: <span className="text-slate-800 dark:text-slate-200 font-bold">{getCurrentMonth()}</span></p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8 md:gap-16 px-1 md:px-0">
           
           {/* KATEGORI AKADEMIK */}
           <div>
-            <div className="flex items-center gap-2 md:gap-3 mb-5 md:mb-8 border-b-2 border-slate-100 pb-3 md:pb-4 px-2 md:px-0">
-              <div className="bg-blue-600 p-2 md:p-2.5 rounded-xl md:rounded-2xl text-white shadow-lg shadow-blue-200 shrink-0"><GraduationCap className="w-4 h-4 md:w-6 md:h-6" /></div>
+            <div className="flex items-center gap-2 md:gap-3 mb-5 md:mb-8 border-b-2 border-slate-100 dark:border-slate-700 pb-3 md:pb-4 px-2 md:px-0">
+              <div className="bg-blue-600 p-2 md:p-2.5 rounded-xl md:rounded-2xl text-white shadow-lg shadow-blue-200 dark:shadow-none shrink-0"><GraduationCap className="w-4 h-4 md:w-6 md:h-6" /></div>
               <div>
-                <h3 className="text-sm md:text-xl font-black text-slate-900 leading-tight">Prestasi Akademik</h3>
-                <p className="text-[8px] md:text-xs text-slate-400 font-bold uppercase leading-tight mt-0.5 md:mt-1">Berdasarkan Sertifikasi & Lomba</p>
+                <h3 className="text-sm md:text-xl font-black text-slate-900 dark:text-slate-100 leading-tight">Prestasi Akademik</h3>
+                <p className="text-[8px] md:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase leading-tight mt-0.5 md:mt-1">Berdasarkan Sertifikasi & Lomba</p>
               </div>
             </div>
             
@@ -383,18 +395,18 @@ export default function Home() {
               {topAkademik.length > 0 ? topAkademik.map((kader, i) => (
                 <AppreciationCard key={kader.id || i} data={kader} index={i} category="Akademik" />
               )) : (
-                <div className="col-span-3 py-10 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm font-bold">Data akademik belum tersedia.</div>
+                <div className="col-span-3 py-10 text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 text-sm font-bold">Data akademik belum tersedia.</div>
               )}
             </div>
           </div>
 
           {/* KATEGORI NON-AKADEMIK */}
           <div>
-            <div className="flex items-center gap-2 md:gap-3 mb-5 md:mb-8 border-b-2 border-slate-100 pb-3 md:pb-4 px-2 md:px-0">
-              <div className="bg-orange-500 p-2 md:p-2.5 rounded-xl md:rounded-2xl text-white shadow-lg shadow-orange-200 shrink-0"><Flame className="w-4 h-4 md:w-6 md:h-6" /></div>
+            <div className="flex items-center gap-2 md:gap-3 mb-5 md:mb-8 border-b-2 border-slate-100 dark:border-slate-700 pb-3 md:pb-4 px-2 md:px-0">
+              <div className="bg-orange-500 p-2 md:p-2.5 rounded-xl md:rounded-2xl text-white shadow-lg shadow-orange-200 dark:shadow-none shrink-0"><Flame className="w-4 h-4 md:w-6 md:h-6" /></div>
               <div>
-                <h3 className="text-sm md:text-xl font-black text-slate-900 leading-tight">Minat & Bakat</h3>
-                <p className="text-[8px] md:text-xs text-slate-400 font-bold uppercase leading-tight mt-0.5 md:mt-1">Berdasarkan Prestasi Non-Akademik</p>
+                <h3 className="text-sm md:text-xl font-black text-slate-900 dark:text-slate-100 leading-tight">Minat & Bakat</h3>
+                <p className="text-[8px] md:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase leading-tight mt-0.5 md:mt-1">Berdasarkan Prestasi Non-Akademik</p>
               </div>
             </div>
             
@@ -402,7 +414,7 @@ export default function Home() {
               {topNonAkademik.length > 0 ? topNonAkademik.map((kader, i) => (
                 <AppreciationCard key={kader.id || i} data={kader} index={i} category="Non-Akademik" />
               )) : (
-                <div className="col-span-3 py-10 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm font-bold">Data non-akademik belum tersedia.</div>
+                <div className="col-span-3 py-10 text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 text-sm font-bold">Data non-akademik belum tersedia.</div>
               )}
             </div>
           </div>
@@ -415,28 +427,34 @@ export default function Home() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative order-2 lg:order-1 px-4 sm:px-0">
             <div className="absolute inset-0 bg-blue-600 rounded-3xl transform -translate-x-3 translate-y-3 md:-translate-x-4 md:translate-y-4"></div>
-            <div className="relative h-64 md:h-[450px] bg-slate-200 rounded-3xl overflow-hidden shadow-2xl">
+            <div className="relative h-64 md:h-[450px] bg-slate-200 dark:bg-slate-700 rounded-3xl overflow-hidden shadow-2xl">
                {config?.sejarahImage ? (
-                  <img src={config.sejarahImage} alt="Sejarah" className="w-full h-full object-cover" />
+                  <Image 
+                    src={config.sejarahImage} 
+                    alt="Sejarah" 
+                    fill 
+                    className="object-cover" 
+                    sizes="(max-width: 1024px) 100vw, 50vw" 
+                  />
                ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400"><ImageIcon size={48} /></div>
                )}
             </div>
-            <div className="absolute -bottom-4 -right-2 md:-bottom-6 md:-right-6 bg-white p-4 md:p-6 rounded-2xl shadow-2xl border border-slate-50">
-               <p className="text-3xl md:text-4xl font-black text-blue-600">{config?.sejarahTahun || "1960"}</p>
-               <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Tahun Berdiri</p>
+            <div className="absolute -bottom-4 -right-2 md:-bottom-6 md:-right-6 bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-2xl border border-slate-50 dark:border-slate-700">
+               <p className="text-3xl md:text-4xl font-black text-blue-600 dark:text-blue-400">{config?.sejarahTahun || "1960"}</p>
+               <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">Tahun Berdiri</p>
             </div>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="order-1 lg:order-2">
-             <div className="inline-block bg-blue-100 text-blue-700 font-black px-4 py-1.5 rounded-full text-[10px] md:text-xs mb-4 uppercase tracking-widest">Jejak Pergerakan</div>
-             <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-6 leading-tight">
+             <div className="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 font-black px-4 py-1.5 rounded-full text-[10px] md:text-xs mb-4 uppercase tracking-widest">Jejak Pergerakan</div>
+             <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 dark:text-slate-100 mb-6 leading-tight">
                {config?.sejarahTitle || "Menyatukan Keislaman, Keilmuan & Kebangsaan"}
              </h2>
-            <div className="space-y-4 md:space-y-6 text-slate-600 text-sm md:text-lg leading-relaxed">
+            <div className="space-y-4 md:space-y-6 text-slate-600 dark:text-slate-300 text-sm md:text-lg leading-relaxed">
               <p>{config?.sejarahDesc || "Pergerakan Mahasiswa Islam Indonesia (PMII) lahir sebagai wadah perjuangan mahasiswa berlandaskan Islam Ahlussunnah Wal Jama'ah."}</p>
-              <div className="pl-4 md:pl-6 border-l-4 border-yellow-400 bg-white py-3 md:py-4 pr-3 md:pr-4 rounded-r-2xl md:rounded-r-3xl shadow-sm italic">
-                <p className="text-slate-800 text-sm md:text-base">"{config?.sejarahQuote || "Menjadikan Dzikir, Fikir, dan Amal Sholeh..."}"</p>
+              <div className="pl-4 md:pl-6 border-l-4 border-yellow-400 bg-white dark:bg-slate-800 py-3 md:py-4 pr-3 md:pr-4 rounded-r-2xl md:rounded-r-3xl shadow-sm italic">
+                <p className="text-slate-800 dark:text-slate-200 text-sm md:text-base">"{config?.sejarahQuote || "Menjadikan Dzikir, Fikir, dan Amal Sholeh..."}"</p>
               </div>
             </div>
           </motion.div>
@@ -471,36 +489,41 @@ export default function Home() {
       </section>
 
       {/* ================= BERITA TERBARU SECTION ================= */}
-      <section className="bg-white py-16 md:py-24 px-5 overflow-hidden w-full">
+      <section className="bg-white dark:bg-slate-900 py-16 md:py-24 px-5 overflow-hidden w-full transition-colors duration-300">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8 md:mb-12">
             <div>
-              <div className="inline-block bg-blue-100 text-blue-700 font-black px-4 py-1.5 rounded-full text-[10px] md:text-xs mb-3 uppercase tracking-widest">Publikasi</div>
-              <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-none">Kabar <span className="text-blue-600">Terbaru</span></h2>
+              <div className="inline-block bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 font-black px-4 py-1.5 rounded-full text-[10px] md:text-xs mb-3 uppercase tracking-widest">Publikasi</div>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-slate-100 leading-none">Kabar <span className="text-blue-600 dark:text-blue-400">Terbaru</span></h2>
             </div>
-            <Link href="/berita" className="flex items-center gap-2 text-sm md:text-base text-blue-600 font-bold hover:gap-3 transition-all bg-blue-50 sm:bg-transparent px-4 py-2 sm:p-0 rounded-lg w-full sm:w-auto justify-center sm:justify-start">
+            <Link href="/berita" className="flex items-center gap-2 text-sm md:text-base text-blue-600 dark:text-blue-400 font-bold hover:gap-3 transition-all bg-blue-50 dark:bg-blue-900/20 sm:bg-transparent px-4 py-2 sm:p-0 rounded-lg w-full sm:w-auto justify-center sm:justify-start">
                Semua Berita <ArrowRight size={18} />
             </Link>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {latestNews.map((berita) => (
-              <div key={berita.id} className="bg-[#f8fafc] rounded-2xl md:rounded-3xl overflow-hidden shadow-sm border border-slate-100 p-4 md:p-5 hover:shadow-xl transition-all group flex flex-col h-full">
-                <div className="relative h-48 md:h-52 bg-slate-200 rounded-xl md:rounded-2xl mb-4 md:mb-5 overflow-hidden">
+              <div key={berita.id} className="bg-[#f8fafc] dark:bg-slate-800/80 rounded-2xl md:rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-700 p-4 md:p-5 hover:shadow-xl transition-all group flex flex-col h-full">
+                <div className="relative h-48 md:h-52 bg-slate-200 dark:bg-slate-700 rounded-xl md:rounded-2xl mb-4 md:mb-5 overflow-hidden">
                   {berita.imageUrl ? (
-                    <img src={berita.imageUrl} alt="Berita" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <Image 
+                      src={berita.imageUrl} 
+                      alt="Berita" 
+                      fill 
+                      className="object-cover group-hover:scale-110 transition-transform duration-700" 
+                      sizes="(max-width: 768px) 100vw, 33vw" 
+                    />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400"><ImageIcon size={32} /></div>
+                    <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500"><ImageIcon size={32} /></div>
                   )}
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md text-slate-900 rounded-lg md:rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 text-center shadow-lg font-black">
+                  <div className="absolute top-3 left-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md text-slate-900 dark:text-slate-100 rounded-lg md:rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 text-center shadow-lg font-black border border-slate-100 dark:border-slate-600">
                      <p className="text-base md:text-lg leading-none">{berita.createdAt?.toDate ? berita.createdAt.toDate().getDate() : "00"}</p>
-                     <p className="text-[8px] md:text-[10px] uppercase text-blue-600 mt-1"></p>
                   </div>
                 </div>
-                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2 block">{berita.kategori}</span>
-                <h3 className="font-bold text-slate-900 text-lg md:text-xl mb-2 md:mb-3 line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors">{berita.title}</h3>
-                <p className="text-slate-500 text-xs md:text-sm line-clamp-2 mb-4 md:mb-6 leading-relaxed grow">{berita.excerpt}</p>
-                <Link href={`/berita/${berita.id}`} className="inline-flex items-center gap-2 text-[10px] md:text-xs font-black text-slate-900 group-hover:text-blue-600 transition-colors pt-4 md:pt-5 border-t border-slate-200/50">BACA SELENGKAPNYA <ArrowRight size={14} /></Link>
+                <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2 block">{berita.kategori}</span>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg md:text-xl mb-2 md:mb-3 line-clamp-2 leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{berita.title}</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-xs md:text-sm line-clamp-2 mb-4 md:mb-6 leading-relaxed grow">{berita.excerpt}</p>
+                <Link href={`/berita/${berita.id}`} className="inline-flex items-center gap-2 text-[10px] md:text-xs font-black text-slate-900 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors pt-4 md:pt-5 border-t border-slate-200/50 dark:border-slate-700/50">BACA SELENGKAPNYA <ArrowRight size={14} /></Link>
               </div>
             ))}
           </div>

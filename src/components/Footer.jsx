@@ -1,3 +1,4 @@
+// src/components/Footer.jsx
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -30,7 +31,7 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="bg-[#0f172a] text-slate-300 pt-16 pb-8 border-t border-slate-800">
+    <footer className="bg-[#0f172a] dark:bg-[#0a0a0a] text-slate-300 pt-16 pb-8 border-t border-slate-800 dark:border-slate-800/50 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12 mb-12">
           
@@ -54,12 +55,12 @@ export default function Footer() {
           <div>
             <h3 className="text-xl font-bold text-yellow-400 mb-5 md:mb-6">Menu Kategori</h3>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Beranda</Link></li>
-              <li><Link href="/struktur" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Struktur Kepengurusan</Link></li>
-              <li><Link href="/anggota" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Cari Anggota</Link></li>
-              <li><Link href="/rayon" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Daftar Rayon</Link></li>
-              <li><Link href="/administrasi" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Administrasi Surat</Link></li>
-              <li><Link href="https://siakad.pmii-uinmalang.or.id/" className="hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Portal Siakad</Link></li>
+              <li><Link href="/" className="text-slate-400 hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Beranda</Link></li>
+              <li><Link href="/struktur" className="text-slate-400 hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Struktur Kepengurusan</Link></li>
+              <li><Link href="/anggota" className="text-slate-400 hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Cari Anggota</Link></li>
+              <li><Link href="/rayon" className="text-slate-400 hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Daftar Rayon</Link></li>
+              <li><Link href="/administrasi" className="text-slate-400 hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Administrasi Surat</Link></li>
+              <li><Link href="https://siakad.pmii-uinmalang.or.id/" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-yellow-400 flex items-center gap-2 transition"><ChevronRight size={14}/> Portal Siakad</Link></li>
             </ul>
           </div>
           
@@ -82,7 +83,7 @@ export default function Footer() {
               </div>
             </div>
 
-            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+            <div className="bg-slate-800/50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-700 dark:border-slate-800">
                <h4 className="font-bold text-slate-200 mb-2 flex items-center gap-2">
                  <Heart size={16} className="text-pink-500" /> Dukung Pengembangan
                </h4>
@@ -94,7 +95,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="pt-8 border-t border-slate-800 dark:border-slate-800/50 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-slate-500 text-center md:text-left">
             {config.footerText}
           </p>

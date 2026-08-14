@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import Image from "next/image"; // Mengimpor komponen Image dari next
-import GridSkeleton from "@/components/GridSkeleton"; // Mengimpor komponen skeleton
+import Image from "next/image";
+import GridSkeleton from "@/components/GridSkeleton";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,15 +36,15 @@ export default function StrukturPage() {
   const renderIkonBiro = (namaBiro) => {
     const LowerStr = namaBiro.toLowerCase();
     if (LowerStr.includes("bph") || LowerStr.includes("harian") || LowerStr.includes("inti")) {
-      return <Shield size={22} className="text-blue-600" />;
+      return <Shield size={22} className="text-blue-600 dark:text-blue-400" />;
     } else if (LowerStr.includes("kaderisasi") || LowerStr.includes("anggota") || LowerStr.includes("psdm")) {
-      return <Users size={22} className="text-blue-600" />;
+      return <Users size={22} className="text-blue-600 dark:text-blue-400" />;
     }
-    return <Briefcase size={22} className="text-blue-600" />;
+    return <Briefcase size={22} className="text-blue-600 dark:text-blue-400" />;
   };
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 w-full overflow-x-hidden">
+    <main className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-200 w-full overflow-x-hidden">
       <Navbar />
 
       {/* 1. BANNER HERO UTAMA */}
@@ -69,11 +69,11 @@ export default function StrukturPage() {
       <section className="py-12 md:py-16 px-5 max-w-6xl mx-auto min-h-[50vh]">
         
         {loading ? (
-          <GridSkeleton /> // Pemuatan kerangka animasi pengganti loading screen penuh
+          <GridSkeleton />
         ) : strukturData.length === 0 ? (
-          <div className="bg-white rounded-[2rem] p-12 text-center border border-slate-100 shadow-sm max-w-xl mx-auto">
-             <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-             <h3 className="font-bold text-slate-700 text-lg">Data Struktur Kosong</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-12 text-center border border-slate-100 dark:border-slate-700 shadow-sm max-w-xl mx-auto">
+             <Users className="w-12 h-12 text-slate-300 dark:text-slate-500 mx-auto mb-4" />
+             <h3 className="font-bold text-slate-700 dark:text-slate-300 text-lg">Data Struktur Kosong</h3>
              <p className="text-sm text-slate-400 mt-1 leading-relaxed">Susunan kepengurusan belum diunggah. Silakan isi data personil organisasi melalui Dashboard Admin.</p>
           </div>
         ) : (
@@ -82,10 +82,10 @@ export default function StrukturPage() {
               
               {/* Header Kategori Divisi/Biro */}
               <div className="flex flex-col items-center mb-8 md:mb-10 text-center">
-                <h2 className="text-xl md:text-3xl font-extrabold text-slate-900 mb-2 flex items-center justify-center gap-2 md:gap-3">
+                <h2 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center justify-center gap-2 md:gap-3">
                   {renderIkonBiro(divisi.kategori)} {divisi.kategori}
                 </h2>
-                <div className="w-16 h-1 bg-blue-600 rounded-full mt-2"></div>
+                <div className="w-16 h-1 bg-blue-600 dark:bg-blue-500 rounded-full mt-2"></div>
               </div>
 
               {/* Grid Kartu Pengurus */}
@@ -98,10 +98,10 @@ export default function StrukturPage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-50px" }}
                     transition={{ duration: 0.5, delay: memberIndex * 0.05 }}
-                    className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+                    className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-slate-100 dark:border-slate-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
                   >
-                    {/* Area Foto Profil dengan komponen Image Next.js */}
-                    <div className="relative h-44 sm:h-56 w-full bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden shrink-0">
+                    {/* Area Foto Profil */}
+                    <div className="relative h-44 sm:h-56 w-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center border-b border-slate-100 dark:border-slate-700 overflow-hidden shrink-0">
                       {item.foto ? (
                         <Image 
                           src={item.foto} 
@@ -111,7 +111,7 @@ export default function StrukturPage() {
                           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                         />
                       ) : (
-                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 text-2xl font-bold uppercase shadow-sm">
+                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-blue-50 dark:bg-slate-800 border border-blue-100 dark:border-slate-600 flex items-center justify-center text-blue-500 dark:text-blue-400 text-2xl font-bold uppercase shadow-sm">
                           {item.nama ? item.nama.charAt(0) : "?"}
                         </div>
                       )}
@@ -122,11 +122,11 @@ export default function StrukturPage() {
                     </div>
                     
                     {/* Info Jabatan */}
-                    <div className="p-4 text-center border-t-4 border-[#facc15] flex-grow flex flex-col justify-center bg-white z-10">
-                      <h4 className="font-extrabold text-slate-900 text-xs md:text-sm leading-tight mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                    <div className="p-4 text-center border-t-4 border-[#facc15] flex-grow flex flex-col justify-center bg-white dark:bg-slate-800 z-10">
+                      <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-xs md:text-sm leading-tight mb-1 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {item.nama || "Nama Kosong"}
                       </h4>
-                      <p className="text-[9px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      <p className="text-[9px] md:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                         {item.jabatan || "Anggota"}
                       </p>
                     </div>
@@ -147,7 +147,7 @@ export default function StrukturPage() {
 
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} transition={{ type: "spring", duration: 0.4 }}
-              className="bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 w-full max-w-md relative z-10 flex flex-col max-h-[85vh]"
+              className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md relative z-10 flex flex-col max-h-[85vh]"
             >
               {/* Header Modal */}
               <div className="bg-[#1e293b] text-white p-4 flex justify-between items-center shrink-0">
@@ -162,8 +162,8 @@ export default function StrukturPage() {
 
               {/* Konten Scrollable */}
               <div className="p-5 md:p-6 space-y-4 overflow-y-auto hide-scrollbar">
-                <div className="flex flex-col items-center border-b border-slate-100 pb-4 text-center">
-                  <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-slate-50 mb-3 shadow-md border-4 border-white shadow-slate-200 flex items-center justify-center text-3xl font-black text-white bg-gradient-to-br from-blue-500 to-indigo-600 shrink-0">
+                <div className="flex flex-col items-center border-b border-slate-100 dark:border-slate-700 pb-4 text-center">
+                  <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800 mb-3 shadow-md border-4 border-white dark:border-slate-800 shadow-slate-200 dark:shadow-none flex items-center justify-center text-3xl font-black text-white bg-gradient-to-br from-blue-500 to-indigo-600 shrink-0">
                     {selectedPengurus.foto ? (
                       <Image 
                         src={selectedPengurus.foto} 
@@ -176,35 +176,35 @@ export default function StrukturPage() {
                       selectedPengurus.nama ? selectedPengurus.nama.charAt(0) : "?"
                     )}
                   </div>
-                  <h3 className="text-base md:text-lg font-extrabold text-slate-900 leading-tight px-1">{selectedPengurus.nama || "Nama Kosong"}</h3>
-                  <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1 rounded-full mt-2">
+                  <h3 className="text-base md:text-lg font-extrabold text-slate-900 dark:text-slate-100 leading-tight px-1">{selectedPengurus.nama || "Nama Kosong"}</h3>
+                  <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 px-3 py-1 rounded-full mt-2">
                     {selectedPengurus.jabatan || "Anggota"}
                   </span>
                 </div>
 
                 {/* List Data */}
                 <div className="space-y-2.5 text-xs md:text-sm">
-                  <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0"><Hash size={14} className="text-blue-600" /></div>
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <div className="w-7 h-7 rounded-lg bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center shrink-0"><Hash size={14} className="text-blue-600 dark:text-blue-400" /></div>
                     <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">NIM / NIA KADER</p>
-                      <p className="font-bold text-slate-700 mt-0.5">{selectedPengurus.nim || "-"} <span className="text-slate-300 mx-1">|</span> <span className="text-blue-700 font-mono">{selectedPengurus.nia || "-"}</span></p>
+                      <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">NIM / NIA KADER</p>
+                      <p className="font-bold text-slate-700 dark:text-slate-200 mt-0.5">{selectedPengurus.nim || "-"} <span className="text-slate-300 dark:text-slate-600 mx-1">|</span> <span className="text-blue-700 dark:text-blue-400 font-mono">{selectedPengurus.nia || "-"}</span></p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0"><MapPin size={14} className="text-emerald-600" /></div>
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <div className="w-7 h-7 rounded-lg bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center shrink-0"><MapPin size={14} className="text-emerald-600 dark:text-emerald-400" /></div>
                     <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">Asal Rayon</p>
-                      <p className="font-bold text-slate-700 mt-0.5">{selectedPengurus.rayon || "-"}</p>
+                      <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">Asal Rayon</p>
+                      <p className="font-bold text-slate-700 dark:text-slate-200 mt-0.5">{selectedPengurus.rayon || "-"}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0"><Calendar size={14} className="text-amber-600" /></div>
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <div className="w-7 h-7 rounded-lg bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center shrink-0"><Calendar size={14} className="text-amber-600 dark:text-amber-400" /></div>
                     <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">Angkatan Mapaba/PKD</p>
-                      <p className="font-bold text-slate-700 mt-0.5">{selectedPengurus.angkatan ? `Tahun ${selectedPengurus.angkatan}` : "-"}</p>
+                      <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">Angkatan Mapaba/PKD</p>
+                      <p className="font-bold text-slate-700 dark:text-slate-200 mt-0.5">{selectedPengurus.angkatan ? `Tahun ${selectedPengurus.angkatan}` : "-"}</p>
                     </div>
                   </div>
                 </div>
@@ -215,7 +215,7 @@ export default function StrukturPage() {
                     <a 
                       href={`https://wa.me/${selectedPengurus.whatsapp.replace(/[^0-9]/g, "")}?text=Assalamualaikum%20Sahabat%20${encodeURIComponent(selectedPengurus.nama)}...`}
                       target="_blank" rel="noopener noreferrer"
-                      className="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs md:text-sm font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10"
+                      className="w-full bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs md:text-sm font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10"
                     >
                       <MessageSquare size={14} /> Hubungi via WhatsApp
                     </a>
