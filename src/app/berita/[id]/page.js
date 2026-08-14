@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
+import GridSkeleton from "@/components/GridSkeleton";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import LoadingScreen from "@/components/LoadingScreen";
 import { 
   ArrowLeft, Calendar, User, Clock, AlertCircle, 
   Newspaper, Sparkles, MessageCircle, Link2, Users, Tag, 
@@ -183,16 +184,26 @@ export default function DetailBerita() {
     alert("Tautan artikel berhasil disalin ke clipboard!");
   };
 
-  if (loading) return <LoadingScreen text="Menyiapkan Artikel..." />;
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 flex flex-col font-sans">
+        <Navbar />
+        <div className="flex-grow max-w-4xl mx-auto w-full pt-32 px-5">
+           <GridSkeleton />
+        </div>
+        <Footer />
+      </main>
+    );
+  }
 
   if (!article) {
     return (
-      <main className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-5 font-sans">
+      <main className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 flex flex-col items-center justify-center p-5 font-sans">
         <Navbar />
-        <div className="text-center mt-20 bg-white p-10 rounded-3xl border border-slate-100 shadow-sm max-w-md w-full">
-          <AlertCircle className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h1 className="text-xl md:text-2xl font-bold text-slate-800 mb-2">Artikel Tidak Ditemukan</h1>
-          <p className="text-sm text-slate-500 mb-6 leading-relaxed">Maaf, artikel yang Anda cari mungkin telah dihapus atau tautannya salah.</p>
+        <div className="text-center mt-20 bg-white dark:bg-slate-800 p-10 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm max-w-md w-full">
+          <AlertCircle className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <h1 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Artikel Tidak Ditemukan</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">Maaf, artikel yang Anda cari mungkin telah dihapus atau tautannya salah.</p>
           <button onClick={() => router.push('/berita')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 w-full shadow-md">
             <ArrowLeft size={16} /> Kembali ke Indeks Berita
           </button>
@@ -210,10 +221,10 @@ export default function DetailBerita() {
 
   const getCategoryColor = (cat) => {
     switch (cat) {
-      case "Opini Kader": return "bg-emerald-50 text-emerald-700 border-emerald-200";
-      case "Kajian & Artikel": return "bg-purple-50 text-purple-700 border-purple-200";
-      case "Pengumuman": return "bg-amber-50 text-amber-700 border-amber-200";
-      default: return "bg-blue-50 text-blue-700 border-blue-200";
+      case "Opini Kader": return "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50";
+      case "Kajian & Artikel": return "bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800/50";
+      case "Pengumuman": return "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50";
+      default: return "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50";
     }
   };
 
@@ -225,7 +236,7 @@ export default function DetailBerita() {
   // PROSES DATELINE AGAR INLINE DENGAN PARAGRAF PERTAMA
   let finalHtmlContent = cleanCorruptedHTML(article.content);
   if (article.dateline) {
-    const datelineHTML = `<strong style="color: #0f172a; text-transform: uppercase;">${article.dateline} &mdash; </strong>`;
+    const datelineHTML = `<strong class="text-slate-900 dark:text-slate-100 uppercase">${article.dateline} &mdash; </strong>`;
     
     // Cari tag <p> pertama yang tidak kosong
     const pMatch = finalHtmlContent.match(/<p\b[^>]*>(.*?)<\/p>/i);
@@ -241,27 +252,27 @@ export default function DetailBerita() {
   }
 
   return (
-    <main className="min-h-screen bg-white font-sans text-slate-900 w-full overflow-x-hidden selection:bg-blue-200 selection:text-blue-900">
+    <main className="min-h-screen bg-white dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 w-full overflow-x-hidden selection:bg-blue-200 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-100 transition-colors duration-300">
       <Navbar />
 
       {/* READING PROGRESS BAR */}
-      <div className="fixed top-0 left-0 h-1.5 bg-blue-600 z-[60] transition-all duration-150 ease-out" style={{ width: `${scrollProgress}%` }}></div>
+      <div className="fixed top-0 left-0 h-1.5 bg-blue-600 dark:bg-blue-500 z-[60] transition-all duration-150 ease-out" style={{ width: `${scrollProgress}%` }}></div>
 
       <div className="pt-24 md:pt-32 pb-20 px-4 md:px-5 max-w-4xl mx-auto w-full relative">
         
         {/* FLOATING SHARE SIDEBAR (Desktop) */}
         <div className="hidden lg:flex flex-col gap-3 absolute -left-12 top-64 z-10">
-           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center mb-1 w-10">Share</p>
-           <a href={shareLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-50 hover:bg-[#25D366] hover:text-white border border-slate-200 text-slate-500 rounded-full flex items-center justify-center transition-colors tooltip" title="Bagikan ke WhatsApp">
+           <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-1 w-10">Share</p>
+           <a href={shareLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-50 dark:bg-slate-800 hover:bg-[#25D366] dark:hover:bg-[#25D366] hover:text-white border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-full flex items-center justify-center transition-colors tooltip" title="Bagikan ke WhatsApp">
              <MessageCircle size={18} />
            </a>
-           <a href={shareLinks.twitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-50 hover:bg-[#1DA1F2] hover:text-white border border-slate-200 text-slate-500 rounded-full flex items-center justify-center transition-colors tooltip" title="Bagikan ke X/Twitter">
+           <a href={shareLinks.twitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-50 dark:bg-slate-800 hover:bg-[#1DA1F2] dark:hover:bg-[#1DA1F2] hover:text-white border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-full flex items-center justify-center transition-colors tooltip" title="Bagikan ke X/Twitter">
              <TwitterIcon size={18} />
            </a>
-           <a href={shareLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-50 hover:bg-[#1877F2] hover:text-white border border-slate-200 text-slate-500 rounded-full flex items-center justify-center transition-colors tooltip" title="Bagikan ke Facebook">
+           <a href={shareLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-50 dark:bg-slate-800 hover:bg-[#1877F2] dark:hover:bg-[#1877F2] hover:text-white border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-full flex items-center justify-center transition-colors tooltip" title="Bagikan ke Facebook">
              <FacebookIcon size={18} />
            </a>
-           <button onClick={handleCopyLink} className="w-10 h-10 bg-slate-50 hover:bg-slate-800 hover:text-white border border-slate-200 text-slate-500 rounded-full flex items-center justify-center transition-colors tooltip" title="Salin Tautan">
+           <button onClick={handleCopyLink} className="w-10 h-10 bg-slate-50 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 hover:text-white border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-full flex items-center justify-center transition-colors tooltip" title="Salin Tautan">
              <Link2 size={18} />
            </button>
         </div>
@@ -269,7 +280,7 @@ export default function DetailBerita() {
         <div className="w-full">
           {/* HEADER ARTIKEL */}
           <header className="mb-8 md:mb-10 text-center md:text-left">
-            <Link href="/berita" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors mb-6 group">
+            <Link href="/berita" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-6 group">
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Indeks Berita
             </Link>
             
@@ -279,43 +290,43 @@ export default function DetailBerita() {
               </span>
             </div>
             
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 leading-[1.3] md:leading-[1.15] mb-6 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-slate-50 leading-[1.3] md:leading-[1.15] mb-6 tracking-tight">
               {article.title}
             </h1>
             
             {/* METADATA PENULIS & STATISTIK */}
-            <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6 pt-6 border-t border-slate-100">
+            <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6 pt-6 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-center md:justify-start gap-3">
-                   <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200 text-slate-400 shrink-0">
+                   <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 shrink-0 relative">
                      {article.fotoPenulis ? (
-                        <img src={article.fotoPenulis} alt={article.penulis} className="w-full h-full object-cover" />
+                        <Image src={article.fotoPenulis} alt={article.penulis} fill className="object-cover" sizes="40px" />
                      ) : (
                         <User size={20} />
                      )}
                    </div>
                    <div className="text-left">
-                     <p className="text-sm font-bold text-slate-800">{article.penulis || "Tim Redaksi PMII"}</p>
-                     <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest">Penulis Artikel</p>
+                     <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{article.penulis || "Tim Redaksi PMII"}</p>
+                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">Penulis Artikel</p>
                    </div>
                 </div>
                 
-                <div className="hidden md:block w-px h-8 bg-slate-200"></div>
+                <div className="hidden md:block w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
                 
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 text-xs sm:text-sm text-slate-500 font-medium">
-                   <div className="flex items-center gap-1.5"><Calendar size={15} className="text-slate-400"/> {publishDate}</div>
-                   <div className="flex items-center gap-1.5"><Clock size={15} className="text-slate-400"/> {readTime} min baca</div>
-                   <div className="flex items-center gap-1.5"><Eye size={15} className="text-blue-400"/> {article.views || 0} Dilihat</div>
-                   <div className="flex items-center gap-1.5"><MessageCircle size={15} className="text-pink-400"/> {article.commentsCount || 0} Komentar</div>
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+                   <div className="flex items-center gap-1.5"><Calendar size={15} className="text-slate-400 dark:text-slate-500"/> {publishDate}</div>
+                   <div className="flex items-center gap-1.5"><Clock size={15} className="text-slate-400 dark:text-slate-500"/> {readTime} min baca</div>
+                   <div className="flex items-center gap-1.5"><Eye size={15} className="text-blue-400 dark:text-blue-500"/> {article.views || 0} Dilihat</div>
+                   <div className="flex items-center gap-1.5"><MessageCircle size={15} className="text-pink-400 dark:text-pink-500"/> {article.commentsCount || 0} Komentar</div>
                 </div>
             </div>
           </header>
 
           {/* GAMBAR SAMPUL */}
-          <div className="w-full aspect-[4/3] sm:aspect-video bg-slate-100 rounded-xl md:rounded-2xl mb-8 md:mb-12 overflow-hidden shadow-sm border border-slate-200 flex items-center justify-center relative group">
+          <div className="w-full aspect-[4/3] sm:aspect-video bg-slate-100 dark:bg-slate-800 rounded-xl md:rounded-2xl mb-8 md:mb-12 overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center relative group">
               {article.imageUrl ? (
-                <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <Image src={article.imageUrl} alt={article.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700" sizes="(max-width: 1024px) 100vw, 900px" priority />
               ) : (
-                <div className="flex flex-col items-center text-slate-400 w-full h-full justify-center">
+                <div className="flex flex-col items-center text-slate-400 dark:text-slate-500 w-full h-full justify-center">
                   <Newspaper size={40} className="mb-3 opacity-30" />
                   <span className="font-semibold text-xs md:text-sm opacity-50">Tanpa Gambar Sampul</span>
                 </div>
@@ -326,12 +337,12 @@ export default function DetailBerita() {
           <div className="ql-snow w-full max-w-full overflow-hidden px-1 md:px-0">
             <div 
               id="super-clean-article"
-              className="ql-editor w-full text-slate-800" 
+              className="ql-editor w-full text-slate-800 dark:text-slate-200" 
               dangerouslySetInnerHTML={{ __html: finalHtmlContent }} 
             />
           </div>
 
-          {/* CSS EDITORIAL UNTUK ARTIKEL (Responsif HP & Desktop) */}
+          {/* CSS EDITORIAL UNTUK ARTIKEL (Responsif HP & Desktop + Dark Mode) */}
           <style dangerouslySetInnerHTML={{
             __html: `
               #super-clean-article,
@@ -345,12 +356,28 @@ export default function DetailBerita() {
               #super-clean-article {
                 padding: 0 !important;
                 font-family: ui-sans-serif, system-ui, -apple-system, sans-serif !important;
-                font-size: 1.1rem !important; /* Default desktop */
+                font-size: 1.1rem !important;
                 line-height: 1.8 !important;
-                color: #334155 !important;
+                color: inherit !important;
               }
 
               #super-clean-article p { margin-bottom: 1.25rem !important; }
+
+              /* Konfigurasi untuk Dark Mode */
+              html.dark #super-clean-article blockquote {
+                background-color: #1e293b !important;
+                color: #cbd5e1 !important;
+              }
+              html.dark #super-clean-article h2, 
+              html.dark #super-clean-article h3 {
+                color: #f8fafc !important;
+              }
+              html.dark #super-clean-article a {
+                color: #60a5fa !important;
+              }
+              html.dark #super-clean-article a:hover {
+                color: #93c5fd !important;
+              }
 
               #super-clean-article blockquote {
                 border-left: 4px solid #2563eb !important;
@@ -394,7 +421,6 @@ export default function DetailBerita() {
                 margin: 2rem auto;
               }
 
-              /* Penyesuaian Khusus Mobile (HP) */
               @media (max-width: 640px) {
                 #super-clean-article {
                   font-size: 1.05rem !important;
@@ -412,20 +438,20 @@ export default function DetailBerita() {
           }} />
 
           {/* AREA BAWAH: TAGS & REDAKSI */}
-          <div className="mt-10 md:mt-12 space-y-8 border-t border-slate-200 pt-8 md:pt-10">
+          <div className="mt-10 md:mt-12 space-y-8 border-t border-slate-200 dark:border-slate-800 pt-8 md:pt-10">
              
-             {/* KATA KUNCI (TAGS) - KLIKABLE */}
+             {/* KATA KUNCI (TAGS) */}
              {tagsArray.length > 0 && (
                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                 <div className="flex items-center gap-2 text-sm font-bold text-slate-800 shrink-0">
-                    <Tag size={16} className="text-amber-500"/> Tags:
+                 <div className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-200 shrink-0">
+                    <Tag size={16} className="text-amber-500 dark:text-amber-400"/> Tags:
                  </div>
                  <div className="flex flex-wrap gap-2">
                     {tagsArray.map((tag, idx) => (
                       <Link 
                         key={idx} 
                         href={`/berita?search=${encodeURIComponent(tag)}`}
-                        className="bg-slate-50 border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider cursor-pointer"
+                        className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800/50 transition-colors px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider cursor-pointer"
                       >
                         {tag}
                       </Link>
@@ -434,58 +460,58 @@ export default function DetailBerita() {
                </div>
              )}
 
-             {/* SUSUNAN REDAKSI (KREDIT) - HANYA MUNCUL JIKA ADA DATA */}
+             {/* SUSUNAN REDAKSI */}
              {hasRedaksi && (
-               <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 md:p-8">
-                  <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-widest text-[13px]">
-                    <Users size={16} className="text-blue-600"/> Susunan Redaksi
+               <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-5 md:p-8">
+                  <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-6 flex items-center gap-2 uppercase tracking-widest text-[13px]">
+                    <Users size={16} className="text-blue-600 dark:text-blue-400"/> Susunan Redaksi
                   </h3>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                      {article.penulis && (
                        <div className="flex flex-col gap-2">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Penulis</p>
+                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Penulis</p>
                           <div className="flex items-center gap-2 md:gap-3">
-                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
-                              {article.fotoPenulis ? <img src={article.fotoPenulis} className="w-full h-full object-cover"/> : <User size={14} className="m-1 md:m-2 text-slate-400"/>}
+                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600 relative">
+                              {article.fotoPenulis ? <Image src={article.fotoPenulis} alt="Penulis" fill className="object-cover" sizes="32px"/> : <User size={14} className="m-1 md:m-2 text-slate-400 dark:text-slate-500 absolute inset-0 m-auto"/>}
                             </div>
-                            <p className="text-xs md:text-[13px] font-bold text-slate-800 leading-tight">{article.penulis}</p>
+                            <p className="text-xs md:text-[13px] font-bold text-slate-800 dark:text-slate-200 leading-tight">{article.penulis}</p>
                           </div>
                        </div>
                      )}
 
                      {article.editorName && (
                        <div className="flex flex-col gap-2">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Editor</p>
+                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Editor</p>
                           <div className="flex items-center gap-2 md:gap-3">
-                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
-                              {article.fotoEditor ? <img src={article.fotoEditor} className="w-full h-full object-cover"/> : <Edit3 size={12} className="m-1.5 md:m-2 text-slate-400"/>}
+                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600 relative">
+                              {article.fotoEditor ? <Image src={article.fotoEditor} alt="Editor" fill className="object-cover" sizes="32px"/> : <Edit3 size={12} className="m-1.5 md:m-2 text-slate-400 dark:text-slate-500 absolute inset-0 m-auto"/>}
                             </div>
-                            <p className="text-xs md:text-[13px] font-bold text-slate-800 leading-tight">{article.editorName}</p>
+                            <p className="text-xs md:text-[13px] font-bold text-slate-800 dark:text-slate-200 leading-tight">{article.editorName}</p>
                           </div>
                        </div>
                      )}
 
                      {article.fotografer && (
                        <div className="flex flex-col gap-2">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fotografer</p>
+                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Fotografer</p>
                           <div className="flex items-center gap-2 md:gap-3">
-                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
-                              {article.fotoFotografer ? <img src={article.fotoFotografer} className="w-full h-full object-cover"/> : <Camera size={12} className="m-1.5 md:m-2 text-slate-400"/>}
+                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600 relative">
+                              {article.fotoFotografer ? <Image src={article.fotoFotografer} alt="Fotografer" fill className="object-cover" sizes="32px"/> : <Camera size={12} className="m-1.5 md:m-2 text-slate-400 dark:text-slate-500 absolute inset-0 m-auto"/>}
                             </div>
-                            <p className="text-xs md:text-[13px] font-bold text-slate-800 leading-tight">{article.fotografer}</p>
+                            <p className="text-xs md:text-[13px] font-bold text-slate-800 dark:text-slate-200 leading-tight">{article.fotografer}</p>
                           </div>
                        </div>
                      )}
 
                      {article.sumber && (
                        <div className="flex flex-col gap-2">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sumber</p>
+                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Sumber</p>
                           <div className="flex items-center gap-2 md:gap-3">
-                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-md bg-slate-200 overflow-hidden shrink-0 border border-slate-300 flex items-center justify-center">
-                              {article.logoSumber ? <img src={article.logoSumber} className="w-full h-full object-contain bg-white p-1"/> : <Globe size={12} className="text-slate-400"/>}
+                            <div className="w-6 h-6 md:w-8 md:h-8 rounded-md bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600 flex items-center justify-center relative">
+                              {article.logoSumber ? <Image src={article.logoSumber} alt="Sumber" fill className="object-contain bg-white dark:bg-slate-800 p-1" sizes="32px"/> : <Globe size={12} className="text-slate-400 dark:text-slate-500 absolute inset-0 m-auto"/>}
                             </div>
-                            <p className="text-xs md:text-[13px] font-bold text-slate-800 leading-tight line-clamp-2">{article.sumber}</p>
+                            <p className="text-xs md:text-[13px] font-bold text-slate-800 dark:text-slate-200 leading-tight line-clamp-2">{article.sumber}</p>
                           </div>
                        </div>
                      )}
@@ -495,21 +521,21 @@ export default function DetailBerita() {
 
              {/* UI KOLOM KOMENTAR REAL-TIME */}
              <div className="pt-6 md:pt-10">
-                <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-widest text-[13px]">
-                  <MessageCircle size={16} className="text-pink-500"/> Komentar Pembaca ({article.commentsCount || 0})
+                <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-6 flex items-center gap-2 uppercase tracking-widest text-[13px]">
+                  <MessageCircle size={16} className="text-pink-500 dark:text-pink-400"/> Komentar Pembaca ({article.commentsCount || 0})
                 </h3>
                 
                 {/* Form Kirim Komentar */}
-                <form onSubmit={handleSubmitComment} className="bg-white border border-slate-200 rounded-xl p-4 md:p-5 shadow-sm mb-8">
+                <form onSubmit={handleSubmitComment} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 md:p-5 shadow-sm mb-8">
                   <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-                    <div className="hidden md:flex w-10 h-10 rounded-full bg-slate-100 items-center justify-center shrink-0 border border-slate-200"><User size={18} className="text-slate-400"/></div>
+                    <div className="hidden md:flex w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 items-center justify-center shrink-0 border border-slate-200 dark:border-slate-600"><User size={18} className="text-slate-400 dark:text-slate-500"/></div>
                     <div className="w-full space-y-3">
                        <input 
                          type="text" 
                          required 
                          value={newCommentName}
                          onChange={(e) => setNewCommentName(e.target.value)}
-                         className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-sm font-semibold" 
+                         className="w-full px-3 py-2 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-sm font-semibold placeholder:text-slate-400 dark:placeholder:text-slate-500" 
                          placeholder="Nama Anda..."
                        />
                        <textarea 
@@ -517,11 +543,11 @@ export default function DetailBerita() {
                          rows="3" 
                          value={newCommentText}
                          onChange={(e) => setNewCommentText(e.target.value)}
-                         className="w-full px-3 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-sm resize-none" 
+                         className="w-full px-3 py-3 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-sm resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500" 
                          placeholder="Tulis pendapat atau tanggapan Anda di sini..."
                        />
                        <div className="flex justify-end">
-                         <button type="submit" disabled={isSubmittingComment} className="w-full md:w-auto bg-slate-800 hover:bg-slate-900 disabled:bg-slate-500 text-white font-bold py-2.5 md:py-2 px-6 rounded-md transition flex items-center justify-center gap-2 text-[13px]">
+                         <button type="submit" disabled={isSubmittingComment} className="w-full md:w-auto bg-slate-800 dark:bg-blue-600 hover:bg-slate-900 dark:hover:bg-blue-500 disabled:bg-slate-500 dark:disabled:bg-slate-700 text-white font-bold py-2.5 md:py-2 px-6 rounded-md transition flex items-center justify-center gap-2 text-[13px]">
                            {isSubmittingComment ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} 
                            {isSubmittingComment ? "Mengirim..." : "Kirim Komentar"}
                          </button>
@@ -539,29 +565,29 @@ export default function DetailBerita() {
                         : "Baru saja";
 
                       return (
-                        <div key={comment.id} className="bg-slate-50 rounded-xl p-4 md:p-5 flex gap-3 md:gap-4 border border-slate-100">
-                           <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white flex items-center justify-center shrink-0 border border-slate-200 text-blue-600 font-black text-sm md:text-base uppercase shadow-sm">
+                        <div key={comment.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 md:p-5 flex gap-3 md:gap-4 border border-slate-100 dark:border-slate-700">
+                           <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 font-black text-sm md:text-base uppercase shadow-sm">
                              {comment.name.charAt(0)}
                            </div>
                            <div>
                              <div className="flex items-center gap-2 mb-1">
-                               <h4 className="font-bold text-slate-800 text-sm">{comment.name}</h4>
-                               <span className="text-[10px] text-slate-400 font-medium">• {dateStr}</span>
+                               <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">{comment.name}</h4>
+                               <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">• {dateStr}</span>
                              </div>
-                             <p className="text-slate-600 text-xs md:text-sm leading-relaxed">{comment.text}</p>
+                             <p className="text-slate-600 dark:text-slate-300 text-xs md:text-sm leading-relaxed">{comment.text}</p>
                            </div>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <p className="text-center text-sm text-slate-400 py-8 bg-slate-50 rounded-xl border border-slate-100 border-dashed">Belum ada komentar. Jadilah yang pertama memberikan tanggapan!</p>
+                  <p className="text-center text-sm text-slate-400 dark:text-slate-500 py-8 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700 border-dashed">Belum ada komentar. Jadilah yang pertama memberikan tanggapan!</p>
                 )}
              </div>
 
              {/* Mobile Share Buttons */}
-             <div className="flex flex-col items-center justify-center gap-3 pt-8 border-t border-slate-100 lg:hidden">
-                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">Bagikan Artikel Ini:</span>
+             <div className="flex flex-col items-center justify-center gap-3 pt-8 border-t border-slate-100 dark:border-slate-800 lg:hidden">
+                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Bagikan Artikel Ini:</span>
                  <div className="flex items-center gap-4">
                    <a href={shareLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-md">
                      <MessageCircle size={20} />
@@ -572,7 +598,7 @@ export default function DetailBerita() {
                    <a href={shareLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-[#1877F2] text-white rounded-full flex items-center justify-center shadow-md">
                      <FacebookIcon size={20} />
                    </a>
-                   <button onClick={handleCopyLink} className="w-12 h-12 bg-slate-800 text-white rounded-full flex items-center justify-center shadow-md">
+                   <button onClick={handleCopyLink} className="w-12 h-12 bg-slate-800 dark:bg-slate-700 text-white rounded-full flex items-center justify-center shadow-md">
                      <Link2 size={20} />
                    </button>
                  </div>
