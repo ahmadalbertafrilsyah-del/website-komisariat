@@ -271,9 +271,11 @@ export default function AdministrasiPage() {
   const DocumentCard = ({ item, isHukum }) => (
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col h-full">
       <div className="relative w-full pt-[141.4%] bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 overflow-hidden">
-        {item.thumbnailUrl ? (
+        
+        {/* 🔥 PERBAIKAN: Menyesuaikan pemanggilan thumbnail dari database */}
+        {(item.thumbnail || item.thumbnailUrl) ? (
           <Image 
-            src={item.thumbnailUrl} 
+            src={item.thumbnail || item.thumbnailUrl} 
             alt="Cover" 
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500" 
@@ -282,6 +284,7 @@ export default function AdministrasiPage() {
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 dark:text-slate-500 bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-800 dark:to-slate-700"><FileText size={48} className="mb-2 drop-shadow-sm" /><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Pratinjau PDF</span></div>
         )}
+        
         <div className="absolute top-3 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-md shadow-sm border border-slate-100/50 dark:border-slate-700"><span className={`text-[9px] font-black uppercase tracking-widest ${isHukum ? 'text-purple-600 dark:text-purple-400' : 'text-amber-600 dark:text-amber-400'}`}>{isHukum ? 'Produk Hukum' : 'Laporan'}</span></div>
         <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
            {item.linkFile ? (<a href={item.linkFile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-blue-600 text-white p-4 rounded-full hover:scale-110 hover:bg-blue-500 transition-all shadow-xl shadow-blue-500/30"><Download size={24} /></a>) : (<span className="bg-slate-800 text-slate-300 px-4 py-2 rounded-full text-xs font-bold">File Kosong</span>)}

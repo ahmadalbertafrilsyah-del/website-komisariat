@@ -180,7 +180,6 @@ export default function AdminAdministrasi() {
     return isNaN(d) ? 0 : d.getTime();
   };
 
-  // Fungsi helper membuat slug (Untuk URL yang lebih cantik)
   const createSlug = (text) => {
     if (!text) return "";
     return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
@@ -188,9 +187,7 @@ export default function AdminAdministrasi() {
 
   const filterByLembaga = (dataArray) => { return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga); };
 
-  // 🔥 URUTAN SURAT MASUK DIPERBAIKI: ASCENDING (Tanggal Awal/Lama di Atas) 🔥
   const currentSuratMasuk = filterByLembaga(masterSuratMasuk).sort((a, b) => getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang));
-  
   const currentSuratKeluar = filterByLembaga(masterSuratKeluar).sort((a, b) => {
     const getNum = (str) => { const match = (str || "").match(/\d+/); return match ? parseInt(match[0], 10) : 999999; };
     const numA = getNum(a.nomorSurat); const numB = getNum(b.nomorSurat);
@@ -229,7 +226,9 @@ export default function AdminAdministrasi() {
     if (data) {
       setEditDataId(data.id || Math.random());
       setFormData(data);
-      if (activeTab === "inventaris" && data.fotoGroup) setFotoUrls(data.fotoGroup); else setFotoUrls([]);
+      if (activeTab === "inventaris" && data.fotoGroup) setFotoUrls(data.fotoGroup); 
+      else if (activeTab === "produkhukum" && data.thumbnail) setFotoUrls([data.thumbnail]); 
+      else setFotoUrls([]);
     } else {
       setEditDataId(null); setFormData({ lembaga: activeLembaga }); setFotoUrls([]);
     }
@@ -245,7 +244,9 @@ export default function AdminAdministrasi() {
       let newMaster;
 
       if (activeTab === "inventaris") {
-        finalPayload = { ...finalPayload, fotoGroup: fotoUrls, slug: createSlug(formData.namaBarang) }; // 🔥 Menyisipkan SLUG
+        finalPayload = { ...finalPayload, fotoGroup: fotoUrls, slug: createSlug(formData.namaBarang) }; 
+      } else if (activeTab === "produkhukum") {
+        finalPayload = { ...finalPayload, thumbnail: fotoUrls.length > 0 ? fotoUrls[0] : (formData.thumbnail || "") };
       }
 
       if (activeTab === "persuratan") {
@@ -291,7 +292,6 @@ export default function AdminAdministrasi() {
     await setDoc(docRef, updateField, { merge: true });
   };
 
-  // 🔥 1. TOMBOL EXCEL DIPERBAIKI AGAR MUNCUL KEMBALI 🔥
   const handleDownloadTemplate = () => {
     let templateData = [];
     if (activeTab === "persuratan") {
@@ -321,6 +321,7 @@ export default function AdminAdministrasi() {
         "Nomor SK / Ketetapan": "01/SK/PMII/2026",
         "Tentang": "Pengesahan Pengurus Rayon",
         "Deskripsi Singkat": "Mengesahkan kepengurusan Rayon untuk masa khidmat 2026-2027",
+        "Link Thumbnail": "https://res.cloudinary.com/...",
         "Link Berkas": ""
       }];
     } else if (activeTab === "laporan") {
@@ -408,6 +409,7 @@ export default function AdminAdministrasi() {
             nomorSK: row["Nomor SK / Ketetapan"] || "",
             tentangHukum: row["Tentang"] || "",
             deskripsiHukum: row["Deskripsi Singkat"] || "",
+            thumbnail: row["Link Thumbnail"] || "",
             linkFile: row["Link Berkas"] || ""
           }));
           const newMaster = [...updatedData, ...masterProdukHukum];
@@ -449,7 +451,7 @@ export default function AdminAdministrasi() {
               id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
               lembaga: activeLembaga,
               namaBarang: namaBrg,
-              slug: createSlug(namaBrg), // 🔥 Memasukkan SLUG saat Import Excel
+              slug: createSlug(namaBrg),
               jumlah: row["Jumlah"] || "1",
               kondisi: row["Kondisi (Baik/Rusak Ringan/Rusak Berat)"] || "Baik",
               deskripsi: row["Deskripsi"] || "",
@@ -484,7 +486,7 @@ export default function AdminAdministrasi() {
       }));
     } else if (activeTab === "produkhukum") {
       formattedData = currentListData.map((i, idx) => ({
-        "No": idx + 1, "Nomor SK": i.nomorSK, "Tentang Hukum": i.tentangHukum, "Deskripsi": i.deskripsiHukum, "Link Berkas": i.linkFile
+        "No": idx + 1, "Nomor SK": i.nomorSK, "Tentang Hukum": i.tentangHukum, "Deskripsi": i.deskripsiHukum, "Link Thumbnail": i.thumbnail || "", "Link Berkas": i.linkFile
       }));
     } else if (activeTab === "laporan") {
       formattedData = currentListData.map((i, idx) => ({
@@ -554,7 +556,6 @@ export default function AdminAdministrasi() {
            </div>
          </div>
          
-         {/* KEMBALIKAN TOMBOL UPLOAD/DOWNLOAD EXCEL */}
          <div className="flex w-full xl:w-auto flex-wrap gap-2 justify-end">
            {activeTab !== "peminjaman" && (
              <>
@@ -660,7 +661,6 @@ export default function AdminAdministrasi() {
                       <tr className={`transition-colors hover:bg-slate-50 cursor-pointer ${isExpanded ? 'bg-slate-50' : ''}`} onClick={() => setExpandedRowId(isExpanded ? null : index)}>
                         <td className="py-2 px-2 md:py-3 md:px-4 text-center font-medium text-slate-400">{index + 1}</td>
                         
-                        {/* 🔥 TAMPILAN TANGGAL DIPERBAIKI 🔥 */}
                         {activeTab === "persuratan" && (
                           <>
                             <td className="py-2 px-2 md:py-3 md:px-4 font-semibold text-slate-900">{item.nomorSurat || "-"}</td>
@@ -720,7 +720,6 @@ export default function AdminAdministrasi() {
                               </span>
                             </td>
                             <td className="py-2 px-2 md:py-3 md:px-4 text-slate-500 max-w-[300px]">
-                              {/* Tambahkan whitespace-pre-wrap agar enter terbaca di tabel Admin */}
                               <div className="truncate font-medium text-slate-700 whitespace-pre-wrap">{item.deskripsi || "-"}</div>
                             </td>
                           </>
@@ -919,6 +918,45 @@ export default function AdminAdministrasi() {
                         <label className={labelStandardClass}>Deskripsi Singkat Hukum</label>
                         <textarea rows="2" value={formData.deskripsiHukum || ''} onChange={e => setFormData({...formData, deskripsiHukum: e.target.value})} className={inputStandardClass} />
                       </div>
+                      
+                      {/* 🔥 TAMBAHAN UPLOAD THUMBNAIL */}
+                      <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                        <label className={labelStandardClass}>Upload Thumbnail / Sampul (Opsional)</label>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={(e) => {
+                            setFotoUrls([]); 
+                            uploadToCloudinary(e.target.files);
+                          }} 
+                          className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" 
+                          disabled={isUploadingFoto}
+                        />
+                        
+                        {isUploadingFoto && (
+                          <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                            <Loader2 size={12} className="animate-spin" /> Mengunggah gambar sampul...
+                          </p>
+                        )}
+
+                        {fotoUrls.length > 0 && (
+                          <div className="flex gap-3 mt-4 bg-slate-50 p-3 rounded-md border border-slate-100">
+                            {fotoUrls.slice(0, 1).map((url, idx) => ( 
+                              <div key={idx} className="relative w-24 h-32 rounded-md overflow-hidden border border-slate-200 group shadow-sm">
+                                <img src={url} alt="thumbnail" className="w-full h-full object-cover" />
+                                <button 
+                                  type="button" 
+                                  onClick={() => setFotoUrls([])} 
+                                  className="absolute top-1 right-1 bg-red-500/90 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {/* AKHIR TAMBAHAN */}
                     </>
                   )}
 
