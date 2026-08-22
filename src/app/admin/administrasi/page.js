@@ -7,7 +7,7 @@ import * as XLSX from "xlsx";
 import { 
   FolderArchive, Mail, Briefcase, Scale, FileCheck, Inbox, Send, Search, 
   Download, Plus, Trash2, Edit, Save, FileSpreadsheet, Building2, 
-  Loader2, Sparkles, X, ExternalLink, UploadCloud, MonitorPlay, Package, Camera, ClipboardList, CheckCircle, XCircle
+  Loader2, Sparkles, X, ExternalLink, UploadCloud, MonitorPlay, Package, Camera, ClipboardList, CheckCircle, XCircle, CalendarDays, FolderTree
 } from "lucide-react";
 
 export default function AdminAdministrasi() {
@@ -15,8 +15,8 @@ export default function AdminAdministrasi() {
   const [activeLembaga, setActiveLembaga] = useState("Komisariat"); 
   const [listLSO, setListLSO] = useState([]); 
   
-  const [masterSuratMasuk, setMasterSuratMasuk] = useState([]); 
-  const [masterSuratKeluar, setMasterSuratKeluar] = useState([]); 
+  // State Data Master
+  const [masterPersuratan, setMasterPersuratan] = useState([]); // 🔥 State baru untuk sistem Periodesasi
   const [masterProker, setMasterProker] = useState([]);
   const [masterProdukHukum, setMasterProdukHukum] = useState([]);
   const [masterLpj, setMasterLpj] = useState([]); 
@@ -24,15 +24,22 @@ export default function AdminAdministrasi() {
   const [masterInventaris, setMasterInventaris] = useState([]); 
   const [masterPeminjaman, setMasterPeminjaman] = useState([]);
   
+  // State Filter & Navigasi
   const [activeTab, setActiveTab] = useState("persuratan"); 
   const [activeSuratTab, setActiveSuratTab] = useState("masuk"); 
+  const [activePeriode, setActivePeriode] = useState(""); // 🔥 ID Periode Terpilih
   const [searchQuery, setSearchQuery] = useState("");
 
+  // State Modal Surat/Data Umum
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editDataId, setEditDataId] = useState(null);
   const [formData, setFormData] = useState({});
   const [expandedRowId, setExpandedRowId] = useState(null);
   
+  // State Modal Pengaturan Periode (Khusus Persuratan)
+  const [isPeriodeModalOpen, setIsPeriodeModalOpen] = useState(false);
+  const [periodeFormData, setPeriodeFormData] = useState({});
+
   const [fotoUrls, setFotoUrls] = useState([]); 
   const [isUploadingFoto, setIsUploadingFoto] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false); 
@@ -53,8 +60,22 @@ export default function AdminAdministrasi() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setMasterSuratMasuk(data.listSuratMasuk || []); 
-        setMasterSuratKeluar(data.listSuratKeluar || data.listDokumen || []); 
+        
+        // 🔥 LOGIKA AUTO-MIGRASI DATA SURAT LAMA KE SISTEM PERIODE BARU 🔥
+        let initPersuratan = data.masterPersuratan || [];
+        if (initPersuratan.length === 0 && (data.listSuratMasuk?.length > 0 || data.listSuratKeluar?.length > 0)) {
+           initPersuratan = [{
+               id: "legacy-period-1",
+               lembaga: "Komisariat",
+               periode: "Periode Sebelumnya (Legacy)",
+               linkMasuk: "",
+               linkKeluar: "",
+               suratMasuk: data.listSuratMasuk || [],
+               suratKeluar: data.listSuratKeluar || data.listDokumen || []
+           }];
+        }
+
+        setMasterPersuratan(initPersuratan); 
         setMasterProker(data.listProker || []);   
         setMasterProdukHukum(data.listProdukHukum || []); 
         setMasterLpj(data.listLpj || []); 
@@ -75,6 +96,64 @@ export default function AdminAdministrasi() {
       setMasterPeminjaman(data);
     } catch (error) { console.error("Gagal mengambil data peminjaman:", error); }
   }
+
+  // Auto-Select Periode saat Tab / Lembaga Berubah
+  const availablePeriods = masterPersuratan.filter(p => (p.lembaga || "Komisariat") === activeLembaga);
+  useEffect(() => {
+    if (activeTab === "persuratan" && availablePeriods.length > 0) {
+      if (!availablePeriods.some(p => p.id === activePeriode)) setActivePeriode(availablePeriods[0].id);
+    } else if (availablePeriods.length === 0) {
+      setActivePeriode("");
+    }
+  }, [activeLembaga, activeTab, masterPersuratan]);
+
+  // ================= PERIODE MANAGEMENT FUNCTIONS =================
+  const handleOpenPeriodeModal = () => {
+    if (activePeriode) {
+      const periodData = masterPersuratan.find(p => p.id === activePeriode);
+      setPeriodeFormData(periodData || { lembaga: activeLembaga, periode: "", linkMasuk: "", linkKeluar: "" });
+    } else {
+      setPeriodeFormData({ lembaga: activeLembaga, periode: "", linkMasuk: "", linkKeluar: "" });
+    }
+    setIsPeriodeModalOpen(true);
+  };
+
+  const handleSavePeriode = async (e) => {
+    e.preventDefault();
+    const payload = { 
+        ...periodeFormData, 
+        id: periodeFormData.id || Date.now().toString(),
+        lembaga: activeLembaga,
+        suratMasuk: periodeFormData.suratMasuk || [],
+        suratKeluar: periodeFormData.suratKeluar || []
+    };
+    
+    let newMaster;
+    if (periodeFormData.id) {
+        newMaster = masterPersuratan.map(p => p.id === payload.id ? payload : p);
+    } else {
+        newMaster = [payload, ...masterPersuratan];
+        setActivePeriode(payload.id);
+    }
+    
+    setMasterPersuratan(newMaster);
+    await setDoc(doc(db, "website_config", "database_administrasi"), { masterPersuratan: newMaster }, { merge: true });
+    setIsPeriodeModalOpen(false);
+    alert("Pengaturan Periode berhasil disimpan!");
+  };
+
+  const handleDeletePeriode = async () => {
+    if(!periodeFormData.id) return;
+    if(!confirm("YAKIN HAPUS PERIODE INI? Seluruh data surat masuk dan keluar di dalam periode ini akan ikut terhapus permanen!")) return;
+    
+    const newMaster = masterPersuratan.filter(p => p.id !== periodeFormData.id);
+    setMasterPersuratan(newMaster);
+    await setDoc(doc(db, "website_config", "database_administrasi"), { masterPersuratan: newMaster }, { merge: true });
+    setIsPeriodeModalOpen(false);
+    setActivePeriode(newMaster.filter(p => p.lembaga === activeLembaga).length > 0 ? newMaster.filter(p => p.lembaga === activeLembaga)[0].id : "");
+  };
+
+  // ================= END PERIODE =================
 
   const handleUpdateStatusPeminjaman = async (pengajuan, newStatus) => {
     if (!confirm(`Yakin ingin mengubah status pengajuan ini menjadi ${newStatus}? Notifikasi email otomatis akan dikirim ke penyewa.`)) return;
@@ -104,13 +183,8 @@ export default function AdminAdministrasi() {
            alert("Data berhasil di ACC di sistem, namun gagal mengirim notifikasi email (cek log).");
          }
       }
-
       alert(`Berhasil! Pengajuan peminjaman telah ${newStatus}.`);
-    } catch (error) {
-      alert("Gagal mengubah status: " + error.message);
-    } finally {
-      setIsSendingEmail(false);
-    }
+    } catch (error) { alert("Gagal mengubah status: " + error.message); } finally { setIsSendingEmail(false); }
   };
 
   const handleDeleteRiwayatPeminjaman = async (id) => {
@@ -118,10 +192,7 @@ export default function AdminAdministrasi() {
     try {
       await deleteDoc(doc(db, "peminjaman_inventaris", id));
       setMasterPeminjaman(prev => prev.filter(p => p.id !== id));
-      alert("Riwayat berhasil dihapus.");
-    } catch (error) {
-      alert("Gagal menghapus riwayat: " + error.message);
-    }
+    } catch (error) { alert("Gagal menghapus riwayat: " + error.message); }
   };
 
   const uploadToCloudinary = async (files) => {
@@ -185,15 +256,16 @@ export default function AdminAdministrasi() {
     return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
   };
 
-  const filterByLembaga = (dataArray) => { return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga); };
-
-  const currentSuratMasuk = filterByLembaga(masterSuratMasuk).sort((a, b) => getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang));
-  const currentSuratKeluar = filterByLembaga(masterSuratKeluar).sort((a, b) => {
+  // 🔥 Logika Data Table Sesuai Periode 🔥
+  const selectedPeriodData = masterPersuratan.find(p => p.id === activePeriode) || { suratMasuk: [], suratKeluar: [] };
+  const currentSuratMasuk = (selectedPeriodData.suratMasuk || []).sort((a, b) => getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang));
+  const currentSuratKeluar = (selectedPeriodData.suratKeluar || []).sort((a, b) => {
     const getNum = (str) => { const match = (str || "").match(/\d+/); return match ? parseInt(match[0], 10) : 999999; };
     const numA = getNum(a.nomorSurat); const numB = getNum(b.nomorSurat);
     if (numA !== numB) return numA - numB; return (a.nomorSurat || "").localeCompare(b.nomorSurat || "");
   });
 
+  const filterByLembaga = (dataArray) => { return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga); };
   const currentProker = filterByLembaga(masterProker);
   const currentProdukHukum = filterByLembaga(masterProdukHukum);
   const currentLpj = filterByLembaga(masterLpj);
@@ -223,6 +295,8 @@ export default function AdminAdministrasi() {
   const currentListData = getFilteredData();
 
   const handleOpenModal = (data = null) => {
+    if (activeTab === "persuratan" && !activePeriode) return alert("Pilih atau buat Periode terlebih dahulu!");
+    
     if (data) {
       setEditDataId(data.id || Math.random());
       setFormData(data);
@@ -250,15 +324,26 @@ export default function AdminAdministrasi() {
       }
 
       if (activeTab === "persuratan") {
-        if (activeSuratTab === "masuk") { newMaster = editDataId ? masterSuratMasuk.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterSuratMasuk]; setMasterSuratMasuk(newMaster); } 
-        else { newMaster = editDataId ? masterSuratKeluar.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterSuratKeluar]; setMasterSuratKeluar(newMaster); }
-      } else if (activeTab === "proker") { newMaster = editDataId ? masterProker.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterProker]; setMasterProker(newMaster);
-      } else if (activeTab === "produkhukum") { newMaster = editDataId ? masterProdukHukum.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterProdukHukum]; setMasterProdukHukum(newMaster);
-      } else if (activeTab === "laporan") { newMaster = editDataId ? masterLpj.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterLpj]; setMasterLpj(newMaster);
-      } else if (activeTab === "presentasi") { newMaster = editDataId ? masterPresentasi.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterPresentasi]; setMasterPresentasi(newMaster); if (!finalPayload.createdAt) finalPayload.createdAt = new Date().toISOString();
-      } else if (activeTab === "inventaris") { newMaster = editDataId ? masterInventaris.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterInventaris]; setMasterInventaris(newMaster); if (!finalPayload.createdAt) finalPayload.createdAt = new Date().toISOString(); }
+        const periodIndex = masterPersuratan.findIndex(p => p.id === activePeriode);
+        const updatedPeriod = { ...masterPersuratan[periodIndex] };
+        
+        if (activeSuratTab === "masuk") { 
+           updatedPeriod.suratMasuk = editDataId ? updatedPeriod.suratMasuk.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...(updatedPeriod.suratMasuk || [])]; 
+        } else { 
+           updatedPeriod.suratKeluar = editDataId ? updatedPeriod.suratKeluar.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...(updatedPeriod.suratKeluar || [])]; 
+        }
+        
+        newMaster = [...masterPersuratan];
+        newMaster[periodIndex] = updatedPeriod;
+        setMasterPersuratan(newMaster);
+      } 
+      else if (activeTab === "proker") { newMaster = editDataId ? masterProker.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterProker]; setMasterProker(newMaster); } 
+      else if (activeTab === "produkhukum") { newMaster = editDataId ? masterProdukHukum.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterProdukHukum]; setMasterProdukHukum(newMaster); } 
+      else if (activeTab === "laporan") { newMaster = editDataId ? masterLpj.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterLpj]; setMasterLpj(newMaster); } 
+      else if (activeTab === "presentasi") { newMaster = editDataId ? masterPresentasi.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterPresentasi]; setMasterPresentasi(newMaster); if (!finalPayload.createdAt) finalPayload.createdAt = new Date().toISOString(); } 
+      else if (activeTab === "inventaris") { newMaster = editDataId ? masterInventaris.map(i => i.id === editDataId ? finalPayload : i) : [finalPayload, ...masterInventaris]; setMasterInventaris(newMaster); if (!finalPayload.createdAt) finalPayload.createdAt = new Date().toISOString(); }
 
-      await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
+      await saveDataToFirebase(activeTab, null, newMaster);
       alert("Data berhasil disimpan!"); setIsModalOpen(false);
     } catch (error) { alert("Gagal menyimpan data: " + error.message); }
   };
@@ -268,22 +353,28 @@ export default function AdminAdministrasi() {
     try {
       let newMaster;
       if (activeTab === "persuratan") {
-        if (activeSuratTab === "masuk") { newMaster = masterSuratMasuk.filter(i => i.id !== idToDelete); setMasterSuratMasuk(newMaster); } 
-        else { newMaster = masterSuratKeluar.filter(i => i.id !== idToDelete); setMasterSuratKeluar(newMaster); }
-      } else if (activeTab === "proker") { newMaster = masterProker.filter(i => i.id !== idToDelete); setMasterProker(newMaster);
-      } else if (activeTab === "produkhukum") { newMaster = masterProdukHukum.filter(i => i.id !== idToDelete); setMasterProdukHukum(newMaster);
-      } else if (activeTab === "laporan") { newMaster = masterLpj.filter(i => i.id !== idToDelete); setMasterLpj(newMaster); 
-      } else if (activeTab === "presentasi") { newMaster = masterPresentasi.filter(i => i.id !== idToDelete); setMasterPresentasi(newMaster); 
-      } else if (activeTab === "inventaris") { newMaster = masterInventaris.filter(i => i.id !== idToDelete); setMasterInventaris(newMaster); }
+        const periodIndex = masterPersuratan.findIndex(p => p.id === activePeriode);
+        const updatedPeriod = { ...masterPersuratan[periodIndex] };
+        if (activeSuratTab === "masuk") { updatedPeriod.suratMasuk = updatedPeriod.suratMasuk.filter(i => i.id !== idToDelete); } 
+        else { updatedPeriod.suratKeluar = updatedPeriod.suratKeluar.filter(i => i.id !== idToDelete); }
+        newMaster = [...masterPersuratan];
+        newMaster[periodIndex] = updatedPeriod;
+        setMasterPersuratan(newMaster);
+      } 
+      else if (activeTab === "proker") { newMaster = masterProker.filter(i => i.id !== idToDelete); setMasterProker(newMaster); } 
+      else if (activeTab === "produkhukum") { newMaster = masterProdukHukum.filter(i => i.id !== idToDelete); setMasterProdukHukum(newMaster); } 
+      else if (activeTab === "laporan") { newMaster = masterLpj.filter(i => i.id !== idToDelete); setMasterLpj(newMaster); } 
+      else if (activeTab === "presentasi") { newMaster = masterPresentasi.filter(i => i.id !== idToDelete); setMasterPresentasi(newMaster); } 
+      else if (activeTab === "inventaris") { newMaster = masterInventaris.filter(i => i.id !== idToDelete); setMasterInventaris(newMaster); }
 
-      await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
+      await saveDataToFirebase(activeTab, null, newMaster);
     } catch (error) { alert("Gagal menghapus: " + error.message); }
   };
 
-  const saveDataToFirebase = async (tab, suratTab, newMasterData) => {
+  const saveDataToFirebase = async (tab, _, newMasterData) => {
     const docRef = doc(db, "website_config", "database_administrasi");
     let updateField = {};
-    if (tab === "persuratan") updateField = suratTab === "masuk" ? { listSuratMasuk: newMasterData } : { listSuratKeluar: newMasterData };
+    if (tab === "persuratan") updateField = { masterPersuratan: newMasterData };
     else if (tab === "proker") updateField = { listProker: newMasterData };
     else if (tab === "produkhukum") updateField = { listProdukHukum: newMasterData };
     else if (tab === "laporan") updateField = { listLpj: newMasterData };
@@ -301,8 +392,7 @@ export default function AdminAdministrasi() {
         "Tanggal Buat (YYYY-MM-DD)": "2026-06-01",
         "Tanggal Terima/Kirim (YYYY-MM-DD)": "2026-06-02",
         "Perihal": "Undangan Kegiatan",
-        "Keterangan": "Surat Penting",
-        "Link Berkas": "https://drive.google.com/..."
+        "Keterangan": "Surat Penting"
       }];
     } else if (activeTab === "proker") {
       templateData = [{
@@ -359,6 +449,12 @@ export default function AdminAdministrasi() {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (activeTab === "persuratan" && !activePeriode) {
+        alert("Pilih atau buat Periode Kepengurusan terlebih dahulu sebelum mengimpor file persuratan!");
+        e.target.value = null;
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
@@ -372,19 +468,25 @@ export default function AdminAdministrasi() {
           const isMasuk = activeSuratTab === "masuk";
           updatedData = data.map(row => ({
             id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
-            lembaga: activeLembaga,
             nomorSurat: row["Nomor Surat"] || "",
             hal: row["Perihal"] || "",
             ket: row["Keterangan"] || "",
             tglBuat: row["Tanggal Buat (YYYY-MM-DD)"] || "",
-            linkFile: row["Link Berkas"] || "",
             ...(isMasuk 
               ? { asalSurat: row["Asal/Tujuan Surat"] || "", tglDatang: row["Tanggal Terima/Kirim (YYYY-MM-DD)"] || "" } 
               : { tujuanSurat: row["Asal/Tujuan Surat"] || "", tglKirim: row["Tanggal Terima/Kirim (YYYY-MM-DD)"] || "" })
           }));
-          const newMaster = [...updatedData, ...(isMasuk ? masterSuratMasuk : masterSuratKeluar)];
-          if (isMasuk) setMasterSuratMasuk(newMaster); else setMasterSuratKeluar(newMaster);
-          await saveDataToFirebase(activeTab, activeSuratTab, newMaster);
+
+          const periodIndex = masterPersuratan.findIndex(p => p.id === activePeriode);
+          const updatedPeriod = { ...masterPersuratan[periodIndex] };
+          
+          if (isMasuk) updatedPeriod.suratMasuk = [...updatedData, ...(updatedPeriod.suratMasuk || [])]; 
+          else updatedPeriod.suratKeluar = [...updatedData, ...(updatedPeriod.suratKeluar || [])];
+          
+          const newMaster = [...masterPersuratan];
+          newMaster[periodIndex] = updatedPeriod;
+          setMasterPersuratan(newMaster);
+          await saveDataToFirebase(activeTab, null, newMaster);
         } else if (activeTab === "proker") {
           updatedData = data.map(row => ({
             id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
@@ -478,7 +580,7 @@ export default function AdminAdministrasi() {
     let formattedData = [];
     if (activeTab === "persuratan") {
       formattedData = currentListData.map((i, idx) => ({
-        "No": idx + 1, "Nomor Surat": i.nomorSurat, [activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"]: activeSuratTab === "masuk" ? i.asalSurat : i.tujuanSurat, "Tanggal Buat": i.tglBuat, [activeSuratTab === "masuk" ? "Tanggal Datang" : "Tanggal Kirim"]: activeSuratTab === "masuk" ? i.tglDatang : i.tglKirim, "Perihal": i.hal || i.perihalSurat, "Keterangan": i.ket || i.deskripsiSurat, "Link Berkas": i.linkFile
+        "No": idx + 1, "Nomor Surat": i.nomorSurat, [activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"]: activeSuratTab === "masuk" ? i.asalSurat : i.tujuanSurat, "Tanggal Buat": i.tglBuat, [activeSuratTab === "masuk" ? "Tanggal Datang" : "Tanggal Kirim"]: activeSuratTab === "masuk" ? i.tglDatang : i.tglKirim, "Perihal": i.hal || i.perihalSurat, "Keterangan": i.ket || i.deskripsiSurat
       }));
     } else if (activeTab === "proker") {
       formattedData = currentListData.map((i, idx) => ({
@@ -521,12 +623,31 @@ export default function AdminAdministrasi() {
           <p className="text-sm text-slate-500 mt-1">Kelola arsip surat, program kerja, produk hukum, laporan, dan inventaris barang.</p>
         </div>
         {(activeTab === "persuratan" || activeTab === "proker") && (
-          <div className="bg-white p-2 rounded-md border border-slate-300 flex items-center gap-2 shadow-sm min-w-[250px]">
-             <Building2 size={18} className="text-blue-600 ml-2" />
-             <select value={activeLembaga} onChange={e => {setActiveLembaga(e.target.value); setSearchQuery("");}} className="w-full text-sm font-bold text-slate-800 bg-transparent border-none focus:ring-0 outline-none cursor-pointer">
-                <option value="Komisariat">Administrasi Komisariat</option><option value="KOPRI">Administrasi KOPRI</option>
-                {listLSO.map(lso => <option key={lso} value={lso}>Administrasi {lso}</option>)}
-             </select>
+          <div className="flex flex-col sm:flex-row gap-3 items-end">
+            <div className="bg-white p-2 rounded-md border border-slate-300 flex items-center gap-2 shadow-sm min-w-[250px] w-full sm:w-auto">
+               <Building2 size={18} className="text-blue-600 ml-2 shrink-0" />
+               <select value={activeLembaga} onChange={e => {setActiveLembaga(e.target.value); setSearchQuery("");}} className="w-full text-sm font-bold text-slate-800 bg-transparent border-none focus:ring-0 outline-none cursor-pointer">
+                  <option value="Komisariat">Administrasi Komisariat</option><option value="KOPRI">Administrasi KOPRI</option>
+                  {listLSO.map(lso => <option key={lso} value={lso}>Administrasi {lso}</option>)}
+               </select>
+            </div>
+
+            {/* DROPDOWN PERIODE KHUSUS PERSURATAN */}
+            {activeTab === "persuratan" && (
+               <div className="bg-white p-2 rounded-md border border-slate-300 flex items-center gap-2 shadow-sm min-w-[250px] w-full sm:w-auto">
+                   <CalendarDays size={18} className="text-amber-600 ml-2 shrink-0" />
+                   <select value={activePeriode} onChange={e => {setActivePeriode(e.target.value); setSearchQuery("");}} className="w-full text-sm font-bold text-slate-800 bg-transparent border-none focus:ring-0 outline-none cursor-pointer">
+                      {availablePeriods.length > 0 ? (
+                          availablePeriods.map(p => <option key={p.id} value={p.id}>{p.periode}</option>)
+                      ) : (
+                          <option value="">Periode Belum Dibuat</option>
+                      )}
+                   </select>
+                   <button onClick={handleOpenPeriodeModal} className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md transition border border-slate-200" title="Kelola Periode & Link Drive">
+                      <FolderTree size={14} />
+                   </button>
+               </div>
+            )}
           </div>
         )}
       </div>
@@ -568,6 +689,14 @@ export default function AdminAdministrasi() {
                </button>
              </>
            )}
+
+           {/* TOMBOL BUKA DRIVE KHUSUS PERSURATAN */}
+           {activeTab === "persuratan" && activePeriode && (
+             <a href={selectedPeriodData[activeSuratTab === "masuk" ? "linkMasuk" : "linkKeluar"] || "#"} target="_blank" rel="noopener noreferrer" className="flex-1 md:flex-none bg-blue-100 hover:bg-blue-200 border border-blue-200 text-blue-700 font-bold py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
+                <FolderArchive size={16} /> <span className="hidden sm:inline">Folder Arsip</span>
+             </a>
+           )}
+
            <button onClick={handleExportExcel} className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm">
               <FileSpreadsheet size={16} /> <span className="hidden sm:inline">Ekspor</span>
            </button>
@@ -644,7 +773,12 @@ export default function AdminAdministrasi() {
                   </>
                 )}
 
-                <th className="py-3 px-3 md:py-4 md:px-4 text-center">{activeTab === "inventaris" ? "Media" : activeTab === "peminjaman" ? "Tindakan" : "Berkas"}</th>
+                {/* Kolom Khusus jika bukan Persuratan (Media/Berkas/Tindakan) */}
+                {activeTab !== "persuratan" && (
+                  <th className="py-3 px-3 md:py-4 md:px-4 text-center">{activeTab === "inventaris" ? "Media" : activeTab === "peminjaman" ? "Tindakan" : "Berkas"}</th>
+                )}
+                
+                {/* Kolom Aksi Umum (Edit/Delete) */}
                 {activeTab !== "peminjaman" && <th className="py-3 px-3 md:py-4 md:px-4 w-20 md:w-24 text-center">Aksi</th>}
               </tr>
             </thead>
@@ -757,40 +891,44 @@ export default function AdminAdministrasi() {
                           </>
                         )}
 
-                        <td className="py-2 px-2 md:py-3 md:px-4 text-center">
-                          {activeTab === "presentasi" ? (
-                             <div className="flex flex-col gap-1.5 items-center justify-center">
-                               {item.embedUrl && <a href={item.embedUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-[9px] md:text-[10px] font-semibold bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 transition">Lihat Embed</a>}
-                               {item.downloadUrl && <a href={item.downloadUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800 text-[9px] md:text-[10px] font-semibold bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded border border-emerald-200 transition"><Download size={12}/> Unduh</a>}
-                               {!item.embedUrl && !item.downloadUrl && <span className="text-slate-400 text-[9px] md:text-[10px] bg-slate-100 px-2 py-1 rounded">Kosong</span>}
-                             </div>
-                          ) : activeTab === "inventaris" ? (
-                             <div className="flex flex-col gap-1.5 items-center justify-center">
-                               {item.fotoGroup && item.fotoGroup.length > 0 ? (
-                                  <span className="inline-flex items-center gap-1 text-blue-600 text-[9px] md:text-[10px] font-semibold bg-blue-50 px-2 py-1 rounded border border-blue-200"><Camera size={12}/> {item.fotoGroup.length} Foto</span>
-                               ) : (
-                                  <span className="text-slate-400 text-[9px] md:text-[10px] bg-slate-100 px-2 py-1 rounded">No Foto</span>
-                               )}
-                             </div>
-                          ) : activeTab === "peminjaman" ? (
-                             <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                               {item.status === "Diproses" && (
-                                  <>
-                                    <button disabled={isSendingEmail} onClick={() => handleUpdateStatusPeminjaman(item, "Disetujui")} className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white p-1 md:p-1.5 rounded shadow-sm transition tooltip" title="Setujui"><CheckCircle size={14}/></button>
-                                    <button disabled={isSendingEmail} onClick={() => handleUpdateStatusPeminjaman(item, "Ditolak")} className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white p-1 md:p-1.5 rounded shadow-sm transition tooltip" title="Tolak"><XCircle size={14}/></button>
-                                  </>
-                               )}
-                               <button onClick={() => handleDeleteRiwayatPeminjaman(item.id)} className="bg-white border border-slate-300 text-slate-400 hover:text-red-600 hover:bg-red-50 p-1 md:p-1.5 rounded shadow-sm transition tooltip" title="Hapus Riwayat">
-                                 <Trash2 size={14}/>
-                               </button>
-                             </div>
-                          ) : (
-                              item.linkFile ? (
-                                 <a href={item.linkFile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-[10px] md:text-xs font-semibold bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-md border border-blue-200 transition"><Download size={14}/> Buka</a>
-                              ) : <span className="text-slate-400 text-[10px] md:text-xs bg-slate-100 px-2 py-1.5 rounded-md">Kosong</span>
-                          )}
-                        </td>
+                        {/* Kolom Berkas / Media Khusus Selain Persuratan */}
+                        {activeTab !== "persuratan" && (
+                          <td className="py-2 px-2 md:py-3 md:px-4 text-center">
+                            {activeTab === "presentasi" ? (
+                               <div className="flex flex-col gap-1.5 items-center justify-center">
+                                 {item.embedUrl && <a href={item.embedUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-[9px] md:text-[10px] font-semibold bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 transition">Lihat Embed</a>}
+                                 {item.downloadUrl && <a href={item.downloadUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800 text-[9px] md:text-[10px] font-semibold bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded border border-emerald-200 transition"><Download size={12}/> Unduh</a>}
+                                 {!item.embedUrl && !item.downloadUrl && <span className="text-slate-400 text-[9px] md:text-[10px] bg-slate-100 px-2 py-1 rounded">Kosong</span>}
+                               </div>
+                            ) : activeTab === "inventaris" ? (
+                               <div className="flex flex-col gap-1.5 items-center justify-center">
+                                 {item.fotoGroup && item.fotoGroup.length > 0 ? (
+                                    <span className="inline-flex items-center gap-1 text-blue-600 text-[9px] md:text-[10px] font-semibold bg-blue-50 px-2 py-1 rounded border border-blue-200"><Camera size={12}/> {item.fotoGroup.length} Foto</span>
+                                 ) : (
+                                    <span className="text-slate-400 text-[9px] md:text-[10px] bg-slate-100 px-2 py-1 rounded">No Foto</span>
+                                 )}
+                               </div>
+                            ) : activeTab === "peminjaman" ? (
+                               <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                 {item.status === "Diproses" && (
+                                    <>
+                                      <button disabled={isSendingEmail} onClick={() => handleUpdateStatusPeminjaman(item, "Disetujui")} className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white p-1 md:p-1.5 rounded shadow-sm transition tooltip" title="Setujui"><CheckCircle size={14}/></button>
+                                      <button disabled={isSendingEmail} onClick={() => handleUpdateStatusPeminjaman(item, "Ditolak")} className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white p-1 md:p-1.5 rounded shadow-sm transition tooltip" title="Tolak"><XCircle size={14}/></button>
+                                    </>
+                                 )}
+                                 <button onClick={() => handleDeleteRiwayatPeminjaman(item.id)} className="bg-white border border-slate-300 text-slate-400 hover:text-red-600 hover:bg-red-50 p-1 md:p-1.5 rounded shadow-sm transition tooltip" title="Hapus Riwayat">
+                                   <Trash2 size={14}/>
+                                 </button>
+                               </div>
+                            ) : (
+                                item.linkFile ? (
+                                   <a href={item.linkFile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-[10px] md:text-xs font-semibold bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-md border border-blue-200 transition"><Download size={14}/> Buka</a>
+                                ) : <span className="text-slate-400 text-[10px] md:text-xs bg-slate-100 px-2 py-1.5 rounded-md">Kosong</span>
+                            )}
+                          </td>
+                        )}
 
+                        {/* Kolom Aksi Umum */}
                         {activeTab !== "peminjaman" && (
                           <td className="py-2 px-2 md:py-3 md:px-4 text-center">
                             <div className="flex gap-2 justify-center" onClick={(e) => e.stopPropagation()}>
@@ -810,7 +948,62 @@ export default function AdminAdministrasi() {
         </div>
       </div>
 
-      {/* MODAL FORM TAMBAH/EDIT */}
+      {/* 🔥 MODAL PENGATURAN PERIODE (Khusus Persuratan) 🔥 */}
+      {isPeriodeModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl flex flex-col overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center shrink-0">
+               <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                  <FolderTree size={18} className="text-amber-600"/>
+                  {periodeFormData.id ? "Edit Periode" : "Buat Periode Baru"}
+               </h2>
+               <div className="flex gap-2">
+                 {periodeFormData.id && (
+                    <button type="button" onClick={() => setPeriodeFormData({ lembaga: activeLembaga, periode: "", linkMasuk: "", linkKeluar: "" })} className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded font-bold transition">
+                      + Buat Baru
+                    </button>
+                 )}
+                 <button onClick={() => setIsPeriodeModalOpen(false)} className="p-1 text-slate-400 hover:bg-slate-200 rounded-md transition"><X size={18}/></button>
+               </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto bg-white flex-1 space-y-4">
+               <div className="bg-amber-50 p-3 rounded-md border border-amber-100 text-xs text-amber-800">
+                 Silakan buat nama Periode Kepengurusan (Misal: <b>2026 - 2027</b>) dan cantumkan link folder Google Drive tempat file-file PDF/Scan arsip disimpan secara global.
+               </div>
+               
+               <form id="periodeForm" onSubmit={handleSavePeriode} className="space-y-4">
+                  <div>
+                    <label className={labelStandardClass}>Nama Periode Kepengurusan</label>
+                    <input type="text" required value={periodeFormData.periode || ''} onChange={e => setPeriodeFormData({...periodeFormData, periode: e.target.value})} className={inputStandardClass} placeholder="Contoh: Tahun 2026-2027" />
+                  </div>
+                  <div>
+                    <label className={labelStandardClass}>Link Folder G-Drive (Surat Masuk)</label>
+                    <input type="url" required value={periodeFormData.linkMasuk || ''} onChange={e => setPeriodeFormData({...periodeFormData, linkMasuk: e.target.value})} className={inputStandardClass} placeholder="https://drive.google.com/drive/folders/..." />
+                  </div>
+                  <div>
+                    <label className={labelStandardClass}>Link Folder G-Drive (Surat Keluar)</label>
+                    <input type="url" required value={periodeFormData.linkKeluar || ''} onChange={e => setPeriodeFormData({...periodeFormData, linkKeluar: e.target.value})} className={inputStandardClass} placeholder="https://drive.google.com/drive/folders/..." />
+                  </div>
+               </form>
+            </div>
+            
+            <div className="bg-slate-50 border-t border-slate-200 p-4 flex justify-between items-center shrink-0">
+               {periodeFormData.id ? (
+                 <button type="button" onClick={handleDeletePeriode} className="text-xs font-bold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-md transition">Hapus Periode</button>
+               ) : <div></div>}
+
+               <div className="flex gap-2">
+                 <button type="button" onClick={() => setIsPeriodeModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-md transition">Batal</button>
+                 <button type="submit" form="periodeForm" className="text-sm font-medium px-6 py-2 rounded-md shadow-sm transition flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"><Save size={16}/> Simpan</button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* MODAL FORM TAMBAH/EDIT DATA UMUM */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6">
           <div className="bg-white w-full max-w-3xl rounded-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
@@ -956,7 +1149,6 @@ export default function AdminAdministrasi() {
                           </div>
                         )}
                       </div>
-                      {/* AKHIR TAMBAHAN */}
                     </>
                   )}
 
@@ -1068,7 +1260,7 @@ export default function AdminAdministrasi() {
                     </>
                   )}
 
-                  {activeTab !== "presentasi" && activeTab !== "inventaris" && (
+                  {activeTab !== "presentasi" && activeTab !== "inventaris" && activeTab !== "persuratan" && (
                     <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
                       <label className={labelStandardClass}>Link File Arsip (G-Drive / PDF)</label>
                       <input type="url" value={formData.linkFile || ''} onChange={e => setFormData({...formData, linkFile: e.target.value})} className={`${inputStandardClass} font-mono text-xs`} placeholder="https://drive.google.com/..." />

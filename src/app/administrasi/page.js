@@ -18,18 +18,18 @@ export default function AdministrasiPage() {
   const [activeLembaga, setActiveLembaga] = useState("Komisariat"); 
   const [listLSO, setListLSO] = useState([]); 
   
-  // State Data Master dari Firebase
-  const [masterSuratMasuk, setMasterSuratMasuk] = useState([]); 
-  const [masterSuratKeluar, setMasterSuratKeluar] = useState([]); 
+  // ================= STATE DATA MASTER =================
+  const [masterPersuratan, setMasterPersuratan] = useState([]); 
   const [masterProker, setMasterProker] = useState([]);
   const [masterProdukHukum, setMasterProdukHukum] = useState([]);
   const [masterLpj, setMasterLpj] = useState([]); 
   const [masterPresentasi, setMasterPresentasi] = useState([]); 
   const [masterInventaris, setMasterInventaris] = useState([]); 
   
-  // State Navigasi & Filter
+  // ================= STATE NAVIGASI & FILTER =================
   const [activeTab, setActiveTab] = useState("persuratan"); 
   const [activeSuratTab, setActiveSuratTab] = useState("masuk"); 
+  const [activePeriode, setActivePeriode] = useState(""); 
   const [searchQuery, setSearchQuery] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -44,8 +44,7 @@ export default function AdministrasiPage() {
         
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setMasterSuratMasuk(data.listSuratMasuk || []); 
-          setMasterSuratKeluar(data.listSuratKeluar || data.listDokumen || []); 
+          setMasterPersuratan(data.masterPersuratan || []); 
           setMasterProker(data.listProker || []);   
           setMasterProdukHukum(data.listProdukHukum || []); 
           setMasterLpj(data.listLpj || []); 
@@ -62,57 +61,45 @@ export default function AdministrasiPage() {
     fetchAdministrasiData();
   }, []); 
 
-  // 🔥 1. FORMAT TANGGAL PATEN (DD/MM/YYYY) 🔥
+  // Mengambil daftar periode yang tersedia sesuai dengan lembaga yang dipilih
+  const availablePeriods = masterPersuratan.filter(p => (p.lembaga || "Komisariat") === activeLembaga);
+
+  // Auto-select periode pertama jika lembaga berubah
+  useEffect(() => {
+    if (activeTab === "persuratan" && availablePeriods.length > 0) {
+      if (!availablePeriods.some(p => p.id === activePeriode)) {
+        setActivePeriode(availablePeriods[0].id);
+      }
+    }
+  }, [activeLembaga, activeTab, masterPersuratan]); 
+
   const formatDisplayDate = (dateVal) => {
     if (!dateVal) return "-";
-    
     if (typeof dateVal === 'string') {
       const str = dateVal.trim();
       const parts = str.includes('/') ? str.split('/') : str.split('-');
       if (parts.length === 3) {
-        if (parts[2].length >= 4) { 
-          return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2].substring(0,4)}`;
-        } 
-        else if (parts[0].length === 4) { 
-          const day = parts[2].substring(0, 2);
-          return `${day.padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
-        }
+        if (parts[2].length >= 4) return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2].substring(0,4)}`;
+        else if (parts[0].length === 4) return `${parts[2].substring(0, 2).padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
       }
     }
-
-    if (!isNaN(dateVal) && Number(dateVal) > 20000) {
-      const date = new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000));
-      return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-    }
-    
+    if (!isNaN(dateVal) && Number(dateVal) > 20000) return `${String(new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000)).getDate()).padStart(2, '0')}/${String(new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000)).getMonth() + 1).padStart(2, '0')}/${new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000)).getFullYear()}`;
     const d = new Date(dateVal);
-    if (!isNaN(d)) {
-      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    }
+    if (!isNaN(d)) return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     return dateVal;
   };
 
-  // 🔥 2. PENERJEMAH TANGGAL UNTUK SORTING AGAR TIDAK ERROR 🔥
   const getSortableDate = (dateVal) => {
     if (!dateVal) return 0;
-    
     if (typeof dateVal === 'string') {
       const str = dateVal.trim();
       const parts = str.includes('/') ? str.split('/') : str.split('-');
       if (parts.length === 3) {
-        if (parts[2].length >= 4) { 
-          return new Date(`${parts[2].substring(0,4)}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`).getTime();
-        } 
-        else if (parts[0].length === 4) { 
-          return new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].substring(0, 2).padStart(2, '0')}T00:00:00`).getTime();
-        }
+        if (parts[2].length >= 4) return new Date(`${parts[2].substring(0,4)}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`).getTime();
+        else if (parts[0].length === 4) return new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].substring(0, 2).padStart(2, '0')}T00:00:00`).getTime();
       }
     }
-
-    if (!isNaN(dateVal) && Number(dateVal) > 20000) {
-      return new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000)).getTime();
-    }
-
+    if (!isNaN(dateVal) && Number(dateVal) > 20000) return new Date(Math.round((Number(dateVal) - 25569) * 86400 * 1000)).getTime();
     const d = new Date(dateVal);
     return isNaN(d) ? 0 : d.getTime();
   };
@@ -121,34 +108,37 @@ export default function AdministrasiPage() {
     return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   };
 
-  const currentSuratMasuk = filterByLembaga(masterSuratMasuk).sort((a, b) => {
-    return getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang); 
-  });
-  
-  const currentSuratKeluar = filterByLembaga(masterSuratKeluar).sort((a, b) => {
+  // 🔥 LOGIKA PERBAIKAN: Memaksa Data Persuratan Wajib Sesuai Lembaga Aktif 🔥
+  const selectedPeriodData = availablePeriods.find(p => p.id === activePeriode) || availablePeriods[0] || { suratMasuk: [], suratKeluar: [], linkMasuk: "", linkKeluar: "" };
+
+  const baseSuratMasuk = (selectedPeriodData.suratMasuk || []).sort((a, b) => getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang));
+  const baseSuratKeluar = (selectedPeriodData.suratKeluar || []).sort((a, b) => {
     const getNum = (str) => {
       const match = (str || "").match(/\d+/);
       return match ? parseInt(match[0], 10) : 999999;
     };
-    const numA = getNum(a.nomorSurat);
-    const numB = getNum(b.nomorSurat);
-    
+    const numA = getNum(a.nomorSurat); const numB = getNum(b.nomorSurat);
     if (numA !== numB) return numA - numB; 
     return (a.nomorSurat || "").localeCompare(b.nomorSurat || "");
   });
 
+  const getDriveLink = () => {
+    if (activeSuratTab === "masuk") return selectedPeriodData.linkMasuk || "#";
+    return selectedPeriodData.linkKeluar || "#";
+  };
+
+  // Data Kategori Lain
   const currentProker = filterByLembaga(masterProker);
-  
-  const currentProdukHukum = masterProdukHukum;
-  const currentLpj = masterLpj;
-  const currentPresentasi = masterPresentasi;
-  const currentInventaris = masterInventaris;
+  const currentProdukHukum = filterByLembaga(masterProdukHukum);
+  const currentLpj = filterByLembaga(masterLpj);
+  const currentPresentasi = filterByLembaga(masterPresentasi);
+  const currentInventaris = filterByLembaga(masterInventaris);
 
   const getFilteredData = () => {
     const q = searchQuery.toLowerCase();
     
     if (activeTab === "persuratan") {
-      const targetData = activeSuratTab === "masuk" ? currentSuratMasuk : currentSuratKeluar;
+      const targetData = activeSuratTab === "masuk" ? baseSuratMasuk : baseSuratKeluar;
       return targetData.filter(item => 
         (item.nomorSurat || "").toLowerCase().includes(q) ||
         (item.hal || item.perihalSurat || "").toLowerCase().includes(q) ||
@@ -207,7 +197,6 @@ export default function AdministrasiPage() {
     ? currentListData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE) 
     : currentListData;
 
-  // ================= EXPORT EXCEL =================
   const handleExportExcel = () => {
     if (currentListData.length === 0) return alert("Tidak ada data arsip untuk diekspor!");
     
@@ -220,8 +209,7 @@ export default function AdministrasiPage() {
         "Tanggal Buat": formatDisplayDate(item.tglBuat),
         [activeSuratTab === "masuk" ? "Tanggal Datang" : "Tanggal Kirim"]: activeSuratTab === "masuk" ? formatDisplayDate(item.tglDatang) : formatDisplayDate(item.tglKirim),
         "Perihal": item.hal || item.perihalSurat || "-",
-        "Keterangan": item.ket || item.deskripsiSurat || "-",
-        "Link Berkas": item.linkFile || "Tidak Ada"
+        "Keterangan": item.ket || item.deskripsiSurat || "-"
       }));
     } else if (activeTab === "proker") {
       formattedData = currentListData.map((item, idx) => ({
@@ -271,8 +259,6 @@ export default function AdministrasiPage() {
   const DocumentCard = ({ item, isHukum }) => (
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col h-full">
       <div className="relative w-full pt-[141.4%] bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 overflow-hidden">
-        
-        {/* 🔥 PERBAIKAN: Menyesuaikan pemanggilan thumbnail dari database */}
         {(item.thumbnail || item.thumbnailUrl) ? (
           <Image 
             src={item.thumbnail || item.thumbnailUrl} 
@@ -284,7 +270,6 @@ export default function AdministrasiPage() {
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 dark:text-slate-500 bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-800 dark:to-slate-700"><FileText size={48} className="mb-2 drop-shadow-sm" /><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Pratinjau PDF</span></div>
         )}
-        
         <div className="absolute top-3 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-md shadow-sm border border-slate-100/50 dark:border-slate-700"><span className={`text-[9px] font-black uppercase tracking-widest ${isHukum ? 'text-purple-600 dark:text-purple-400' : 'text-amber-600 dark:text-amber-400'}`}>{isHukum ? 'Produk Hukum' : 'Laporan'}</span></div>
         <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
            {item.linkFile ? (<a href={item.linkFile} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-blue-600 text-white p-4 rounded-full hover:scale-110 hover:bg-blue-500 transition-all shadow-xl shadow-blue-500/30"><Download size={24} /></a>) : (<span className="bg-slate-800 text-slate-300 px-4 py-2 rounded-full text-xs font-bold">File Kosong</span>)}
@@ -316,9 +301,9 @@ export default function AdministrasiPage() {
       <section className="px-5 max-w-7xl mx-auto w-full -mt-10 md:-mt-12 relative z-20 space-y-4">
         
         {(activeTab === "persuratan" || activeTab === "proker") && (
-          <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700 flex items-center justify-between relative z-30 transition-colors duration-300">
-             <div className="flex items-center gap-3 w-full">
-                 <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400 hidden sm:flex">
+          <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between relative z-30 transition-colors duration-300 gap-3">
+             <div className="flex items-center gap-3 w-full sm:w-1/2">
+                 <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400 hidden sm:flex shrink-0">
                      <Building2 size={20} />
                  </div>
                  <div className="flex-grow">
@@ -336,6 +321,30 @@ export default function AdministrasiPage() {
                      </select>
                  </div>
              </div>
+
+             {activeTab === "persuratan" && (
+                 <div className="flex items-center gap-3 w-full sm:w-1/2 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-700 pt-3 sm:pt-0 sm:pl-4">
+                     <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg text-amber-600 dark:text-amber-400 hidden sm:flex shrink-0">
+                         <CalendarDays size={20} />
+                     </div>
+                     <div className="flex-grow">
+                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 mb-0.5">Periode Kepengurusan</p>
+                         <select
+                           value={activePeriode}
+                           onChange={(e) => { setActivePeriode(e.target.value); setCurrentPage(1); }}
+                           className="w-full text-sm sm:text-base font-black text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer transition-all"
+                         >
+                            {availablePeriods.length > 0 ? (
+                                availablePeriods.map(p => (
+                                    <option key={p.id} value={p.id}>{p.periode}</option>
+                                ))
+                            ) : (
+                                <option value="">Belum Ada Data Periode</option>
+                            )}
+                         </select>
+                     </div>
+                 </div>
+             )}
           </div>
         )}
 
@@ -355,24 +364,38 @@ export default function AdministrasiPage() {
       </section>
 
       <section className="pb-24 px-5 max-w-7xl mx-auto w-full flex-grow mt-6">
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-700 pb-4">
-          <p className="text-xs font-bold text-slate-400 px-1 flex-1">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-700 pb-4 w-full">
+          <p className="text-xs font-bold text-slate-400 px-1 flex-1 text-center sm:text-left">
             Kategori: <span className="text-blue-600 dark:text-blue-400 uppercase tracking-wider">{activeTab}</span> 
             {activeTab !== "persuratan" && ` (${currentListData.length} Data)`}
             {activeTab === "persuratan" && ` (Total ${currentListData.length} Surat)`}
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          {/* 🔥 PERBAIKAN: Menambahkan w-full dan flex-1 untuk mode HP agar sejajar/berjejer */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             {activeTab === "persuratan" && (
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg self-start sm:self-auto shadow-inner border border-slate-200 dark:border-slate-700">
-                <button onClick={() => handleSuratTabChange("masuk")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeSuratTab === "masuk" ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}><Inbox size={14} /> Surat Masuk ({currentSuratMasuk.length})</button>
-                <button onClick={() => handleSuratTabChange("keluar")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeSuratTab === "keluar" ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}><Send size={14} /> Surat Keluar ({currentSuratKeluar.length})</button>
+              <div className="flex w-full sm:w-auto bg-slate-100 dark:bg-slate-800 p-1 rounded-lg shadow-inner border border-slate-200 dark:border-slate-700">
+                <button onClick={() => handleSuratTabChange("masuk")} className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-[11px] sm:text-xs font-bold transition-all ${activeSuratTab === "masuk" ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}><Inbox size={14} /> Surat Masuk ({baseSuratMasuk.length})</button>
+                <button onClick={() => handleSuratTabChange("keluar")} className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-[11px] sm:text-xs font-bold transition-all ${activeSuratTab === "keluar" ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}><Send size={14} /> Surat Keluar ({baseSuratKeluar.length})</button>
               </div>
             )}
             
-            <button onClick={handleExportExcel} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors shadow-sm self-start sm:self-auto">
-              <FileSpreadsheet size={14} /> Export ke Excel
-            </button>
+            <div className="flex w-full sm:w-auto gap-2 sm:gap-3">
+              {activeTab === "persuratan" && (
+                <a 
+                   href={getDriveLink()} 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-colors shadow-sm ${getDriveLink() !== "#" ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed pointer-events-none'}`}
+                >
+                  <FolderArchive size={14} /> <span className="truncate">Folder Arsip</span>
+                </a>
+              )}
+
+              <button onClick={handleExportExcel} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-[11px] sm:text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors shadow-sm">
+                <FileSpreadsheet size={14} /> <span className="truncate">Export ke Excel</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -380,11 +403,13 @@ export default function AdministrasiPage() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-16 text-center shadow-sm mt-4">
              <FileText className="w-14 h-14 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
              <h3 className="font-bold text-slate-700 dark:text-slate-300 text-lg">Data Belum Tersedia</h3>
-             <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">Admin belum menginput data untuk kategori ini di ruang kerja <b>{activeLembaga}</b>, atau kata kunci pencarian Anda tidak ditemukan.</p>
+             <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">
+                Admin belum menginput data untuk kategori ini, atau kata kunci pencarian Anda tidak ditemukan.
+             </p>
           </div>
         ) : (
           <AnimatePresence mode="wait">
-            <motion.div key={`${activeLembaga}-${activeTab}-${activeSuratTab}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="w-full">
+            <motion.div key={`${activeLembaga}-${activeTab}-${activeSuratTab}-${activePeriode}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="w-full">
               
               {/* ================= SUB 1: PERSURATAN ================= */}
               {activeTab === "persuratan" && (
@@ -398,16 +423,15 @@ export default function AdministrasiPage() {
                   </div>
 
                   <div className="overflow-x-auto flex-grow">
-                    <table className="w-full text-left border-collapse min-w-[1200px]">
+                    <table className="w-full text-left border-collapse min-w-[1000px]">
                       <thead className="bg-amber-500 dark:bg-amber-700 text-white text-[11px] uppercase tracking-wider text-center">
                         <tr>
                           <th rowSpan={2} className="py-2 px-3 w-10 font-bold border border-amber-600 dark:border-amber-800">No</th>
                           <th rowSpan={2} className="py-2 px-4 w-64 lg:w-56 font-bold border border-amber-600 dark:border-amber-800">No. Surat</th>
                           <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600 dark:border-amber-800">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</th>
                           <th colSpan={2} className="py-1.5 border border-amber-600 dark:border-amber-800 font-bold">Tgl Surat</th>
-                          <th rowSpan={2} className="py-2 px-4 w-20 font-bold border border-amber-600 dark:border-amber-800">Hal</th>
+                          <th rowSpan={2} className="py-2 px-4 w-48 font-bold border border-amber-600 dark:border-amber-800">Hal</th>
                           <th rowSpan={2} className="py-2 px-4 w-64 font-bold border border-amber-600 dark:border-amber-800">Ket</th>
-                          <th rowSpan={2} className="py-2 px-3 w-20 font-bold border border-amber-600 dark:border-amber-800 bg-amber-600 dark:bg-amber-800">Berkas</th>
                         </tr>
                         <tr>
                           <th className="py-1.5 px-3 w-24 font-bold border border-amber-600 dark:border-amber-800 bg-amber-500/90 dark:bg-amber-700/90">Buat</th>
@@ -436,17 +460,10 @@ export default function AdministrasiPage() {
                               <td className="py-1.5 px-3 border-r border-amber-200 dark:border-amber-800/50 text-[11px] text-center text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap">{activeSuratTab === "masuk" ? formatDisplayDate(doc.tglDatang) : formatDisplayDate(doc.tglKirim)}</td>
                               
                               <td className="py-1.5 px-4 border-r border-amber-200 dark:border-amber-800/50">
-                                <div className="font-bold text-slate-800 dark:text-slate-200 text-xs leading-snug w-48">{doc.hal || doc.perihalSurat || "-"}</div>
+                                <div className="font-bold text-slate-800 dark:text-slate-200 text-xs leading-snug">{doc.hal || doc.perihalSurat || "-"}</div>
                               </td>
-                              <td className="py-1.5 px-4 border-r border-amber-200 dark:border-amber-800/50">
+                              <td className="py-1.5 px-4">
                                 <div className="text-slate-500 dark:text-slate-400 text-[11px] leading-snug">{doc.ket || doc.deskripsiSurat || "-"}</div>
-                              </td>
-                              <td className="py-1.5 px-3 text-center">
-                                {doc.linkFile ? (
-                                  <a href={doc.linkFile} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1 w-full bg-slate-900 dark:bg-slate-700 hover:bg-amber-600 dark:hover:bg-amber-600 text-white font-bold px-2 py-1.5 rounded text-[10px] uppercase tracking-wider transition-colors"><Download size={12} /> Buka</a>
-                                ) : (
-                                  <span className="text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-2 py-1.5 rounded text-[10px] uppercase tracking-wider block text-center font-bold">Kosong</span>
-                                )}
                               </td>
                             </tr>
                           )
