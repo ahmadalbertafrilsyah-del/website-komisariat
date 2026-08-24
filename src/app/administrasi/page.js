@@ -5,7 +5,7 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, MonitorPlay, Share2, Package, Camera, CalendarDays, FileSignature, Users, Loader2 } from "lucide-react";
+import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, MonitorPlay, Share2, Package, Camera, CalendarDays, FileSignature, Users, Loader2, CheckCircle } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, addDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -44,6 +44,9 @@ export default function AdministrasiPage() {
   const [formRTARData, setFormRTARData] = useState({});
   const [isSubmittingSK, setIsSubmittingSK] = useState(false);
   const [isSubmittingRTAR, setIsSubmittingRTAR] = useState(false);
+  
+  // 🔥 State Upload File 🔥
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -269,9 +272,47 @@ export default function AdministrasiPage() {
     XLSX.utils.book_append_sheet(wb, ws, "Data_Arsip"); XLSX.writeFile(wb, `Rekap_${activeTab}_${activeLembaga.toUpperCase()}_${Date.now()}.xlsx`);
   };
 
+  // 🔥 FUNGSI UPLOAD FILE KE CLOUDINARY 🔥
+  const handleFileUpload = async (e, fieldId, setFormData, formData) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME; 
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET; 
+    
+    if (!cloudName || !uploadPreset) { 
+      alert("Error: Konfigurasi Cloudinary belum lengkap!"); 
+      return; 
+    }
+
+    setIsUploadingFile(true);
+    const uploadData = new FormData();
+    uploadData.append("file", file); 
+    uploadData.append("upload_preset", uploadPreset);
+    
+    try {
+      // Gunakan auto/upload agar bisa menerima PDF (raw) maupun Image
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, { 
+        method: "POST", 
+        body: uploadData 
+      });
+      const data = await res.json();
+      
+      if (data.secure_url) {
+         setFormData({...formData, [fieldId]: data.secure_url.replace("/upload/", "/upload/q_auto,f_auto/")});
+      }
+    } catch (err) { 
+      alert(`Gagal mengunggah file ${file.name}.`); 
+    } finally {
+      setIsUploadingFile(false);
+    }
+  };
+
   // ================= SUBMIT PENGAJUAN (DINAMIS) =================
   const handleSubmitSK = async (e) => {
     e.preventDefault();
+    if(isUploadingFile) return alert("Harap tunggu, file sedang diunggah!");
+    
     setIsSubmittingSK(true);
     try {
       await addDoc(collection(db, "pengajuan_sk"), {
@@ -288,6 +329,8 @@ export default function AdministrasiPage() {
 
   const handleSubmitRTAR = async (e) => {
     e.preventDefault();
+    if(isUploadingFile) return alert("Harap tunggu, file sedang diunggah!");
+    
     setIsSubmittingRTAR(true);
     try {
       await addDoc(collection(db, "pengajuan_rtar"), {
@@ -303,13 +346,11 @@ export default function AdministrasiPage() {
   };
 
   // ================= RENDER DYNAMIC FORM =================
-  // Menyesuaikan desain form agar terlihat lebih formal & rapi sesuai referensi UI
   const inputCustomClass = "w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder:text-slate-400";
   const labelCustomClass = "text-[13px] sm:text-sm font-bold text-slate-800 dark:text-slate-200 block mb-2";
 
   const renderDynamicForm = (schema, formData, setFormData) => {
     return schema.map((field, idx) => {
-      // Form akan ditarik full-width jika jenisnya textarea, url, atau judulnya sangat panjang.
       const isFullWidth = field.type === 'textarea' || field.type === 'url' || field.label.length > 35;
 
       return (
@@ -317,8 +358,30 @@ export default function AdministrasiPage() {
           <label className={labelCustomClass}>
             {field.label} {field.required && <span className="text-red-500 ml-0.5">*</span>}
           </label>
+          
           {field.type === 'textarea' ? (
             <textarea required={field.required} placeholder={field.placeholder} value={formData[field.id] || ''} onChange={e => setFormData({...formData, [field.id]: e.target.value})} className={inputCustomClass} rows="4" />
+          ) : field.type === 'file' || field.type === 'image' ? (
+            <div className="relative">
+              <input 
+                type="file" 
+                accept={field.type === 'image' ? "image/*" : ".pdf,.doc,.docx"}
+                required={field.required && !formData[field.id]} 
+                onChange={(e) => handleFileUpload(e, field.id, setFormData, formData)} 
+                className={`w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 ${isUploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isUploadingFile}
+              />
+              {isUploadingFile && (
+                <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1 animate-pulse">
+                  <Loader2 size={12} className="animate-spin" /> Mengunggah File...
+                </p>
+              )}
+              {formData[field.id] && !isUploadingFile && (
+                <p className="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1">
+                  <CheckCircle size={14}/> File terlampir: <a href={formData[field.id]} target="_blank" rel="noopener noreferrer" className="underline hover:text-emerald-800">Lihat File</a>
+                </p>
+              )}
+            </div>
           ) : (
             <input type={field.type} required={field.required} placeholder={field.placeholder} value={formData[field.id] || ''} onChange={e => setFormData({...formData, [field.id]: e.target.value})} className={inputCustomClass} />
           )}
@@ -759,7 +822,7 @@ export default function AdministrasiPage() {
                      </div>
 
                      <div className="pt-6">
-                        <button type="submit" disabled={isSubmittingSK} className={`w-full font-bold text-sm md:text-base py-4 rounded-xl transition-all flex justify-center items-center gap-2 ${isSubmittingSK ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg'}`}>
+                        <button type="submit" disabled={isSubmittingSK || isUploadingFile} className={`w-full font-bold text-sm md:text-base py-4 rounded-xl transition-all flex justify-center items-center gap-2 ${(isSubmittingSK || isUploadingFile) ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg'}`}>
                            {isSubmittingSK ? <><Loader2 size={18} className="animate-spin"/> Mengirim Pengajuan...</> : <><Send size={18}/> Kirim Pengajuan SK</>}
                         </button>
                      </div>
@@ -786,7 +849,7 @@ export default function AdministrasiPage() {
                      </div>
 
                      <div className="pt-6">
-                        <button type="submit" disabled={isSubmittingRTAR} className={`w-full font-bold text-sm md:text-base py-4 rounded-xl transition-all flex justify-center items-center gap-2 ${isSubmittingRTAR ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg'}`}>
+                        <button type="submit" disabled={isSubmittingRTAR || isUploadingFile} className={`w-full font-bold text-sm md:text-base py-4 rounded-xl transition-all flex justify-center items-center gap-2 ${(isSubmittingRTAR || isUploadingFile) ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg'}`}>
                            {isSubmittingRTAR ? <><Loader2 size={18} className="animate-spin"/> Mengirim Pengajuan...</> : <><Send size={18}/> Kirim Pengajuan RTAR</>}
                         </button>
                      </div>
