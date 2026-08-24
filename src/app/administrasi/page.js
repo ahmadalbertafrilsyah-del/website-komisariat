@@ -5,9 +5,9 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, MonitorPlay, Share2, Package, Camera, CalendarDays } from "lucide-react";
+import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, MonitorPlay, Share2, Package, Camera, CalendarDays, FileSignature, Users, Loader2 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import * as XLSX from "xlsx"; 
 
@@ -26,6 +26,10 @@ export default function AdministrasiPage() {
   const [masterPresentasi, setMasterPresentasi] = useState([]); 
   const [masterInventaris, setMasterInventaris] = useState([]); 
   
+  // ================= STATE CUSTOM FORM SCHEMA =================
+  const [skSchema, setSkSchema] = useState([]);
+  const [rtarSchema, setRtarSchema] = useState([]);
+
   // ================= STATE NAVIGASI & FILTER =================
   const [activeTab, setActiveTab] = useState("persuratan"); 
   const [activeSuratTab, setActiveSuratTab] = useState("masuk"); 
@@ -35,13 +39,23 @@ export default function AdministrasiPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
+  // ================= STATE FORM PENGAJUAN (DINAMIS) =================
+  const [formSKData, setFormSKData] = useState({});
+  const [formRTARData, setFormRTARData] = useState({});
+  const [isSubmittingSK, setIsSubmittingSK] = useState(false);
+  const [isSubmittingRTAR, setIsSubmittingRTAR] = useState(false);
+
   useEffect(() => {
-    async function fetchAdministrasiData() {
+    const params = new URLSearchParams(window.location.search);
+    const tabFromUrl = params.get("tab");
+    if (tabFromUrl) setActiveTab(tabFromUrl);
+
+    async function fetchData() {
       setLoading(true);
       try {
+        // 1. Tarik Data Arsip
         const docRef = doc(db, "website_config", "database_administrasi");
         const docSnap = await getDoc(docRef);
-        
         if (docSnap.exists()) {
           const data = docSnap.data();
           setMasterPersuratan(data.masterPersuratan || []); 
@@ -52,24 +66,48 @@ export default function AdministrasiPage() {
           setMasterInventaris(data.listInventaris || []); 
           setListLSO(data.listLSO || []);
         }
+
+        // 2. Tarik Data Custom Form Schema
+        const schemaRef = doc(db, "website_config", "pengajuan_schema");
+        const schemaSnap = await getDoc(schemaRef);
+        if (schemaSnap.exists()) {
+          const sData = schemaSnap.data();
+          setSkSchema(sData.sk || defaultSkSchema);
+          setRtarSchema(sData.rtar || defaultRtarSchema);
+        } else {
+          setSkSchema(defaultSkSchema);
+          setRtarSchema(defaultRtarSchema);
+        }
       } catch (error) {
-        console.error("Gagal menarik database administrasi:", error);
+        console.error("Gagal menarik database:", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchAdministrasiData();
+    fetchData();
   }, []); 
 
-  // Mengambil daftar periode yang tersedia sesuai dengan lembaga yang dipilih
+  // Skema Default jika Admin belum mengatur custom form
+  const defaultSkSchema = [
+    { id: "namaOrganisasi", label: "Asal Organisasi / Nama Kepanitiaan", type: "text", required: true, placeholder: "Contoh: PR PMII Rayon XYZ" },
+    { id: "email", label: "Email Pemohon (Penerima Info ACC)", type: "email", required: true, placeholder: "email_anda@gmail.com" },
+    { id: "tentangSK", label: "Tentang SK", type: "textarea", required: true, placeholder: "Deskripsikan dengan singkat mengenai SK apa yang diajukan..." },
+    { id: "linkBerkas", label: "Link Surat Permohonan / Berkas Dukung (G-Drive)", type: "url", required: false, placeholder: "https://drive.google.com/..." }
+  ];
+
+  const defaultRtarSchema = [
+    { id: "namaRayon", label: "Nama Rayon", type: "text", required: true, placeholder: "Contoh: PR PMII Penakluk" },
+    { id: "email", label: "Email Pemohon (Penerima Info ACC)", type: "email", required: true, placeholder: "email_anda@gmail.com" },
+    { id: "waktuPelaksanaan", label: "Rencana Tgl Pelaksanaan", type: "date", required: true, placeholder: "" },
+    { id: "tempat", label: "Tempat Pelaksanaan", type: "text", required: true, placeholder: "Misal: Gedung NU Kota Malang" },
+    { id: "linkBerkas", label: "Link Berkas / Proposal (G-Drive)", type: "url", required: false, placeholder: "https://drive.google.com/..." }
+  ];
+
   const availablePeriods = masterPersuratan.filter(p => (p.lembaga || "Komisariat") === activeLembaga);
 
-  // Auto-select periode pertama jika lembaga berubah
   useEffect(() => {
     if (activeTab === "persuratan" && availablePeriods.length > 0) {
-      if (!availablePeriods.some(p => p.id === activePeriode)) {
-        setActivePeriode(availablePeriods[0].id);
-      }
+      if (!availablePeriods.some(p => p.id === activePeriode)) setActivePeriode(availablePeriods[0].id);
     }
   }, [activeLembaga, activeTab, masterPersuratan]); 
 
@@ -108,7 +146,6 @@ export default function AdministrasiPage() {
     return dataArray.filter(item => (item.lembaga || "Komisariat") === activeLembaga);
   };
 
-  // 🔥 LOGIKA PERBAIKAN: Memaksa Data Persuratan Wajib Sesuai Lembaga Aktif 🔥
   const selectedPeriodData = availablePeriods.find(p => p.id === activePeriode) || availablePeriods[0] || { suratMasuk: [], suratKeluar: [], linkMasuk: "", linkKeluar: "" };
 
   const baseSuratMasuk = (selectedPeriodData.suratMasuk || []).sort((a, b) => getSortableDate(a.tglDatang) - getSortableDate(b.tglDatang));
@@ -127,12 +164,11 @@ export default function AdministrasiPage() {
     return selectedPeriodData.linkKeluar || "#";
   };
 
-  // Data Kategori Lain
   const currentProker = filterByLembaga(masterProker);
-  const currentProdukHukum = filterByLembaga(masterProdukHukum);
-  const currentLpj = filterByLembaga(masterLpj);
-  const currentPresentasi = filterByLembaga(masterPresentasi);
-  const currentInventaris = filterByLembaga(masterInventaris);
+  const currentProdukHukum = masterProdukHukum;
+  const currentLpj = masterLpj;
+  const currentPresentasi = masterPresentasi;
+  const currentInventaris = masterInventaris;
 
   const getFilteredData = () => {
     const q = searchQuery.toLowerCase();
@@ -181,7 +217,13 @@ export default function AdministrasiPage() {
 
   const currentListData = getFilteredData();
 
-  const handleTabChange = (tab) => { setActiveTab(tab); setSearchQuery(""); setCurrentPage(1); };
+  const handleTabChange = (tab) => { 
+    setActiveTab(tab); 
+    setSearchQuery(""); 
+    setCurrentPage(1); 
+    window.history.pushState(null, "", `?tab=${tab}`);
+  };
+
   const handleSuratTabChange = (tab) => { setActiveSuratTab(tab); setSearchQuery(""); setCurrentPage(1); };
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); setCurrentPage(1); };
   
@@ -190,6 +232,7 @@ export default function AdministrasiPage() {
     setActiveTab("persuratan");
     setSearchQuery("");
     setCurrentPage(1);
+    window.history.pushState(null, "", `?tab=persuratan`);
   };
 
   const totalPages = Math.ceil(currentListData.length / ITEMS_PER_PAGE);
@@ -199,59 +242,89 @@ export default function AdministrasiPage() {
 
   const handleExportExcel = () => {
     if (currentListData.length === 0) return alert("Tidak ada data arsip untuk diekspor!");
-    
     let formattedData = [];
     if (activeTab === "persuratan") {
       formattedData = currentListData.map((item, idx) => ({
-        "No": idx + 1,
-        "Nomor Surat": item.nomorSurat || "-",
-        [activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"]: activeSuratTab === "masuk" ? (item.asalSurat||"-") : (item.tujuanSurat||"-"),
-        "Tanggal Buat": formatDisplayDate(item.tglBuat),
-        [activeSuratTab === "masuk" ? "Tanggal Datang" : "Tanggal Kirim"]: activeSuratTab === "masuk" ? formatDisplayDate(item.tglDatang) : formatDisplayDate(item.tglKirim),
-        "Perihal": item.hal || item.perihalSurat || "-",
-        "Keterangan": item.ket || item.deskripsiSurat || "-"
+        "No": idx + 1, "Nomor Surat": item.nomorSurat || "-", [activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"]: activeSuratTab === "masuk" ? (item.asalSurat||"-") : (item.tujuanSurat||"-"), "Tanggal Buat": formatDisplayDate(item.tglBuat), [activeSuratTab === "masuk" ? "Tanggal Datang" : "Tanggal Kirim"]: activeSuratTab === "masuk" ? formatDisplayDate(item.tglDatang) : formatDisplayDate(item.tglKirim), "Perihal": item.hal || item.perihalSurat || "-", "Keterangan": item.ket || item.deskripsiSurat || "-"
       }));
     } else if (activeTab === "proker") {
       formattedData = currentListData.map((item, idx) => ({
-        "No": idx + 1,
-        "Biro/Pelaksana": item.pelaksanaProker || "-",
-        "Nama Kegiatan": item.namaProker || "-",
-        "Tujuan": item.tujuan || "-",
-        "Indikator": item.indikator || "-",
-        "Sasaran": item.sasaran || "-",
-        "Waktu Pelaksanaan": formatDisplayDate(item.waktuPelaksanaan),
-        "Penanggung Jawab": item.penanggungJawab || "-",
-        "Estimasi Dana": item.estimasiDana || "-"
+        "No": idx + 1, "Biro/Pelaksana": item.pelaksanaProker || "-", "Nama Kegiatan": item.namaProker || "-", "Tujuan": item.tujuan || "-", "Indikator": item.indikator || "-", "Sasaran": item.sasaran || "-", "Waktu Pelaksanaan": formatDisplayDate(item.waktuPelaksanaan), "Penanggung Jawab": item.penanggungJawab || "-", "Estimasi Dana": item.estimasiDana || "-"
       }));
     } else if (activeTab === "presentasi") {
       formattedData = currentListData.map((item, idx) => ({
-        "No": idx + 1,
-        "Judul Dokumen": item.judul || "-",
-        "Tipe Dokumen": item.tipeDokumen || "Presentasi",
-        "Deskripsi": item.deskripsi || "-",
-        "Link Unduh": item.downloadUrl || "Tidak Ada"
+        "No": idx + 1, "Judul Dokumen": item.judul || "-", "Tipe Dokumen": item.tipeDokumen || "Presentasi", "Deskripsi": item.deskripsi || "-", "Link Unduh": item.downloadUrl || "Tidak Ada"
       }));
     } else if (activeTab === "inventaris") {
       formattedData = currentListData.map((item, idx) => ({
-        "No": idx + 1,
-        "Nama Barang": item.namaBarang || "-",
-        "Jumlah": item.jumlah || "0",
-        "Kondisi": item.kondisi || "-",
-        "Deskripsi": item.deskripsi || "-"
+        "No": idx + 1, "Nama Barang": item.namaBarang || "-", "Jumlah": item.jumlah || "0", "Kondisi": item.kondisi || "-", "Deskripsi": item.deskripsi || "-"
       }));
     } else {
       formattedData = currentListData.map((item, idx) => ({
-        "No": idx + 1,
-        "Judul/Ketetapan": item.tentangHukum || item.namaLaporan || "-",
-        "Nomor/Periode": item.nomorSK || item.periode || "-",
-        "Deskripsi Singkat": item.deskripsiHukum || item.deskripsiLaporan || "-"
+        "No": idx + 1, "Judul/Ketetapan": item.tentangHukum || item.namaLaporan || "-", "Nomor/Periode": item.nomorSK || item.periode || "-", "Deskripsi Singkat": item.deskripsiHukum || item.deskripsiLaporan || "-"
       }));
     }
 
-    const ws = XLSX.utils.json_to_sheet(formattedData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Data_Arsip");
-    XLSX.writeFile(wb, `Rekap_${activeTab}_${activeLembaga.toUpperCase()}_${Date.now()}.xlsx`);
+    const ws = XLSX.utils.json_to_sheet(formattedData); const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data_Arsip"); XLSX.writeFile(wb, `Rekap_${activeTab}_${activeLembaga.toUpperCase()}_${Date.now()}.xlsx`);
+  };
+
+  // ================= SUBMIT PENGAJUAN (DINAMIS) =================
+  const handleSubmitSK = async (e) => {
+    e.preventDefault();
+    setIsSubmittingSK(true);
+    try {
+      await addDoc(collection(db, "pengajuan_sk"), {
+        dataForm: formSKData,
+        email: formSKData.email || "", 
+        status: "Diproses",
+        createdAt: new Date().toISOString()
+      });
+      alert("Pengajuan SK berhasil dikirim! Silakan tunggu konfirmasi melalui email Anda.");
+      setFormSKData({});
+    } catch (err) { alert("Terjadi kesalahan saat mengirim pengajuan: " + err.message); } 
+    finally { setIsSubmittingSK(false); }
+  };
+
+  const handleSubmitRTAR = async (e) => {
+    e.preventDefault();
+    setIsSubmittingRTAR(true);
+    try {
+      await addDoc(collection(db, "pengajuan_rtar"), {
+        dataForm: formRTARData,
+        email: formRTARData.email || "",
+        status: "Diproses",
+        createdAt: new Date().toISOString()
+      });
+      alert("Pengajuan Kegiatan RTAR berhasil dikirim! Silakan tunggu konfirmasi melalui email Anda.");
+      setFormRTARData({});
+    } catch (err) { alert("Terjadi kesalahan saat mengirim pengajuan: " + err.message); } 
+    finally { setIsSubmittingRTAR(false); }
+  };
+
+  // ================= RENDER DYNAMIC FORM =================
+  // Menyesuaikan desain form agar terlihat lebih formal & rapi sesuai referensi UI
+  const inputCustomClass = "w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder:text-slate-400";
+  const labelCustomClass = "text-[13px] sm:text-sm font-bold text-slate-800 dark:text-slate-200 block mb-2";
+
+  const renderDynamicForm = (schema, formData, setFormData) => {
+    return schema.map((field, idx) => {
+      // Form akan ditarik full-width jika jenisnya textarea, url, atau judulnya sangat panjang.
+      const isFullWidth = field.type === 'textarea' || field.type === 'url' || field.label.length > 35;
+
+      return (
+        <div key={idx} className={isFullWidth ? "col-span-1 sm:col-span-2" : "col-span-1"}>
+          <label className={labelCustomClass}>
+            {field.label} {field.required && <span className="text-red-500 ml-0.5">*</span>}
+          </label>
+          {field.type === 'textarea' ? (
+            <textarea required={field.required} placeholder={field.placeholder} value={formData[field.id] || ''} onChange={e => setFormData({...formData, [field.id]: e.target.value})} className={inputCustomClass} rows="4" />
+          ) : (
+            <input type={field.type} required={field.required} placeholder={field.placeholder} value={formData[field.id] || ''} onChange={e => setFormData({...formData, [field.id]: e.target.value})} className={inputCustomClass} />
+          )}
+        </div>
+      );
+    });
   };
 
   if (loading) return <LoadingScreen text={`Memuat Bank Data Arsip`} />;
@@ -294,12 +367,13 @@ export default function AdministrasiPage() {
         <div className="relative z-10 max-w-3xl mx-auto">
           <motion.span initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-purple-400 bg-white/10 border border-white/20 px-4 py-1.5 rounded-full mb-5 inline-flex items-center justify-center gap-2 w-max mx-auto backdrop-blur-sm"><FolderArchive size={14} /></motion.span>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tight leading-tight">Pusat <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">Administrasi</span></motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-300 text-sm md:text-lg font-light max-w-2xl mx-auto leading-relaxed">Satu pintu untuk mengakses arsip persuratan, program kerja, produk hukum, presentasi interaktif, hingga inventaris & peminjaman barang.</motion.p>
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-300 text-sm md:text-lg font-light max-w-2xl mx-auto leading-relaxed">Satu pintu untuk mengakses arsip persuratan, program kerja, produk hukum, pengajuan kegiatan, hingga inventaris & peminjaman barang.</motion.p>
         </div>
       </section>
 
       <section className="px-5 max-w-7xl mx-auto w-full -mt-10 md:-mt-12 relative z-20 space-y-4">
         
+        {/* DROPDOWN LEMBAGA & PERIODE (Hanya muncul di tab Persuratan & Proker) */}
         {(activeTab === "persuratan" || activeTab === "proker") && (
           <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between relative z-30 transition-colors duration-300 gap-3">
              <div className="flex items-center gap-3 w-full sm:w-1/2">
@@ -355,51 +429,59 @@ export default function AdministrasiPage() {
           <button onClick={() => handleTabChange("laporan")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "laporan" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><FileCheck size={16} /> Laporan (LPJ)</button>
           <button onClick={() => handleTabChange("presentasi")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "presentasi" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><MonitorPlay size={16} /> Presentasi & Dok</button>
           <button onClick={() => handleTabChange("inventaris")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "inventaris" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Package size={16} /> Inventaris Barang</button>
+          <button onClick={() => handleTabChange("pengajuan-sk")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "pengajuan-sk" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><FileSignature size={16} /> Pengajuan SK</button>
+          <button onClick={() => handleTabChange("pengajuan-rtar")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "pengajuan-rtar" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Users size={16} /> Pengajuan RTAR</button>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700 flex items-center relative transition-colors duration-300">
-          <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={activeTab === "persuratan" ? "Cari nomor surat, perihal, atau tujuan/asal..." : activeTab === "proker" ? "Cari nama program kerja atau divisi pelaksana..." : activeTab === "presentasi" ? "Cari judul presentasi atau tipe dokumen..." : activeTab === "inventaris" ? "Cari nama barang atau kondisinya..." : activeTab === "produkhukum" ? "Cari nomor SK atau tentang ketetapan..." : "Cari judul laporan atau periode..."} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400" />
-          <Search className="absolute left-7 h-5 w-5 text-slate-400" />
-        </div>
+        {/* Form Pencarian disembunyikan untuk Tab Pengajuan */}
+        {(activeTab !== "pengajuan-sk" && activeTab !== "pengajuan-rtar") && (
+          <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700 flex items-center relative transition-colors duration-300">
+            <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={activeTab === "persuratan" ? "Cari nomor surat, perihal, atau tujuan/asal..." : activeTab === "proker" ? "Cari nama program kerja atau divisi pelaksana..." : activeTab === "presentasi" ? "Cari judul presentasi atau tipe dokumen..." : activeTab === "inventaris" ? "Cari nama barang atau kondisinya..." : activeTab === "produkhukum" ? "Cari nomor SK atau tentang ketetapan..." : "Cari judul laporan atau periode..."} className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400" />
+            <Search className="absolute left-7 h-5 w-5 text-slate-400" />
+          </div>
+        )}
       </section>
 
       <section className="pb-24 px-5 max-w-7xl mx-auto w-full flex-grow mt-6">
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-700 pb-4 w-full">
-          <p className="text-xs font-bold text-slate-400 px-1 flex-1 text-center sm:text-left">
-            Kategori: <span className="text-blue-600 dark:text-blue-400 uppercase tracking-wider">{activeTab}</span> 
-            {activeTab !== "persuratan" && ` (${currentListData.length} Data)`}
-            {activeTab === "persuratan" && ` (Total ${currentListData.length} Surat)`}
-          </p>
+        
+        {/* Kategori Header disembunyikan untuk Tab Pengajuan */}
+        {(activeTab !== "pengajuan-sk" && activeTab !== "pengajuan-rtar") && (
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-700 pb-4 w-full">
+            <p className="text-xs font-bold text-slate-400 px-1 flex-1 text-center sm:text-left">
+              Kategori: <span className="text-blue-600 dark:text-blue-400 uppercase tracking-wider">{activeTab}</span> 
+              {activeTab !== "persuratan" && ` (${currentListData.length} Data)`}
+              {activeTab === "persuratan" && ` (Total ${currentListData.length} Surat)`}
+            </p>
 
-          {/* 🔥 PERBAIKAN: Menambahkan w-full dan flex-1 untuk mode HP agar sejajar/berjejer */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            {activeTab === "persuratan" && (
-              <div className="flex w-full sm:w-auto bg-slate-100 dark:bg-slate-800 p-1 rounded-lg shadow-inner border border-slate-200 dark:border-slate-700">
-                <button onClick={() => handleSuratTabChange("masuk")} className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-[11px] sm:text-xs font-bold transition-all ${activeSuratTab === "masuk" ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}><Inbox size={14} /> Surat Masuk ({baseSuratMasuk.length})</button>
-                <button onClick={() => handleSuratTabChange("keluar")} className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-[11px] sm:text-xs font-bold transition-all ${activeSuratTab === "keluar" ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}><Send size={14} /> Surat Keluar ({baseSuratKeluar.length})</button>
-              </div>
-            )}
-            
-            <div className="flex w-full sm:w-auto gap-2 sm:gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               {activeTab === "persuratan" && (
-                <a 
-                   href={getDriveLink()} 
-                   target="_blank" 
-                   rel="noopener noreferrer" 
-                   className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-colors shadow-sm ${getDriveLink() !== "#" ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed pointer-events-none'}`}
-                >
-                  <FolderArchive size={14} /> <span className="truncate">Folder Arsip</span>
-                </a>
+                <div className="flex w-full sm:w-auto bg-slate-100 dark:bg-slate-800 p-1 rounded-lg shadow-inner border border-slate-200 dark:border-slate-700">
+                  <button onClick={() => handleSuratTabChange("masuk")} className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-[11px] sm:text-xs font-bold transition-all ${activeSuratTab === "masuk" ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}><Inbox size={14} /> Surat Masuk ({baseSuratMasuk.length})</button>
+                  <button onClick={() => handleSuratTabChange("keluar")} className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-[11px] sm:text-xs font-bold transition-all ${activeSuratTab === "keluar" ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}><Send size={14} /> Surat Keluar ({baseSuratKeluar.length})</button>
+                </div>
               )}
+              
+              <div className="flex w-full sm:w-auto gap-2 sm:gap-3">
+                {activeTab === "persuratan" && (
+                  <a 
+                     href={getDriveLink()} 
+                     target="_blank" 
+                     rel="noopener noreferrer" 
+                     className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-colors shadow-sm ${getDriveLink() !== "#" ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed pointer-events-none'}`}
+                  >
+                    <FolderArchive size={14} /> <span className="truncate">Folder Arsip</span>
+                  </a>
+                )}
 
-              <button onClick={handleExportExcel} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-[11px] sm:text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors shadow-sm">
-                <FileSpreadsheet size={14} /> <span className="truncate">Export ke Excel</span>
-              </button>
+                <button onClick={handleExportExcel} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-[11px] sm:text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors shadow-sm">
+                  <FileSpreadsheet size={14} /> <span className="truncate">Export ke Excel</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {currentListData.length === 0 ? (
+        {(activeTab !== "pengajuan-sk" && activeTab !== "pengajuan-rtar") && currentListData.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-16 text-center shadow-sm mt-4">
              <FileText className="w-14 h-14 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
              <h3 className="font-bold text-slate-700 dark:text-slate-300 text-lg">Data Belum Tersedia</h3>
@@ -608,13 +690,12 @@ export default function AdministrasiPage() {
                 </div>
               )}
 
-              {/* 🔥 ================= SUB 6: INVENTARIS ================= 🔥 */}
+              {/* ================= SUB 6: INVENTARIS ================= */}
               {activeTab === "inventaris" && (
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                   {currentListData.map((item, index) => (
                     <div key={index} className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col group">
                       
-                      {/* Thumbnail Gambar */}
                       <div className="relative w-full pt-[75%] bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 overflow-hidden">
                         {item.fotoGroup && item.fotoGroup[0] ? (
                           <Image 
@@ -656,6 +737,60 @@ export default function AdministrasiPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* 🔥 ================= SUB 7: FORM PENGAJUAN SK ================= 🔥 */}
+              {activeTab === "pengajuan-sk" && (
+                <div className="max-w-4xl mx-auto bg-white dark:bg-slate-800 p-8 sm:p-10 md:p-12 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 w-full">
+                  <div className="flex items-center gap-4 mb-3">
+                     <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-2xl text-emerald-600 dark:text-emerald-400">
+                        <FileSignature size={28} strokeWidth={2} />
+                     </div>
+                     <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-slate-100">Pengajuan SK Kepengurusan</h2>
+                  </div>
+                  <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 mb-8 border-b border-slate-100 dark:border-slate-700 pb-6">
+                     Silakan lengkapi formulir pengajuan SK. Notifikasi status ACC akan dikirimkan otomatis melalui alamat email pemohon.
+                  </p>
+                  
+                  <form onSubmit={handleSubmitSK} className="space-y-6 md:space-y-8">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6 w-full">
+                        {renderDynamicForm(skSchema, formSKData, setFormSKData)}
+                     </div>
+
+                     <div className="pt-6">
+                        <button type="submit" disabled={isSubmittingSK} className={`w-full font-bold text-sm md:text-base py-4 rounded-xl transition-all flex justify-center items-center gap-2 ${isSubmittingSK ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg'}`}>
+                           {isSubmittingSK ? <><Loader2 size={18} className="animate-spin"/> Mengirim Pengajuan...</> : <><Send size={18}/> Kirim Pengajuan SK</>}
+                        </button>
+                     </div>
+                  </form>
+                </div>
+              )}
+
+              {/* 🔥 ================= SUB 8: FORM PENGAJUAN RTAR ================= 🔥 */}
+              {activeTab === "pengajuan-rtar" && (
+                <div className="max-w-4xl mx-auto bg-white dark:bg-slate-800 p-8 sm:p-10 md:p-12 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 w-full">
+                  <div className="flex items-center gap-4 mb-3">
+                     <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-2xl text-emerald-600 dark:text-emerald-400">
+                        <Users size={28} strokeWidth={2} />
+                     </div>
+                     <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-slate-100">Pengajuan Kegiatan RTAR</h2>
+                  </div>
+                  <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 mb-8 border-b border-slate-100 dark:border-slate-700 pb-6">
+                     Silakan lengkapi formulir pendaftaran untuk penyelenggaraan Rapat Tahunan Anggota Rayon (RTAR).
+                  </p>
+                  
+                  <form onSubmit={handleSubmitRTAR} className="space-y-6 md:space-y-8">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6 w-full">
+                        {renderDynamicForm(rtarSchema, formRTARData, setFormRTARData)}
+                     </div>
+
+                     <div className="pt-6">
+                        <button type="submit" disabled={isSubmittingRTAR} className={`w-full font-bold text-sm md:text-base py-4 rounded-xl transition-all flex justify-center items-center gap-2 ${isSubmittingRTAR ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg'}`}>
+                           {isSubmittingRTAR ? <><Loader2 size={18} className="animate-spin"/> Mengirim Pengajuan...</> : <><Send size={18}/> Kirim Pengajuan RTAR</>}
+                        </button>
+                     </div>
+                  </form>
                 </div>
               )}
 

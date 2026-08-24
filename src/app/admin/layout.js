@@ -1,10 +1,11 @@
+// src/app/admin/layout.js
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { LayoutDashboard, Newspaper, Settings, LogOut, Menu, X, Users, GraduationCap, Trophy, Heart } from "lucide-react";
+import { LayoutDashboard, Newspaper, Settings, LogOut, Menu, X, Users, GraduationCap, Trophy, Heart, FileSignature } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 
 export default function AdminLayout({ children }) {
@@ -69,6 +70,8 @@ export default function AdminLayout({ children }) {
           <Link href="/admin" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin")}><LayoutDashboard size={16} /> Global & Footer</Link>
           <Link href="/admin/beranda" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/beranda")}><Settings size={16} /> Beranda</Link>
           <Link href="/admin/administrasi" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/administrasi")}><Newspaper size={16} /> Administrasi</Link>
+          {/* 🔥 Menu Layanan Pengajuan Baru */}
+          <Link href="/admin/pengajuan" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/pengajuan")}><FileSignature size={16} /> Layanan Pengajuan</Link>
           <Link href="/admin/struktur" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/struktur")}><Users size={16} /> Pengurus</Link>
           <Link href="/admin/anggota" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/anggota")}><Users size={16} /> Anggota</Link>
           <Link href="/admin/rayon" onClick={() => setSidebarOpen(false)} className={menuStyle("/admin/rayon")}><Users size={16} /> Rayon</Link>
