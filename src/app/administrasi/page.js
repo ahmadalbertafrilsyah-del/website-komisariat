@@ -5,7 +5,7 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
-import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, MonitorPlay, Share2, Package, Camera, CalendarDays, FileSignature, Users, Loader2, CheckCircle } from "lucide-react";
+import { Search, Download, FolderArchive, Mail, Briefcase, Scale, FileText, FileCheck, ExternalLink, Inbox, Send, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, MonitorPlay, Share2, Package, Camera, CalendarDays, FileSignature, Users, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, addDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,14 +39,16 @@ export default function AdministrasiPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
-  // ================= STATE FORM PENGAJUAN (DINAMIS) =================
+  // ================= STATE FORM PENGAJUAN =================
   const [formSKData, setFormSKData] = useState({});
   const [formRTARData, setFormRTARData] = useState({});
   const [isSubmittingSK, setIsSubmittingSK] = useState(false);
   const [isSubmittingRTAR, setIsSubmittingRTAR] = useState(false);
   
-  // 🔥 State Upload File 🔥
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+
+  // 🔥 STATE CUSTOM NOTIFICATION MODAL 🔥
+  const [notifModal, setNotifModal] = useState({ isOpen: false, type: "success", title: "", message: "" });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -56,7 +58,6 @@ export default function AdministrasiPage() {
     async function fetchData() {
       setLoading(true);
       try {
-        // 1. Tarik Data Arsip
         const docRef = doc(db, "website_config", "database_administrasi");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -70,7 +71,6 @@ export default function AdministrasiPage() {
           setListLSO(data.listLSO || []);
         }
 
-        // 2. Tarik Data Custom Form Schema
         const schemaRef = doc(db, "website_config", "pengajuan_schema");
         const schemaSnap = await getDoc(schemaRef);
         if (schemaSnap.exists()) {
@@ -90,7 +90,6 @@ export default function AdministrasiPage() {
     fetchData();
   }, []); 
 
-  // Skema Default jika Admin belum mengatur custom form
   const defaultSkSchema = [
     { id: "namaOrganisasi", label: "Asal Organisasi / Nama Kepanitiaan", type: "text", required: true, placeholder: "Contoh: PR PMII Rayon XYZ" },
     { id: "email", label: "Email Pemohon (Penerima Info ACC)", type: "email", required: true, placeholder: "email_anda@gmail.com" },
@@ -244,7 +243,13 @@ export default function AdministrasiPage() {
     : currentListData;
 
   const handleExportExcel = () => {
-    if (currentListData.length === 0) return alert("Tidak ada data arsip untuk diekspor!");
+    if (currentListData.length === 0) {
+      return setNotifModal({ 
+        isOpen: true, type: "error", title: "Data Kosong", 
+        message: "Tidak ada data arsip pada kategori ini untuk diekspor." 
+      });
+    }
+
     let formattedData = [];
     if (activeTab === "persuratan") {
       formattedData = currentListData.map((item, idx) => ({
@@ -272,7 +277,6 @@ export default function AdministrasiPage() {
     XLSX.utils.book_append_sheet(wb, ws, "Data_Arsip"); XLSX.writeFile(wb, `Rekap_${activeTab}_${activeLembaga.toUpperCase()}_${Date.now()}.xlsx`);
   };
 
-  // 🔥 FUNGSI UPLOAD FILE KE CLOUDINARY 🔥
   const handleFileUpload = async (e, fieldId, setFormData, formData) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -281,8 +285,7 @@ export default function AdministrasiPage() {
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET; 
     
     if (!cloudName || !uploadPreset) { 
-      alert("Error: Konfigurasi Cloudinary belum lengkap!"); 
-      return; 
+      return setNotifModal({ isOpen: true, type: "error", title: "Error Konfigurasi", message: "Konfigurasi Cloudinary di server belum lengkap!" }); 
     }
 
     setIsUploadingFile(true);
@@ -291,7 +294,6 @@ export default function AdministrasiPage() {
     uploadData.append("upload_preset", uploadPreset);
     
     try {
-      // Gunakan auto/upload agar bisa menerima PDF (raw) maupun Image
       const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, { 
         method: "POST", 
         body: uploadData 
@@ -302,7 +304,7 @@ export default function AdministrasiPage() {
          setFormData({...formData, [fieldId]: data.secure_url.replace("/upload/", "/upload/q_auto,f_auto/")});
       }
     } catch (err) { 
-      alert(`Gagal mengunggah file ${file.name}.`); 
+      setNotifModal({ isOpen: true, type: "error", title: "Gagal Mengunggah", message: `Gagal mengunggah file ${file.name}. Pastikan koneksi stabil.` }); 
     } finally {
       setIsUploadingFile(false);
     }
@@ -311,7 +313,7 @@ export default function AdministrasiPage() {
   // ================= SUBMIT PENGAJUAN (DINAMIS) =================
   const handleSubmitSK = async (e) => {
     e.preventDefault();
-    if(isUploadingFile) return alert("Harap tunggu, file sedang diunggah!");
+    if(isUploadingFile) return setNotifModal({ isOpen: true, type: "error", title: "Harap Tunggu", message: "File sedang diunggah. Mohon tunggu sesaat." });
     
     setIsSubmittingSK(true);
     try {
@@ -321,15 +323,17 @@ export default function AdministrasiPage() {
         status: "Diproses",
         createdAt: new Date().toISOString()
       });
-      alert("Pengajuan SK berhasil dikirim! Silakan tunggu konfirmasi melalui email Anda.");
+      setNotifModal({ isOpen: true, type: "success", title: "Berhasil Terkirim!", message: "Pengajuan SK berhasil dikirim. Silakan tunggu konfirmasi yang akan dikirimkan otomatis ke email Anda." });
       setFormSKData({});
-    } catch (err) { alert("Terjadi kesalahan saat mengirim pengajuan: " + err.message); } 
+    } catch (err) { 
+      setNotifModal({ isOpen: true, type: "error", title: "Pengajuan Gagal", message: "Terjadi kesalahan sistem saat mengirim: " + err.message }); 
+    } 
     finally { setIsSubmittingSK(false); }
   };
 
   const handleSubmitRTAR = async (e) => {
     e.preventDefault();
-    if(isUploadingFile) return alert("Harap tunggu, file sedang diunggah!");
+    if(isUploadingFile) return setNotifModal({ isOpen: true, type: "error", title: "Harap Tunggu", message: "File sedang diunggah. Mohon tunggu sesaat." });
     
     setIsSubmittingRTAR(true);
     try {
@@ -339,15 +343,16 @@ export default function AdministrasiPage() {
         status: "Diproses",
         createdAt: new Date().toISOString()
       });
-      alert("Pengajuan Kegiatan RTAR berhasil dikirim! Silakan tunggu konfirmasi melalui email Anda.");
+      setNotifModal({ isOpen: true, type: "success", title: "Berhasil Terkirim!", message: "Pengajuan Kegiatan RTAR berhasil dikirim. Silakan tunggu konfirmasi dari Admin melalui email." });
       setFormRTARData({});
-    } catch (err) { alert("Terjadi kesalahan saat mengirim pengajuan: " + err.message); } 
+    } catch (err) { 
+      setNotifModal({ isOpen: true, type: "error", title: "Pengajuan Gagal", message: "Terjadi kesalahan sistem saat mengirim: " + err.message }); 
+    } 
     finally { setIsSubmittingRTAR(false); }
   };
 
-  // ================= RENDER DYNAMIC FORM =================
-  const inputCustomClass = "w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder:text-slate-400";
-  const labelCustomClass = "text-[13px] sm:text-sm font-bold text-slate-800 dark:text-slate-200 block mb-2";
+  const inputCustomClass = "w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 placeholder:font-normal";
+  const labelCustomClass = "text-[13px] sm:text-sm font-bold text-slate-800 dark:text-slate-200 block mb-2 leading-relaxed";
 
   const renderDynamicForm = (schema, formData, setFormData) => {
     return schema.map((field, idx) => {
@@ -861,6 +866,24 @@ export default function AdministrasiPage() {
           </AnimatePresence>
         )}
       </section>
+
+      {/* 🔥 CUSTOM MODAL NOTIFICATION 🔥 */}
+      <AnimatePresence>
+        {notifModal.isOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6 sm:p-8 relative">
+              <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-5 shadow-sm ${notifModal.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                {notifModal.type === 'success' ? <CheckCircle size={32} /> : <XCircle size={32} />}
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-800 mb-2">{notifModal.title}</h3>
+              <p className="text-slate-500 text-sm mb-8 leading-relaxed px-2">{notifModal.message}</p>
+              <button onClick={() => setNotifModal({ isOpen: false, type: "success", title: "", message: "" })} className={`w-full py-3.5 font-bold rounded-xl text-white transition-all shadow-md ${notifModal.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                OK, Mengerti
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <Footer />
     </main>

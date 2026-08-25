@@ -1,3 +1,4 @@
+// src/app/pendaftaran/PendaftaranClient.js
 "use client";
 import React, { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
@@ -6,8 +7,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, addDoc, serverTimestamp, query, where } from "firebase/firestore";
-import { Send, Phone, CheckCircle, Share2, ArrowLeft, Calendar, UploadCloud, Loader2, Info, FileText } from "lucide-react";
-import { motion } from "framer-motion";
+import { Send, Phone, CheckCircle, Share2, ArrowLeft, Calendar, UploadCloud, Loader2, Info, FileText, XCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ================= FUNGSI HELPER FORMAT TEXT =================
 const formatDescription = (text) => {
@@ -101,6 +102,9 @@ function PendaftaranContent() {
 
   const [customAnswers, setCustomAnswers] = useState({});
 
+  // 🔥 STATE CUSTOM NOTIFICATION MODAL 🔥
+  const [notifModal, setNotifModal] = useState({ isOpen: false, type: "success", title: "", message: "" });
+
   useEffect(() => {
     fetchForms();
   }, [formIdParam]);
@@ -120,8 +124,11 @@ function PendaftaranContent() {
 
       if (formIdParam) {
         const found = validForms.find(f => f.id === formIdParam || f.slug === formIdParam);
-        if (found) setSelectedForm(found);
-        else alert("Formulir tidak ditemukan atau pendaftaran sudah ditutup.");
+        if (found) {
+           setSelectedForm(found);
+        } else {
+           setNotifModal({ isOpen: true, type: "error", title: "Formulir Tidak Ditemukan", message: "Formulir yang Anda tuju tidak ditemukan atau pendaftaran telah ditutup." });
+        }
       }
     } catch (error) {
       console.error("Gagal memuat formulir:", error);
@@ -148,7 +155,7 @@ function PendaftaranContent() {
       }
     } else {
       navigator.clipboard.writeText(`${shareData.title}\n\n${shareData.text}\n${shareData.url}`);
-      alert("Detail dan Link pendaftaran berhasil disalin! Silakan paste di WhatsApp.");
+      setNotifModal({ isOpen: true, type: "success", title: "Link Disalin!", message: "Detail dan Link pendaftaran berhasil disalin ke clipboard! Silakan paste di grup WhatsApp." });
     }
   };
 
@@ -178,7 +185,7 @@ function PendaftaranContent() {
       setCustomAnswers(prev => ({ ...prev, [questionText]: data.url }));
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Gagal mengunggah file. Pastikan sinyal stabil atau coba file lain.");
+      setNotifModal({ isOpen: true, type: "error", title: "Gagal Unggah", message: "Gagal mengunggah file. Pastikan sinyal stabil atau coba gunakan file gambar dengan ukuran lebih kecil." });
     } finally {
       setUploadingFiles(prev => ({ ...prev, [questionId]: false }));
     }
@@ -190,7 +197,9 @@ function PendaftaranContent() {
     if (selectedForm.customQuestions) {
       const requiredFiles = selectedForm.customQuestions.filter(q => q.type === 'file' && q.required);
       for (let q of requiredFiles) {
-        if (!customAnswers[q.question]) return alert(`Harap tunggu proses unggah file selesai, atau unggah file untuk pertanyaan: ${q.question}`);
+        if (!customAnswers[q.question]) {
+          return setNotifModal({ isOpen: true, type: "error", title: "Berkas Belum Lengkap", message: `Harap tunggu proses unggah file selesai, atau unggah file untuk pertanyaan wajib: ${q.question}` });
+        }
       }
     }
 
@@ -217,7 +226,7 @@ function PendaftaranContent() {
       setIsSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      alert("Terjadi kesalahan sistem pendaftaran: " + error.message);
+      setNotifModal({ isOpen: true, type: "error", title: "Pendaftaran Gagal", message: "Terjadi kesalahan sistem pendaftaran: " + error.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -439,6 +448,25 @@ function PendaftaranContent() {
            </motion.div>
         </div>
       )}
+
+      {/* 🔥 CUSTOM NOTIFICATION MODAL 🔥 */}
+      <AnimatePresence>
+        {notifModal.isOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6 sm:p-8 relative">
+              <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-5 shadow-sm ${notifModal.type === 'success' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}>
+                {notifModal.type === 'success' ? <CheckCircle size={32} /> : <XCircle size={32} />}
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-800 dark:text-slate-100 mb-2">{notifModal.title}</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed px-2 whitespace-pre-wrap">{notifModal.message}</p>
+              <button onClick={() => setNotifModal({ isOpen: false, type: "success", title: "", message: "" })} className={`w-full py-3.5 font-bold rounded-xl text-white transition-all shadow-md ${notifModal.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                OK, Mengerti
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <Footer />
     </main>
   );
