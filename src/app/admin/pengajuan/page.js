@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc } from "firebase/firestore";
-import { Inbox, Settings, FileSignature, Users, Loader2, CheckCircle, XCircle, Trash2, Plus, Edit, X, Save, ArrowUp, ArrowDown, Link as LinkIcon } from "lucide-react";
+// 🔥 PERBAIKAN: Menambahkan Send di list import
+import { Inbox, Settings, FileSignature, Users, Loader2, CheckCircle, XCircle, Trash2, Plus, Edit, X, Save, ArrowUp, ArrowDown, Link as LinkIcon, ExternalLink, FileText, Send } from "lucide-react";
 
 export default function AdminPengajuan() {
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,9 @@ export default function AdminPengajuan() {
   // Modal ACC SK (Input Link Rekomendasi)
   const [accModal, setAccModal] = useState({ isOpen: false, item: null, collection: "", linkRekomendasi: "" });
   
+  // Modal Detail Data (Buka Data Lengkap)
+  const [detailModal, setDetailModal] = useState({ isOpen: false, data: null, title: "" });
+
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   useEffect(() => {
@@ -74,9 +78,16 @@ export default function AdminPengajuan() {
     return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
+  // Fungsi Pembantu Buka Detail Data
+  const openDetail = (item) => {
+    setDetailModal({
+      isOpen: true,
+      data: item.dataForm || {},
+      title: item.dataForm?.namaOrganisasi || item.dataForm?.namaRayon || "Data Pemohon"
+    });
+  };
+
   // ================= ACTION INBOX (ACC / TOLAK / DELETE) =================
-  
-  // Fungsi Khusus Membuka Modal ACC SK
   const openAccModal = (item, collectionName) => {
     setAccModal({ isOpen: true, item, collection: collectionName, linkRekomendasi: "" });
   };
@@ -92,14 +103,12 @@ export default function AdminPengajuan() {
 
       await updateDoc(doc(db, collectionName, item.id), updateData);
       
-      // Update State Local
       if(collectionName === "pengajuan_sk") {
         setInboxSK(prev => prev.map(p => p.id === item.id ? { ...p, ...updateData } : p));
       } else {
         setInboxRTAR(prev => prev.map(p => p.id === item.id ? { ...p, ...updateData } : p));
       }
 
-      // Kirim Notifikasi Email
       if (item.email) {
         try {
           await fetch('/api/email', {
@@ -111,14 +120,14 @@ export default function AdminPengajuan() {
               namaOrganisasi: item.dataForm?.namaOrganisasi || item.dataForm?.namaRayon || "Organisasi PMII",
               status: newStatus,
               waktuPinjam: formatDate(item.createdAt),
-              linkRekomendasi: customLinkRekomendasi || "" // Kirim link ke email
+              linkRekomendasi: customLinkRekomendasi || "" 
             })
           });
         } catch (e) { console.error("Gagal kirim email", e); }
       }
       
       alert(`Berhasil! Pengajuan telah ${newStatus}.`);
-      setAccModal({ isOpen: false, item: null, collection: "", linkRekomendasi: "" }); // Tutup modal
+      setAccModal({ isOpen: false, item: null, collection: "", linkRekomendasi: "" }); 
     } catch (err) { alert("Gagal update status: " + err.message); }
     finally { setIsSendingEmail(false); }
   };
@@ -226,7 +235,7 @@ export default function AdminPengajuan() {
                     <th className="py-3 px-3 md:px-4 w-12 text-center">No</th>
                     <th className="py-3 px-3 md:px-4">Tanggal Masuk</th>
                     <th className="py-3 px-3 md:px-4">Data Pemohon</th>
-                    <th className="py-3 px-3 md:px-4 min-w-[250px]">Detail Pengajuan (Custom Form)</th>
+                    <th className="py-3 px-3 md:px-4 text-center">Data Lengkap</th>
                     <th className="py-3 px-3 md:px-4 text-center">Status</th>
                     <th className="py-3 px-3 md:px-4 text-center">Aksi</th>
                   </tr>
@@ -244,24 +253,10 @@ export default function AdminPengajuan() {
                             <p className="text-[10px] md:text-xs text-blue-500 mt-0.5 break-words">{item.email}</p>
                          </td>
                          
-                         <td className="py-3 px-3 md:px-4 max-w-[300px] md:max-w-[350px] whitespace-normal">
-                           <div className="flex flex-col gap-1.5 text-[11px] md:text-xs">
-                             {Object.entries(item.dataForm || {}).map(([key, val]) => {
-                               const isLink = typeof val === 'string' && val.startsWith('http');
-                               return (
-                                 <div key={key} className="border-b border-slate-100 pb-1.5 last:border-0 last:pb-0">
-                                   <span className="font-semibold text-slate-600 capitalize block mb-0.5">{key}:</span> 
-                                   {isLink ? (
-                                      <a href={val} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline inline-flex items-center gap-1 font-medium bg-blue-50 px-2 py-0.5 rounded break-all">
-                                        <ExternalLink size={10} className="shrink-0"/> Buka Link/File
-                                      </a>
-                                   ) : (
-                                      <span className="text-slate-500 break-words">{val || "-"}</span>
-                                   )}
-                                 </div>
-                               );
-                             })}
-                           </div>
+                         <td className="py-3 px-3 md:px-4 text-center">
+                            <button onClick={() => openDetail(item)} className="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 hover:border-blue-300 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center justify-center gap-1.5 mx-auto transition-colors shadow-sm">
+                               <FileText size={14}/> Buka Data
+                            </button>
                          </td>
                          
                          <td className="py-3 px-3 md:px-4 text-center">
@@ -299,6 +294,48 @@ export default function AdminPengajuan() {
                </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ================= MODAL DETAIL DATA PENGAJUAN ================= */}
+      {detailModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+                 <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    <FileText size={18} className="text-blue-600"/>
+                    Detail Pengajuan
+                 </h3>
+                 <button onClick={() => setDetailModal({ isOpen: false, data: null, title: "" })} className="p-1.5 text-slate-400 hover:bg-slate-200 rounded-md transition"><X size={18}/></button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto bg-white flex-1 space-y-4">
+                 <div className="mb-4">
+                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">Informasi Form Lengkap</h4>
+                 </div>
+                 {Object.entries(detailModal.data || {}).map(([key, val]) => {
+                   const isLink = typeof val === 'string' && val.startsWith('http');
+                   const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                   
+                   return (
+                     <div key={key} className="border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                       <span className="font-semibold text-slate-700 block mb-1 text-xs uppercase tracking-wider">{formattedKey}</span>
+                       {isLink ? (
+                          <a href={val} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline inline-flex items-center gap-1.5 font-semibold bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-sm w-max transition-colors mt-1">
+                            <ExternalLink size={14} /> Buka Berkas Terlampir
+                          </a>
+                       ) : (
+                          <span className="text-slate-600 text-sm whitespace-pre-wrap">{val || "-"}</span>
+                       )}
+                     </div>
+                   );
+                 })}
+              </div>
+              
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
+                 <button onClick={() => setDetailModal({ isOpen: false, data: null, title: "" })} className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-bold transition shadow-sm">Tutup Detail</button>
+              </div>
+           </div>
         </div>
       )}
 
