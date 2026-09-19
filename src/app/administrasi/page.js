@@ -323,7 +323,7 @@ export default function AdministrasiPage() {
         status: "Diproses",
         createdAt: new Date().toISOString()
       });
-      setNotifModal({ isOpen: true, type: "success", title: "Berhasil Terkirim!", message: "Pengajuan SK berhasil dikirim. Silakan tunggu konfirmasi yang akan dikirimkan otomatis ke email Anda." });
+      setNotifModal({ isOpen: true, type: "success", title: "Berhasil Terkirim!", message: "Pengajuan Surat Rekomendasi SK berhasil dikirim. Silakan tunggu konfirmasi yang akan dikirimkan otomatis ke email Anda." });
       setFormSKData({});
     } catch (err) { 
       setNotifModal({ isOpen: true, type: "error", title: "Pengajuan Gagal", message: "Terjadi kesalahan sistem saat mengirim: " + err.message }); 
@@ -497,7 +497,7 @@ export default function AdministrasiPage() {
           <button onClick={() => handleTabChange("laporan")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "laporan" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><FileCheck size={16} /> Laporan (LPJ)</button>
           <button onClick={() => handleTabChange("presentasi")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "presentasi" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><MonitorPlay size={16} /> Presentasi & Dok</button>
           <button onClick={() => handleTabChange("inventaris")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "inventaris" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Package size={16} /> Inventaris Barang</button>
-          <button onClick={() => handleTabChange("pengajuan-sk")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "pengajuan-sk" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><FileSignature size={16} /> Pengajuan SK</button>
+          <button onClick={() => handleTabChange("pengajuan-sk")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "pengajuan-sk" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><FileSignature size={16} /> Pengajuan Surat Rekomendasi SK</button>
           <button onClick={() => handleTabChange("pengajuan-rtar")} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs md:text-sm font-bold transition-all ${activeTab === "pengajuan-rtar" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}><Users size={16} /> Pengajuan RTAR</button>
         </div>
 
@@ -815,10 +815,10 @@ export default function AdministrasiPage() {
                      <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-2xl text-emerald-600 dark:text-emerald-400">
                         <FileSignature size={28} strokeWidth={2} />
                      </div>
-                     <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-slate-100">Pengajuan SK Kepengurusan</h2>
+                     <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-slate-100">Pengajuan Surat Rekomendasi SK Kepengurusan</h2>
                   </div>
                   <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 mb-8 border-b border-slate-100 dark:border-slate-700 pb-6">
-                     Silakan lengkapi formulir pengajuan SK. Notifikasi status ACC akan dikirimkan otomatis melalui alamat email pemohon.
+                     Silakan lengkapi formulir pengajuan Surat Rekomendasi SK. Notifikasi status ACC akan dikirimkan otomatis melalui alamat email pemohon.
                   </p>
                   
                   <form onSubmit={handleSubmitSK} className="space-y-6 md:space-y-8">
@@ -828,7 +828,7 @@ export default function AdministrasiPage() {
 
                      <div className="pt-6">
                         <button type="submit" disabled={isSubmittingSK || isUploadingFile} className={`w-full font-bold text-sm md:text-base py-4 rounded-xl transition-all flex justify-center items-center gap-2 ${(isSubmittingSK || isUploadingFile) ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg'}`}>
-                           {isSubmittingSK ? <><Loader2 size={18} className="animate-spin"/> Mengirim Pengajuan...</> : <><Send size={18}/> Kirim Pengajuan SK</>}
+                           {isSubmittingSK ? <><Loader2 size={18} className="animate-spin"/> Mengirim Pengajuan...</> : <><Send size={18}/> Kirim Pengajuan Surat Rekomendasi SK</>}
                         </button>
                      </div>
                   </form>
