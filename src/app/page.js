@@ -2,19 +2,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { 
-  Landmark, Target, Handshake, Calendar, ArrowRight, 
-  ShieldCheck, Sparkles, Newspaper, User, Image as ImageIcon,
-  Trophy, Medal, Award, ChevronRight, Star, GraduationCap, Flame
-} from "lucide-react";
+import { Landmark, Target, Handshake, Calendar, ArrowRight, ShieldCheck, Sparkles, Newspaper, User, Image as ImageIcon, Trophy, Medal, Award, ChevronRight, Star, GraduationCap, Flame } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
-// IMPORT FIREBASE
 import { db } from "@/lib/firebase"; 
 import { doc, getDoc, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
-
-// IMPORT FRAMER MOTION
 import { motion, useInView, AnimatePresence } from "framer-motion";
 
 // ================= KOMPONEN ANIMASI ANGKA MENGHITUNG =================
