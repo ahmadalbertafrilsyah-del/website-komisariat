@@ -36,38 +36,67 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  // Gunakan sampul unggahan. Gunakan logo jika sampul belum tersedia.
-const fallbackImage =
-  "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png";
+  // Gunakan sampul unggahan untuk pratinjau tautan.
+  const fallbackImage =
+    "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png";
 
-const uploadedCover =
-  typeof article.imageUrl === "string"
-    ? article.imageUrl.trim()
-    : "";
+  const uploadedCover =
+    typeof article.imageUrl === "string" ? article.imageUrl.trim() : "";
 
-const coverImage = new URL(
-  uploadedCover || fallbackImage,
-  siteUrl
-).href;
+  let coverImage = fallbackImage;
+  let optimizedCover = false;
+  try {
+    const imageUrl = new URL(uploadedCover || fallbackImage, siteUrl);
+    if (imageUrl.protocol === "https:" || imageUrl.protocol === "http:") {
+      // Buat versi JPEG yang ringan untuk pratinjau sosial.
+      // Padding menjaga seluruh desain sampul tetap terlihat.
+      if (
+        imageUrl.hostname === "res.cloudinary.com" &&
+        imageUrl.pathname.includes("/image/upload/") &&
+        !imageUrl.pathname.includes("/s--")
+      ) {
+        imageUrl.pathname = imageUrl.pathname.replace(
+          "/image/upload/",
+          "/image/upload/c_pad,w_1200,h_630,b_white,q_80,f_jpg/"
+        );
+        optimizedCover = true;
+      }
+      coverImage = imageUrl.href;
+    }
+  } catch {
+    // URL tidak valid: gunakan gambar cadangan agar metadata tetap tersedia.
+  }
+
+  const canonicalSlug = createSlug(article.title || "") || decodedId;
+  const canonicalUrl = `${siteUrl}/berita/${encodeURIComponent(canonicalSlug)}`;
 
   return {
-    metadataBase: new URL(siteUrl), 
+    metadataBase: new URL(siteUrl),
+    alternates: { canonical: canonicalUrl },
     title: `${article.title} | PMII Sunan Ampel Malang`,
     description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
     openGraph: {
       type: "article",
       locale: "id_ID",
-      url: `/berita/${rawId}`,
+      url: canonicalUrl,
       title: article.title,
       description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
       siteName: "PMII Sunan Ampel Malang",
-      images: [{ url: coverImage, alt: article.title }],
+      // Gunakan gambar sampul yang sama dengan halaman artikel
+      images: [{
+        url: coverImage,
+        alt: article.title,
+        ...(optimizedCover ? { width: 1200, height: 630, type: "image/jpeg" } : {})
+      }],
     },
     twitter: {
       card: "summary_large_image",
       title: article.title,
       description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
-      images: [{ url: coverImage, alt: article.title }],
+      images: [{
+        url: coverImage,
+        alt: article.title
+      }],
     },
   };
 }

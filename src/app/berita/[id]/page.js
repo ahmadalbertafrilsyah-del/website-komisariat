@@ -17,6 +17,8 @@ import { doc, getDoc, collection, getDocs, updateDoc, increment, addDoc, query, 
 
 import "react-quill-new/dist/quill.snow.css";
 
+const SITE_URL = "https://pmii-uinmalang.or.id";
+
 // ================= KOMPONEN ICON CUSTOM =================
 const FacebookIcon = ({ size = 18 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
@@ -172,16 +174,24 @@ export default function DetailBerita() {
     }
   };
 
-  // Fungsi Bagikan ke Sosmed
+  // Selalu bagikan URL berdasarkan judul, meskipun halaman dibuka lewat ID.
+  const articleSlug = createSlug(article?.title || "") || article?.id || params.id;
+  const articleUrl = `${SITE_URL}/berita/${encodeURIComponent(articleSlug || "")}`;
+
   const shareLinks = {
-    whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(article?.title + " - Baca selengkapnya di: " + (typeof window !== "undefined" ? window.location.href : ""))}`,
-    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(article?.title)}&url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`
+    whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(articleUrl)}`,
+    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(article?.title || "")}&url=${encodeURIComponent(articleUrl)}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    alert("Tautan artikel berhasil disalin ke clipboard!");
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(articleUrl);
+      alert("Tautan artikel berhasil disalin ke clipboard!");
+    } catch (error) {
+      console.error("Gagal menyalin tautan:", error);
+      alert(`Tautan tidak berhasil disalin otomatis. Silakan salin tautan ini: ${articleUrl}`);
+    }
   };
 
   if (loading) {
