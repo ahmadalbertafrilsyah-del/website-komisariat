@@ -36,12 +36,19 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  // Ambil URL Gambar Mentah dari Database untuk fallback
-  let coverImage = article.imageUrl || "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png";
+  // Gunakan sampul unggahan. Gunakan logo jika sampul belum tersedia.
+const fallbackImage =
+  "https://res.cloudinary.com/dxeh0qwc9/image/upload/v1779290231/icon_zcnk4k.png";
 
-  if (coverImage.includes('cloudinary.com') && coverImage.includes('/upload/')) {
-    coverImage = coverImage.replace('/upload/', '/upload/c_fill,w_800,h_418,q_80,f_jpg/');
-  }
+const uploadedCover =
+  typeof article.imageUrl === "string"
+    ? article.imageUrl.trim()
+    : "";
+
+const coverImage = new URL(
+  uploadedCover || fallbackImage,
+  siteUrl
+).href;
 
   return {
     metadataBase: new URL(siteUrl), 
@@ -54,24 +61,13 @@ export async function generateMetadata({ params }) {
       title: article.title,
       description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
       siteName: "PMII Sunan Ampel Malang",
-      // Memanggil Dynamic OG Image API
-      images: [{
-        url: `${siteUrl}/api/og?title=${encodeURIComponent(article.title)}`,
-        width: 1200,
-        height: 630,
-        alt: article.title
-      }],
+      images: [{ url: coverImage, alt: article.title }],
     },
     twitter: {
       card: "summary_large_image",
       title: article.title,
       description: article.excerpt || "Baca selengkapnya di portal pergerakan PMII Sunan Ampel Malang...",
-      images: [{
-        url: `${siteUrl}/api/og?title=${encodeURIComponent(article.title)}`,
-        width: 1200,
-        height: 630,
-        alt: article.title
-      }],
+      images: [{ url: coverImage, alt: article.title }],
     },
   };
 }
