@@ -1,23 +1,165 @@
 "use client";
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import GridSkeleton from "@/components/GridSkeleton";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Search, GraduationCap, MapPin, Briefcase, Calendar, User, X, Share2, Info, Star, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  GraduationCap,
+  MapPin,
+  Briefcase,
+  Calendar,
+  X,
+  Share2,
+  Star,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Award,
+  Sparkles,
+  CheckCircle2,
+  LayoutGrid,
+  Table2,
+  Filter,
+  Copy,
+  Check,
+  Building2,
+  Hash,
+} from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 
+const JENJANG_KEYS = ["MAPABA", "PKD", "PKL", "SIG", "SKP", "SKK"];
+
+const JENJANG_META = {
+  MAPABA: {
+    label: "MAPABA",
+    full: "Masa Penerimaan Anggota Baru",
+    soft: "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+  },
+  PKD: {
+    label: "PKD",
+    full: "Pelatihan Kader Dasar",
+    soft: "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
+  },
+  PKL: {
+    label: "PKL",
+    full: "Pelatihan Kader Lanjut",
+    soft: "bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800",
+  },
+  SIG: {
+    label: "SIG",
+    full: "Sekolah Islam & Gender",
+    soft: "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+  },
+  SKP: {
+    label: "SKP",
+    full: "Sekolah Kader Putri",
+    soft: "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800",
+  },
+  SKK: {
+    label: "SKK",
+    full: "Sekolah Kader Komisariat / Keprofesian",
+    soft: "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+  },
+};
+
+function getInitials(name = "") {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "AL";
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function getSafeArray(data) {
+  if (Array.isArray(data)) return data.map((s) => String(s).trim()).filter(Boolean);
+  if (typeof data === "string" && data.trim() !== "") {
+    return data
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function normalizeJenjang(jenjang, fallbackTahun) {
+  const result = {};
+  if (jenjang && typeof jenjang === "object") {
+    JENJANG_KEYS.forEach((key) => {
+      if (jenjang[key] && String(jenjang[key]).trim() !== "") {
+        result[key] = String(jenjang[key]).trim();
+      }
+    });
+  }
+  if (
+    Object.keys(result).length === 0 &&
+    fallbackTahun &&
+    String(fallbackTahun).trim() !== "" &&
+    fallbackTahun !== "-"
+  ) {
+    result.MAPABA = String(fallbackTahun).trim();
+  }
+  return result;
+}
+
+function getHighestJenjang(jenjangObj) {
+  const order = ["PKL", "SKK", "SKP", "SIG", "PKD", "MAPABA"];
+  for (const k of order) {
+    if (jenjangObj && jenjangObj[k]) {
+      return { key: k, year: jenjangObj[k], ...JENJANG_META[k] };
+    }
+  }
+  return null;
+}
+
+function AlumniAvatar({ foto, nama, size = "md" }) {
+  const [imgError, setImgError] = useState(false);
+  const sizeClasses = {
+    sm: "w-10 h-10 text-xs rounded-xl",
+    md: "w-14 h-14 text-base rounded-2xl",
+    lg: "w-24 h-24 text-2xl rounded-2xl",
+  };
+  return (
+    <div
+      className={`relative shrink-0 overflow-hidden bg-slate-900 dark:bg-blue-950 text-amber-400 font-black flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm ${
+        sizeClasses[size] || sizeClasses.md
+      }`}
+    >
+      {foto && !imgError ? (
+        <Image
+          src={foto}
+          alt={nama || "Alumni PMII"}
+          fill
+          className="object-cover"
+          sizes={size === "lg" ? "96px" : "56px"}
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span>{getInitials(nama)}</span>
+      )}
+    </div>
+  );
+}
+
 export default function AlumniClient() {
   const [loading, setLoading] = useState(true);
   const [alumniData, setAlumniData] = useState([]);
+
+  // Search, Filters & View Mode
   const [searchQuery, setSearchQuery] = useState("");
-  
+  const [selectedRayon, setSelectedRayon] = useState("Semua");
+  const [selectedTahun, setSelectedTahun] = useState("Semua");
+  const [selectedJenjang, setSelectedJenjang] = useState("Semua");
+  const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
+
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 15; 
-  
-  const [selectedAlumni, setSelectedAlumni] = useState(null);
+  const ITEMS_PER_PAGE = 12;
+
+  const [selectedAlumniId, setSelectedAlumniId] = useState(null);
+  const [copiedShare, setCopiedShare] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(null);
 
   useEffect(() => {
     async function fetchAlumni() {
@@ -25,14 +167,44 @@ export default function AlumniClient() {
         const docRef = doc(db, "website_config", "database_alumni");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists() && docSnap.data().listAlumni) {
-          const data = docSnap.data().listAlumni;
-          setAlumniData(data);
-          
-          const params = new URLSearchParams(window.location.search);
-          const namaParam = params.get("nama");
-          if (namaParam) {
-            const found = data.find(a => a.nama === decodeURIComponent(namaParam));
-            if (found) setSelectedAlumni(found);
+          const rawList = docSnap.data().listAlumni;
+          const seenIds = new Set();
+
+          const normalized = rawList.map((item, idx) => {
+            const rawId = item.id ? String(item.id) : `alm-${idx}`;
+            const uniqueId = seenIds.has(rawId) ? `${rawId}-${idx}` : rawId;
+            seenIds.add(uniqueId);
+
+            const tahunMapaba =
+              item.tahunMapaba || item.angkatan || item.jenjang?.MAPABA || "";
+            const asalRayon = item.asalRayon || item.rayon || "";
+            const profesiList = getSafeArray(item.profesi);
+            const bidangList = getSafeArray(item.bidang);
+            const jenjangMap = normalizeJenjang(item.jenjang, tahunMapaba);
+
+            return {
+              ...item,
+              id: uniqueId,
+              tahunMapaba: String(tahunMapaba).trim(),
+              asalRayon: String(asalRayon).trim(),
+              profesiList,
+              bidangList,
+              jenjangMap,
+            };
+          });
+
+          setAlumniData(normalized);
+
+          if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const namaParam = params.get("nama");
+            if (namaParam) {
+              const decoded = decodeURIComponent(namaParam).toLowerCase().trim();
+              const found = normalized.find(
+                (a) => (a.nama || "").toLowerCase().trim() === decoded
+              );
+              if (found) setSelectedAlumniId(found.id);
+            }
           }
         }
       } catch (error) {
@@ -44,198 +216,734 @@ export default function AlumniClient() {
     fetchAlumni();
   }, []);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
+  // Filter options
+  const listRayon = useMemo(() => {
+    return [
+      "Semua",
+      ...new Set(alumniData.map((a) => a.asalRayon).filter(Boolean)),
+    ];
+  }, [alumniData]);
 
-  const filteredData = alumniData.filter(item => {
-    const profesiString = Array.isArray(item.profesi) ? item.profesi.join(" ") : (item.profesi || "");
-    const bidangString = Array.isArray(item.bidang) ? item.bidang.join(" ") : (item.bidang || "");
-    
-    const deskripsiString = typeof item.deskripsiProfesi === 'object' && item.deskripsiProfesi !== null 
-      ? Object.values(item.deskripsiProfesi).join(" ") 
-      : (typeof item.deskripsiProfesi === 'string' ? item.deskripsiProfesi : "");
+  const listTahun = useMemo(() => {
+    return [
+      "Semua",
+      ...new Set(alumniData.map((a) => a.tahunMapaba).filter(Boolean)),
+    ].sort((a, b) => (a === "Semua" ? -1 : b === "Semua" ? 1 : b.localeCompare(a)));
+  }, [alumniData]);
 
-    const searchLower = searchQuery.toLowerCase();
+  // Telemetry counts
+  const jenjangCounts = useMemo(() => {
+    const counts = { MAPABA: 0, PKD: 0, PKL: 0, SIG: 0, SKP: 0, SKK: 0 };
+    alumniData.forEach((a) => {
+      JENJANG_KEYS.forEach((k) => {
+        if (a.jenjangMap && a.jenjangMap[k]) counts[k]++;
+      });
+    });
+    return counts;
+  }, [alumniData]);
 
-    return (
-      (item.nama || "").toLowerCase().includes(searchLower) || 
-      profesiString.toLowerCase().includes(searchLower) ||
-      bidangString.toLowerCase().includes(searchLower) ||
-      deskripsiString.toLowerCase().includes(searchLower) ||
-      (item.asalRayon || "").toLowerCase().includes(searchLower)
-    );
-  });
+  const uniqueProfesiCount = useMemo(() => {
+    const set = new Set();
+    alumniData.forEach((a) => {
+      (a.profesiList || []).forEach((p) => set.add(p.toLowerCase()));
+    });
+    return set.size;
+  }, [alumniData]);
+
+  const filteredData = useMemo(() => {
+    const searchLower = searchQuery.trim().toLowerCase();
+
+    return alumniData.filter((item) => {
+      const profesiString = (item.profesiList || []).join(" ");
+      const bidangString = (item.bidangList || []).join(" ");
+      const deskripsiString =
+        typeof item.deskripsiProfesi === "object" &&
+        item.deskripsiProfesi !== null
+          ? Object.values(item.deskripsiProfesi).join(" ")
+          : typeof item.deskripsiProfesi === "string"
+          ? item.deskripsiProfesi
+          : "";
+
+      const matchSearch =
+        !searchLower ||
+        (item.nama || "").toLowerCase().includes(searchLower) ||
+        profesiString.toLowerCase().includes(searchLower) ||
+        bidangString.toLowerCase().includes(searchLower) ||
+        deskripsiString.toLowerCase().includes(searchLower) ||
+        (item.asalRayon || "").toLowerCase().includes(searchLower) ||
+        (item.nim && String(item.nim).toLowerCase().includes(searchLower)) ||
+        (item.nia && String(item.nia).toLowerCase().includes(searchLower));
+
+      const matchRayon =
+        selectedRayon === "Semua" || item.asalRayon === selectedRayon;
+
+      const matchTahun =
+        selectedTahun === "Semua" || item.tahunMapaba === selectedTahun;
+
+      const matchJenjang =
+        selectedJenjang === "Semua" ||
+        Boolean(item.jenjangMap && item.jenjangMap[selectedJenjang]);
+
+      return matchSearch && matchRayon && matchTahun && matchJenjang;
+    });
+  }, [alumniData, searchQuery, selectedRayon, selectedTahun, selectedJenjang]);
 
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
-  const currentAlumniData = filteredData.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const safeCurrentPage = Math.min(currentPage, Math.max(1, totalPages));
+
+  const currentAlumniData = useMemo(() => {
+    return filteredData.slice(
+      (safeCurrentPage - 1) * ITEMS_PER_PAGE,
+      safeCurrentPage * ITEMS_PER_PAGE
+    );
+  }, [filteredData, safeCurrentPage]);
 
   const getPageNumbers = () => {
     const pages = [];
     for (let i = 1; i <= totalPages; i++) {
-      if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= safeCurrentPage - 1 && i <= safeCurrentPage + 1)
+      ) {
         pages.push(i);
-      } else if (pages[pages.length - 1] !== '...') {
-        pages.push('...');
+      } else if (pages[pages.length - 1] !== "...") {
+        pages.push("...");
       }
     }
     return pages;
   };
 
+  // Active Alumni for Modal
+  const selectedAlumniIndex = useMemo(() => {
+    if (!selectedAlumniId) return -1;
+    return filteredData.findIndex((a) => a.id === selectedAlumniId);
+  }, [filteredData, selectedAlumniId]);
+
+  const selectedAlumni = useMemo(() => {
+    if (!selectedAlumniId) return null;
+    return alumniData.find((a) => a.id === selectedAlumniId) || null;
+  }, [alumniData, selectedAlumniId]);
+
   const handleOpenModal = (alumni) => {
-    setSelectedAlumni(alumni);
-    window.history.pushState(null, "", `?nama=${encodeURIComponent(alumni.nama)}`);
+    setSelectedAlumniId(alumni.id);
+    if (typeof window !== "undefined") {
+      window.history.pushState(
+        null,
+        "",
+        `?nama=${encodeURIComponent(alumni.nama)}`
+      );
+    }
   };
 
   const handleCloseModal = () => {
-    setSelectedAlumni(null);
-    window.history.pushState(null, "", `/alumni`);
+    setSelectedAlumniId(null);
+    if (typeof window !== "undefined") {
+      window.history.pushState(null, "", `/alumni`);
+    }
   };
 
-  const handleShare = async () => {
-    const shareUrl = window.location.href;
+  const handlePrevNextModal = (direction) => {
+    if (filteredData.length === 0) return;
+    let nextIdx = selectedAlumniIndex + direction;
+    if (nextIdx < 0) nextIdx = filteredData.length - 1;
+    if (nextIdx >= filteredData.length) nextIdx = 0;
+    const target = filteredData[nextIdx];
+    if (target) handleOpenModal(target);
+  };
+
+  const handleShare = async (targetAlumni = selectedAlumni) => {
+    if (!targetAlumni || typeof window === "undefined") return;
+    const shareUrl = `${window.location.origin}/alumni?nama=${encodeURIComponent(
+      targetAlumni.nama
+    )}`;
     const shareData = {
-      title: `Profil Alumni: ${selectedAlumni.nama}`,
-      text: `Lihat profil keahlian alumni PMII ${selectedAlumni.nama} di Direktori Alumni.`,
+      title: `Profil Alumni: ${targetAlumni.nama}`,
+      text: `Lihat profil profesional & rekam jejak kaderisasi alumni PMII ${targetAlumni.nama} di Direktori Alumni PK. PMII Sunan Ampel Malang.`,
       url: shareUrl,
     };
 
     if (navigator.share) {
-      try { await navigator.share(shareData); } catch (err) { console.log("Error sharing:", err); }
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // User dibatalkan
+      }
     } else {
       navigator.clipboard.writeText(shareUrl);
-      alert("Link profil berhasil disalin ke clipboard!");
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
     }
   };
 
-  const getSafeArray = (data) => {
-    if (Array.isArray(data)) return data;
-    if (typeof data === 'string' && data.trim() !== '') return data.split(',').map(s => s.trim());
-    return [];
+  const handleCopyCode = (value, label) => {
+    if (!value || value === "-") return;
+    navigator.clipboard.writeText(String(value));
+    setCopiedCode(label);
+    setTimeout(() => setCopiedCode(null), 1800);
   };
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-200 flex flex-col relative">
+    <main className="min-h-screen bg-[#f8fafc] dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 flex flex-col relative pb-16 xl:pb-0">
       <Navbar />
 
-      <section className="pt-28 md:pt-36 pb-20 md:pb-28 px-4 md:px-5 bg-slate-900 text-center relative overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/20 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-amber-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="relative z-10 max-w-3xl mx-auto">
-          <motion.span 
-            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} 
-            className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-amber-400 bg-amber-400/10 border border-amber-400/20 px-4 py-1.5 rounded-full mb-4 md:mb-5 inline-flex items-center justify-center gap-2 w-max backdrop-blur-sm"
-          >
-            <GraduationCap size={14} /> Jaringan Profesional Kader
-          </motion.span>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} 
-            className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 md:mb-6 tracking-tight leading-tight"
-          >
-            Direktori <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-500">Alumni</span>
-          </motion.h1>
+      {/* ARCHITECTURAL HERO HEADER */}
+      <section className="relative pt-28 md:pt-32 pb-14 md:pb-20 px-4 sm:px-6 lg:px-8 bg-[#020617] text-white border-b border-slate-800/80 overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-[0.06] pointer-events-none"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #94a3b8 1px, transparent 1px), linear-gradient(to bottom, #94a3b8 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-amber-400 to-blue-600" />
+
+        <div className="relative z-10 max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-950/80 border border-blue-800/70 text-amber-400 text-[11px] font-mono uppercase tracking-widest mb-4">
+                <GraduationCap size={14} />
+                Jejaring Profesional & Korps Alumni // UIN Malang
+              </div>
+              <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-[1.08] text-white">
+                Direktori & Jejaring{" "}
+                <span className="text-amber-400">Alumni PMII</span>
+              </h1>
+              <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
+                Pangkalan data lintas-angkatan yang memetakan distribusi profesi,
+                bidang keahlian, asal rayon, serta rekam jejak kaderisasi alumni
+                PK. PMII Sunan Ampel Malang.
+              </p>
+            </div>
+
+            {/* Live Telemetry Strip */}
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3 w-full lg:w-auto shrink-0">
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3">
+                <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                  Total Alumni
+                </p>
+                <p className="text-2xl sm:text-3xl font-black text-white mt-0.5">
+                  {alumniData.length}
+                </p>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3">
+                <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                  Bidang Profesi
+                </p>
+                <p className="text-2xl sm:text-3xl font-black text-amber-400 mt-0.5">
+                  {uniqueProfesiCount}
+                </p>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3">
+                <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                  Asal Rayon
+                </p>
+                <p className="text-2xl sm:text-3xl font-black text-blue-400 mt-0.5">
+                  {Math.max(0, listRayon.length - 1)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Jenjang Kaderisasi Quick Filter Strip */}
+          <div className="mt-8 pt-6 border-t border-slate-800/80">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-[11px] font-mono uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                <Award size={13} className="text-amber-400" /> Filter Cepat Riwayat
+                Jenjang Kaderisasi Alumni
+              </span>
+              {selectedJenjang !== "Semua" && (
+                <button
+                  onClick={() => {
+                    setSelectedJenjang("Semua");
+                    setCurrentPage(1);
+                  }}
+                  className="text-[11px] font-mono text-amber-400 hover:underline"
+                >
+                  Reset ({selectedJenjang}) ✕
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {JENJANG_KEYS.map((key) => {
+                const isSelected = selectedJenjang === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setSelectedJenjang(isSelected ? "Semua" : key);
+                      setCurrentPage(1);
+                    }}
+                    className={`text-left px-3 py-2.5 rounded-xl border transition-all ${
+                      isSelected
+                        ? "bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-600/20"
+                        : "bg-slate-900/80 hover:bg-slate-900 text-slate-200 border-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`text-[10px] font-mono font-bold uppercase tracking-wider ${
+                          isSelected ? "text-amber-300" : "text-slate-400"
+                        }`}
+                      >
+                        {key}
+                      </span>
+                      <Award
+                        size={12}
+                        className={isSelected ? "text-amber-300" : "text-slate-500"}
+                      />
+                    </div>
+                    <p className="text-lg sm:text-xl font-black mt-0.5 leading-none">
+                      {jenjangCounts[key] || 0}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="px-4 md:px-5 max-w-4xl mx-auto w-full -mt-6 md:-mt-8 relative z-20">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl p-1.5 md:p-2 rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-none border border-slate-200/60 dark:border-slate-700 flex items-center relative transition-all focus-within:shadow-xl focus-within:shadow-blue-100/50 dark:focus-within:shadow-blue-900/20"
-        >
-          <div className="relative w-full flex items-center">
-            <Search className="absolute left-3 md:left-4 h-4 w-4 md:h-5 md:w-5 text-slate-400 dark:text-slate-500" />
-            <input
-              type="text" 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama, profesi, atau keahlian..."
-              className="w-full pl-10 md:pl-12 pr-4 py-3 md:py-3.5 bg-transparent border-none rounded-xl text-xs md:text-sm focus:outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium"
-            />
+      {/* STICKY SEARCH & MULTI-FILTER CONSOLE */}
+      <section className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full -mt-6 relative z-20">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg">
+          <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Cari nama alumni, profesi, instansi, bidang keahlian, atau rayon..."
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setCurrentPage(1);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Dropdown Filters + View Mode */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+              <div className="relative flex-1 sm:flex-initial min-w-[145px]">
+                <Filter
+                  size={13}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                />
+                <select
+                  value={selectedRayon}
+                  onChange={(e) => {
+                    setSelectedRayon(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 truncate"
+                >
+                  {listRayon.map((r, i) => (
+                    <option key={i} value={r}>
+                      {r === "Semua" ? "Semua Rayon" : r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <select
+                value={selectedTahun}
+                onChange={(e) => {
+                  setSelectedTahun(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500"
+              >
+                {listTahun.map((t, i) => (
+                  <option key={i} value={t}>
+                    {t === "Semua" ? "Semua Angkatan" : `Mapaba ${t}`}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedJenjang}
+                onChange={(e) => {
+                  setSelectedJenjang(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500"
+              >
+                <option value="Semua">Semua Jenjang</option>
+                {JENJANG_KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    Lulus {k}
+                  </option>
+                ))}
+              </select>
+
+              {/* View Switcher */}
+              <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700 shrink-0">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition ${
+                    viewMode === "grid"
+                      ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-amber-400 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                  }`}
+                  title="Tampilan Kartu"
+                >
+                  <LayoutGrid size={14} />
+                  <span className="hidden sm:inline">Kartu</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("table")}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition ${
+                    viewMode === "table"
+                      ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-amber-400 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                  }`}
+                  title="Tampilan Tabel Matriks"
+                >
+                  <Table2 size={14} />
+                  <span className="hidden sm:inline">Matriks</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </motion.div>
+
+          {/* Filter summary bar */}
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <span>
+              Menampilkan{" "}
+              <strong className="text-slate-900 dark:text-white">
+                {filteredData.length}
+              </strong>{" "}
+              alumni terdaftar
+            </span>
+            <span className="text-[11px] font-mono text-blue-600 dark:text-amber-400">
+              Klik kartu alumni untuk membuka Dossier Profesi & Riwayat Kaderisasi →
+            </span>
+          </div>
+        </div>
       </section>
 
-      <section className="py-10 md:py-16 px-3 md:px-5 max-w-7xl mx-auto w-full flex-grow flex flex-col">
+      {/* DIRECTORY CONTENT */}
+      <section className="py-8 md:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full flex-grow flex flex-col">
         {loading ? (
           <GridSkeleton />
         ) : filteredData.length === 0 ? (
-           <div className="text-center text-slate-400 dark:text-slate-500 py-20 flex flex-col items-center">
-              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full mb-4"><Search size={32} className="opacity-50"/></div>
-              <p className="font-medium text-sm">Tidak ada data alumni yang ditemukan.</p>
-           </div>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center max-w-lg mx-auto my-6">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-400">
+              <Search size={22} />
+            </div>
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+              Data Alumni Tidak Ditemukan
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">
+              Coba ubah kata kunci pencarian profesi/keahlian atau atur ulang filter di atas.
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedRayon("Semua");
+                setSelectedTahun("Semua");
+                setSelectedJenjang("Semua");
+                setCurrentPage(1);
+              }}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition"
+            >
+              Reset Semua Filter
+            </button>
+          </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
-              {currentAlumniData.map((alumni, idx) => (
-                <motion.div 
-                  key={idx} 
-                  initial={{ opacity: 0, scale: 0.95, y: 20 }} 
-                  whileInView={{ opacity: 1, scale: 1, y: 0 }} 
-                  viewport={{ once: true }} 
-                  transition={{ duration: 0.4, delay: idx * 0.05 }}
-                  className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 border border-slate-100 dark:border-slate-700 group flex flex-col"
-                >
-                   <div className="h-16 md:h-20 w-full bg-gradient-to-r from-blue-600 to-indigo-700 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
-                   </div>
+            {viewMode === "grid" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+                {currentAlumniData.map((alumni, idx) => {
+                  const highest = getHighestJenjang(alumni.jenjangMap || {});
+                  const activeJenjangKeys = JENJANG_KEYS.filter(
+                    (k) => alumni.jenjangMap && alumni.jenjangMap[k]
+                  );
+                  const primaryProfesi = alumni.profesiList?.[0] || null;
+                  const primaryDesc =
+                    primaryProfesi &&
+                    typeof alumni.deskripsiProfesi === "object" &&
+                    alumni.deskripsiProfesi !== null
+                      ? alumni.deskripsiProfesi[primaryProfesi]
+                      : null;
 
-                   <div className="relative -mt-10 md:-mt-12 mx-auto">
-                      <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white dark:border-slate-800 shadow-md bg-slate-100 dark:bg-slate-700 overflow-hidden group-hover:scale-105 transition-transform duration-300 flex items-center justify-center relative">
-                        {alumni.foto ? (
-                          <Image 
-                            src={alumni.foto} 
-                            alt={alumni.nama} 
-                            fill 
-                            className="object-cover" 
-                            sizes="96px"
+                  return (
+                    <motion.div
+                      key={`${alumni.id || "alm"}-${idx}`}
+                      onClick={() => handleOpenModal(alumni)}
+                      initial={{ opacity: 0, y: 14 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.25 }}
+                      className="group cursor-pointer bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-xl hover:border-blue-500/60 dark:hover:border-blue-500/60 transition-all duration-200 flex flex-col justify-between relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-amber-400 opacity-75 group-hover:opacity-100 transition-opacity" />
+
+                      <div>
+                        {/* Top Meta Strip */}
+                        <div className="flex items-center justify-between gap-2 mb-3.5 pt-1">
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 truncate max-w-[65%]">
+                            {alumni.asalRayon
+                              ? alumni.asalRayon.replace(/^PR\.\s*PMII\s*/i, "")
+                              : "Komisariat"}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70 shrink-0">
+                            Akt. {alumni.tahunMapaba || "-"}
+                          </span>
+                        </div>
+
+                        {/* Avatar & Name */}
+                        <div className="flex items-start gap-3.5 mb-4">
+                          <AlumniAvatar
+                            foto={alumni.foto}
+                            nama={alumni.nama}
+                            size="md"
                           />
-                        ) : (
-                          <User className="w-8 h-8 text-slate-300 dark:text-slate-500" />
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug line-clamp-2 text-base">
+                              {alumni.nama}
+                            </h3>
+                            {primaryProfesi ? (
+                              <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1 truncate">
+                                <Briefcase size={12} className="shrink-0" />
+                                <span className="truncate">{primaryProfesi}</span>
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-slate-400 italic mt-1">
+                                Korps Alumni PMII
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Profesi / Instansi Box */}
+                        {alumni.profesiList && alumni.profesiList.length > 0 && (
+                          <div className="mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">
+                            <div className="flex flex-wrap gap-1">
+                              {alumni.profesiList.slice(0, 2).map((p, i) => (
+                                <span
+                                  key={i}
+                                  className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100/80 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+                                >
+                                  <Briefcase size={10} /> {p}
+                                </span>
+                              ))}
+                              {alumni.profesiList.length > 2 && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                                  +{alumni.profesiList.length - 2}
+                                </span>
+                              )}
+                            </div>
+                            {primaryDesc && (
+                              <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-1 mt-1.5 font-medium">
+                                {primaryDesc}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Bidang Keahlian Tags */}
+                        {alumni.bidangList && alumni.bidangList.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1">
+                              Keahlian
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {alumni.bidangList.slice(0, 3).map((b, i) => (
+                                <span
+                                  key={i}
+                                  className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-200/80 dark:border-violet-800/60"
+                                >
+                                  <Sparkles size={9} /> {b}
+                                </span>
+                              ))}
+                              {alumni.bidangList.length > 3 && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                  +{alumni.bidangList.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Jenjang Kaderisasi Chips */}
+                        {activeJenjangKeys.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1">
+                              Jenjang Kaderisasi
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {activeJenjangKeys.map((k) => (
+                                <span
+                                  key={k}
+                                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${JENJANG_META[k].soft}`}
+                                >
+                                  {k} &apos;{String(alumni.jenjangMap[k]).slice(-2)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
-                   </div>
 
-                   <div className="pt-3 pb-5 px-4 flex flex-col items-center flex-grow text-center">
-                      <h3 className="text-slate-800 dark:text-slate-100 font-bold text-sm md:text-base leading-tight mb-4 line-clamp-2 min-h-[40px] flex items-center">
-                        {alumni.nama}
-                      </h3>
-                      
-                      <button 
-                        onClick={() => handleOpenModal(alumni)}
-                        className="mt-auto w-full bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-600 dark:hover:bg-blue-600 text-blue-600 dark:text-blue-400 hover:text-white border border-blue-100 dark:border-blue-800/50 hover:border-blue-600 transition-colors duration-300 font-semibold py-2 rounded-xl text-xs md:text-sm flex justify-center items-center gap-1.5"
-                      >
-                        <Info size={16} /> Lihat Profil
-                      </button>
-                   </div>
-                </motion.div>
-              ))}
-            </div>
+                      {/* Card Footer */}
+                      <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                        <span>
+                          {highest ? `${highest.label} (${highest.year})` : "Profil Alumni"}
+                        </span>
+                        <span className="font-sans font-bold text-blue-600 dark:text-amber-400 group-hover:translate-x-0.5 transition-transform">
+                          Lihat Dossier →
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* MATRIX TABLE VIEW */
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        <th className="py-3.5 px-4">Nama Alumni</th>
+                        <th className="py-3.5 px-4">Asal Rayon & Mapaba</th>
+                        <th className="py-3.5 px-4">Profesi & Karir</th>
+                        <th className="py-3.5 px-4">Bidang Keahlian</th>
+                        <th className="py-3.5 px-4">Jenjang Kaderisasi</th>
+                        <th className="py-3.5 px-4 text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs sm:text-sm">
+                      {currentAlumniData.map((alumni, idx) => (
+                        <tr
+                          key={`${alumni.id || "alm-row"}-${idx}`}
+                          onClick={() => handleOpenModal(alumni)}
+                          className="hover:bg-blue-50/50 dark:hover:bg-slate-800/60 cursor-pointer transition-colors"
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <AlumniAvatar
+                                foto={alumni.foto}
+                                nama={alumni.nama}
+                                size="sm"
+                              />
+                              <div>
+                                <p className="font-bold text-slate-900 dark:text-white">
+                                  {alumni.nama}
+                                </p>
+                                {alumni.nia && (
+                                  <p className="text-[11px] font-mono text-slate-400">
+                                    NIA: {alumni.nia}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <p className="font-semibold text-slate-700 dark:text-slate-200 text-xs">
+                              {alumni.asalRayon || "-"}
+                            </p>
+                            <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
+                              Mapaba {alumni.tahunMapaba || "-"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {alumni.profesiList && alumni.profesiList.length > 0 ? (
+                                alumni.profesiList.map((p, i) => (
+                                  <span
+                                    key={i}
+                                    className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                  >
+                                    {p}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-slate-400">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {alumni.bidangList && alumni.bidangList.length > 0 ? (
+                                alumni.bidangList.slice(0, 3).map((b, i) => (
+                                  <span
+                                    key={i}
+                                    className="text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-200/70 dark:border-violet-800"
+                                  >
+                                    {b}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-slate-400">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap gap-1">
+                              {JENJANG_KEYS.filter(
+                                (k) => alumni.jenjangMap && alumni.jenjangMap[k]
+                              ).map((k) => (
+                                <span
+                                  key={k}
+                                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${JENJANG_META[k].soft}`}
+                                >
+                                  {k} ({alumni.jenjangMap[k]})
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right font-bold text-xs text-blue-600 dark:text-amber-400 whitespace-nowrap">
+                            Buka →
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
+            {/* PAGINATION */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 md:gap-3 mt-12 md:mt-16 w-full">
+              <div className="flex justify-center items-center gap-2 mt-10 w-full">
                 <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 md:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent transition shadow-sm bg-white dark:bg-slate-800"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition bg-white dark:bg-slate-900"
                 >
-                  <ChevronLeft size={20} />
+                  <ChevronLeft size={18} />
                 </button>
 
-                <div className="hidden md:flex items-center gap-1.5">
+                <div className="hidden sm:flex items-center gap-1.5">
                   {getPageNumbers().map((pageNum, idx) => (
                     <button
                       key={idx}
-                      onClick={() => pageNum !== '...' && setCurrentPage(pageNum)}
-                      disabled={pageNum === '...'}
-                      className={`w-10 h-10 rounded-xl text-sm font-bold flex items-center justify-center transition-all duration-300 ${
-                        pageNum === currentPage
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                          : pageNum === '...'
-                          ? 'text-slate-400 dark:text-slate-500 cursor-default bg-transparent'
-                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-blue-300'
+                      onClick={() => pageNum !== "..." && setCurrentPage(pageNum)}
+                      disabled={pageNum === "..."}
+                      className={`w-9 h-9 rounded-xl text-xs font-bold flex items-center justify-center transition ${
+                        pageNum === safeCurrentPage
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : pageNum === "..."
+                          ? "text-slate-400 cursor-default"
+                          : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-blue-400"
                       }`}
                     >
                       {pageNum}
@@ -243,156 +951,322 @@ export default function AlumniClient() {
                   ))}
                 </div>
 
-                <div className="md:hidden px-4 text-sm font-bold text-slate-600 dark:text-slate-300">
-                  Hal <span className="text-blue-600 dark:text-blue-400">{currentPage}</span> / {totalPages}
+                <div className="sm:hidden px-4 text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
+                  Hal <span className="text-blue-600 dark:text-amber-400">{safeCurrentPage}</span> /{" "}
+                  {totalPages}
                 </div>
 
                 <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-2 md:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent transition shadow-sm bg-white dark:bg-slate-800"
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={safeCurrentPage === totalPages}
+                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition bg-white dark:bg-slate-900"
                 >
-                  <ChevronRight size={20} />
+                  <ChevronRight size={18} />
                 </button>
               </div>
             )}
           </>
         )}
       </section>
-      
-      <Footer />
 
+      {/* MODAL DOSSIER ALUMNI */}
       <AnimatePresence>
         {selectedAlumni && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 overflow-y-auto">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={handleCloseModal}
-              className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm cursor-pointer"
-            />
-            
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col md:flex-row my-auto max-h-[90vh] md:max-h-[85vh]"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleCloseModal}
+            className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col"
             >
-              <button onClick={handleCloseModal} className="absolute top-4 right-4 z-20 bg-black/10 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/30 text-slate-800 dark:text-slate-200 hover:text-white p-2 rounded-full backdrop-blur-md transition-colors">
-                 <X size={20} />
-              </button>
-
-              <div className="w-full md:w-2/5 lg:w-1/3 bg-slate-50 dark:bg-slate-800/50 border-r border-slate-100 dark:border-slate-700 flex flex-col items-center pt-10 md:pt-14 pb-8 px-6 relative shrink-0">
-                 <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-blue-600 to-indigo-700 opacity-10 rounded-b-[50%]"></div>
-                 
-                 <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-slate-800 shadow-xl bg-slate-100 dark:bg-slate-700 overflow-hidden flex items-center justify-center mb-6 relative z-10">
-                    {selectedAlumni.foto ? (
-                      <Image 
-                        src={selectedAlumni.foto} 
-                        alt={selectedAlumni.nama} 
-                        fill 
-                        className="object-cover" 
-                        sizes="160px"
-                      />
-                    ) : (
-                      <User className="w-16 h-16 text-slate-300 dark:text-slate-500" />
-                    )}
-                 </div>
-
-                 <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 text-center leading-tight mb-6">
-                   {selectedAlumni.nama}
-                 </h2>
-
-                 <div className="w-full space-y-3 mt-auto">
-                    <div className="flex items-center p-3.5 bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 rounded-2xl gap-3">
-                       <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-xl text-blue-600 dark:text-blue-400"><Calendar size={18}/></div>
-                       <div>
-                         <p className="text-[10px] font-bold text-slate-400 uppercase">Tahun Mapaba</p>
-                         <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{selectedAlumni.tahunMapaba || "Tidak diketahui"}</p>
-                       </div>
-                    </div>
-                    <div className="flex items-center p-3.5 bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 rounded-2xl gap-3">
-                       <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-xl text-amber-600 dark:text-amber-400"><MapPin size={18}/></div>
-                       <div className="overflow-hidden">
-                         <p className="text-[10px] font-bold text-slate-400 uppercase">Asal Rayon</p>
-                         <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={selectedAlumni.asalRayon}>{selectedAlumni.asalRayon || "Tidak diketahui"}</p>
-                       </div>
-                    </div>
-                 </div>
-
-                 <button 
-                   onClick={handleShare}
-                   className="w-full mt-6 bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition flex justify-center items-center gap-2 shadow-lg shadow-slate-900/20"
-                 >
-                   <Share2 size={18} /> Bagikan Profil
-                 </button>
+              {/* Modal Top Bar */}
+              <div className="sticky top-0 z-20 bg-slate-900 text-white px-5 py-4 flex items-center justify-between border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">
+                    Dossier Korps Alumni // PK. PMII Sunan Ampel
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleShare(selectedAlumni)}
+                    className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 transition mr-1"
+                    title="Bagikan Profil Alumni"
+                  >
+                    {copiedShare ? <Check size={14} /> : <Share2 size={14} />}
+                    <span className="hidden sm:inline">
+                      {copiedShare ? "Tersalin" : "Bagikan"}
+                    </span>
+                  </button>
+                  {filteredData.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => handlePrevNextModal(-1)}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+                        title="Alumni Sebelumnya"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button
+                        onClick={() => handlePrevNextModal(1)}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+                        title="Alumni Selanjutnya"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={handleCloseModal}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-200 hover:text-white transition ml-1"
+                    title="Tutup"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
-              <div className="w-full md:w-3/5 lg:w-2/3 p-6 md:p-8 lg:p-10 overflow-y-auto">
-                 <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
-                    <Briefcase className="text-blue-600 dark:text-blue-400"/> Informasi Profesional
-                 </h3>
-
-                 <div className="mb-8">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Profesi Saat Ini</p>
-                    <div className="space-y-3">
-                      {(() => {
-                        const profesiList = getSafeArray(selectedAlumni.profesi);
-                        return profesiList.length > 0 ? (
-                          profesiList.map((p, idx) => {
-                            const descText = (typeof selectedAlumni.deskripsiProfesi === 'object' && selectedAlumni.deskripsiProfesi !== null)
-                              ? selectedAlumni.deskripsiProfesi[p]
-                              : null;
-                              
-                            return (
-                              <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
-                                 <div className="flex items-center gap-2 mb-2">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm font-bold">
-                                      <Briefcase size={14} /> {p}
-                                    </span>
-                                 </div>
-                                 {descText && (
-                                   <div className="flex gap-2.5 items-start mt-2">
-                                      <FileText className="text-slate-400 shrink-0 mt-0.5" size={16}/>
-                                      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
-                                        {descText}
-                                      </p>
-                                   </div>
-                                 )}
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <span className="text-sm font-medium text-slate-500 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 px-4 py-3 rounded-xl block border border-slate-100 dark:border-slate-700 text-center">
-                            Belum mengisi data profesi.
-                          </span>
-                        );
-                      })()}
+              {/* Modal Body */}
+              <div className="p-5 sm:p-6 space-y-6">
+                {/* Identity Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
+                  <AlumniAvatar
+                    foto={selectedAlumni.foto}
+                    nama={selectedAlumni.nama}
+                    size="lg"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-blue-600 text-white">
+                        {selectedAlumni.asalRayon || "PK. PMII Sunan Ampel"}
+                      </span>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-amber-400/20 text-amber-700 dark:text-amber-300 border border-amber-400/40">
+                        Mapaba {selectedAlumni.tahunMapaba || "-"}
+                      </span>
                     </div>
-                 </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-snug">
+                      {selectedAlumni.nama}
+                    </h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+                      <GraduationCap size={14} className="text-blue-500 shrink-0" />
+                      Jaringan Korps Alumni PMII Sunan Ampel Malang
+                    </p>
+                  </div>
+                </div>
 
-                 <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Bidang yang Dikuasai / Keahlian</p>
+                {/* Metadata Grid (Asal Rayon, Tahun Mapaba, + NIM/NIA if transferred from Anggota) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-800 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <MapPin size={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                        Asal Pangkalan Rayon
+                      </p>
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                        {selectedAlumni.asalRayon || "Belum dicantumkan"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-800 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <Calendar size={16} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                        Tahun Angkatan / Mapaba
+                      </p>
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                        {selectedAlumni.tahunMapaba || "Tidak diketahui"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(selectedAlumni.nim || selectedAlumni.nia) && (
+                    <>
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <Hash size={15} className="text-slate-400" />
+                          <div>
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                              NIM Semasa Kuliah
+                            </p>
+                            <p className="text-xs font-mono font-bold text-slate-900 dark:text-white">
+                              {selectedAlumni.nim || "-"}
+                            </p>
+                          </div>
+                        </div>
+                        {selectedAlumni.nim && selectedAlumni.nim !== "-" && (
+                          <button
+                            onClick={() => handleCopyCode(selectedAlumni.nim, "NIM")}
+                            className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-blue-600"
+                          >
+                            {copiedCode === "NIM" ? (
+                              <Check size={13} className="text-emerald-500" />
+                            ) : (
+                              <Copy size={13} />
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <Hash size={15} className="text-slate-400" />
+                          <div>
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                              Nomor Induk Anggota (NIA)
+                            </p>
+                            <p className="text-xs font-mono font-bold text-slate-900 dark:text-white">
+                              {selectedAlumni.nia || "-"}
+                            </p>
+                          </div>
+                        </div>
+                        {selectedAlumni.nia && selectedAlumni.nia !== "-" && (
+                          <button
+                            onClick={() => handleCopyCode(selectedAlumni.nia, "NIA")}
+                            className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-blue-600"
+                          >
+                            {copiedCode === "NIA" ? (
+                              <Check size={13} className="text-emerald-500" />
+                            ) : (
+                              <Copy size={13} />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Profesi & Karir Saat Ini */}
+                <div>
+                  <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-400 mb-2.5 flex items-center gap-1.5">
+                    <Briefcase size={13} className="text-blue-500" /> Profesi &
+                    Kiprah Profesional Saat Ini
+                  </h4>
+                  {selectedAlumni.profesiList &&
+                  selectedAlumni.profesiList.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {selectedAlumni.profesiList.map((p, idx) => {
+                        const descText =
+                          typeof selectedAlumni.deskripsiProfesi === "object" &&
+                          selectedAlumni.deskripsiProfesi !== null
+                            ? selectedAlumni.deskripsiProfesi[p]
+                            : null;
+                        return (
+                          <div
+                            key={idx}
+                            className="p-3.5 rounded-xl bg-blue-50/50 dark:bg-slate-800/80 border border-blue-200/70 dark:border-slate-700"
+                          >
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-600 text-white text-xs font-bold">
+                              <Building2 size={12} /> {p}
+                            </div>
+                            {descText && (
+                              <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed flex items-start gap-1.5">
+                                <FileText
+                                  size={13}
+                                  className="text-slate-400 shrink-0 mt-0.5"
+                                />
+                                <span>{descText}</span>
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs italic text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                      Informasi profesi/instansi belum ditambahkan.
+                    </p>
+                  )}
+                </div>
+
+                {/* Bidang Keahlian */}
+                <div>
+                  <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-400 mb-2.5 flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-violet-500" /> Bidang
+                    Keahlian & Kompetensi
+                  </h4>
+                  {selectedAlumni.bidangList &&
+                  selectedAlumni.bidangList.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {(() => {
-                        const bidangList = getSafeArray(selectedAlumni.bidang);
-                        return bidangList.length > 0 ? (
-                          bidangList.map((b, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border border-violet-100/50 dark:border-violet-800/50 rounded-lg text-sm font-bold">
-                              <Star size={14} className="text-violet-500 dark:text-violet-400" /> {b}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm font-medium text-slate-500 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 px-4 py-3 rounded-xl w-full text-center block border border-slate-100 dark:border-slate-700">
-                            Data keahlian belum ditambahkan.
-                          </span>
-                        );
-                      })()}
+                      {selectedAlumni.bidangList.map((b, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/70 text-xs font-bold"
+                        >
+                          <Star size={12} className="text-violet-500" /> {b}
+                        </span>
+                      ))}
                     </div>
-                 </div>
-                 
+                  ) : (
+                    <p className="text-xs italic text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                      Data bidang keahlian belum ditambahkan.
+                    </p>
+                  )}
+                </div>
+
+                {/* Rekam Jejak Jenjang Kaderisasi */}
+                <div>
+                  <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-400 mb-2.5 flex items-center gap-1.5">
+                    <Award size={13} className="text-amber-500" /> Rekam Jejak
+                    Kaderisasi PMII & Tahun Lulus
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {JENJANG_KEYS.map((key) => {
+                      const year = selectedAlumni.jenjangMap?.[key];
+                      const meta = JENJANG_META[key];
+                      const passed = Boolean(year);
+                      return (
+                        <div
+                          key={key}
+                          className={`p-3 rounded-xl border transition-all ${
+                            passed
+                              ? `${meta.soft} shadow-sm`
+                              : "bg-slate-50/70 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 text-slate-400 opacity-60"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-black tracking-wider font-mono">
+                              {key}
+                            </span>
+                            {passed ? (
+                              <CheckCircle2 size={14} className="shrink-0" />
+                            ) : (
+                              <span className="text-[10px] font-mono">—</span>
+                            )}
+                          </div>
+                          <p className="text-[10px] leading-tight line-clamp-1 opacity-80">
+                            {meta.full}
+                          </p>
+                          <p className="text-xs font-mono font-bold mt-2 pt-1.5 border-t border-current/10">
+                            {passed ? `Tahun ${year}` : "Belum Tercatat"}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
+
+      <Footer />
     </main>
   );
 }
