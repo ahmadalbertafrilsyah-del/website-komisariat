@@ -24,6 +24,8 @@ import {
   ShieldCheck,
   ChevronRight,
   MessageSquareQuote,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 
@@ -150,9 +152,14 @@ export default function AdminLayout({ children }) {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [userEmail, setUserEmail] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const savedCollapsed = window.localStorage.getItem("pmii_admin_sidebar_collapsed");
+      if (savedCollapsed === "true") {
+        setIsSidebarCollapsed(true);
+      }
       if (!user && pathname !== "/admin/login") {
         router.push("/admin/login");
       } else {
@@ -162,6 +169,14 @@ export default function AdminLayout({ children }) {
     });
     return () => unsubscribe();
   }, [pathname, router]);
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem("pmii_admin_sidebar_collapsed", String(next));
+      return next;
+    });
+  };
 
   const currentModule = useMemo(() => {
     const exact = ALL_MENU_ITEMS.find((item) => item.href === pathname);
@@ -188,41 +203,68 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="flex h-screen w-full bg-[#f1f5f9] overflow-hidden font-sans text-slate-900">
-      {/* ==================== 1. DESKTOP SIDEBAR (lg+) ==================== */}
-      <aside className="hidden lg:flex w-64 bg-[#020617] text-white flex-col border-r border-slate-800/80 shrink-0 select-none">
+      {/* ==================== 1. DESKTOP SIDEBAR (lg+, Collapsible) ==================== */}
+      <aside
+        className={`hidden lg:flex ${
+          isSidebarCollapsed ? "w-[74px]" : "w-64"
+        } bg-[#020617] text-white flex-col border-r border-slate-800/80 shrink-0 select-none transition-all duration-200`}
+      >
         {/* Brand Masthead */}
-        <div className="px-5 py-4 border-b border-slate-800/80 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-xs text-amber-300 border border-blue-400/30 shadow-sm">
-              PK
+        <div
+          className={`h-14 border-b border-slate-800/80 flex items-center ${
+            isSidebarCollapsed ? "justify-center px-2" : "justify-between px-4"
+          }`}
+        >
+          {!isSidebarCollapsed && (
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-xs text-amber-300 border border-blue-400/30 shadow-sm shrink-0">
+                PK
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xs font-black tracking-wider text-white uppercase truncate">
+                  Command Center
+                </h2>
+                <p className="text-[10px] font-mono text-amber-400 truncate">
+                  PMII Sunan Ampel
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xs font-black tracking-wider text-white uppercase">
-                Command Center
-              </h2>
-              <p className="text-[10px] font-mono text-amber-400">
-                PMII Sunan Ampel
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/"
-            target="_blank"
-            title="Buka Website Publik"
-            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition"
+          )}
+
+          <button
+            type="button"
+            onClick={toggleSidebarCollapse}
+            title={
+              isSidebarCollapsed
+                ? "Perlebar Sidebar (Tampilkan Teks)"
+                : "Sembunyikan Teks Sidebar (Hanya Ikon)"
+            }
+            className="p-2 rounded-lg bg-slate-900 hover:bg-blue-600 text-slate-300 hover:text-white border border-slate-800 transition shrink-0"
           >
-            <ExternalLink size={14} />
-          </Link>
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen size={16} />
+            ) : (
+              <PanelLeftClose size={16} />
+            )}
+          </button>
         </div>
 
         {/* Navigation Groups */}
-        <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto hide-scrollbar">
+        <nav
+          className={`flex-1 ${
+            isSidebarCollapsed ? "px-2 py-3 space-y-3" : "px-3 py-4 space-y-5"
+          } overflow-y-auto hide-scrollbar`}
+        >
           {ADMIN_MENU_GROUPS.map((group, gIdx) => (
             <div key={gIdx}>
-              <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">
-                {group.groupLabel}
-              </p>
-              <div className="space-y-0.5">
+              {!isSidebarCollapsed ? (
+                <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">
+                  {group.groupLabel}
+                </p>
+              ) : (
+                gIdx > 0 && <div className="h-px bg-slate-800/80 my-2 mx-2" />
+              )}
+              <div className="space-y-1">
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   const isActive =
@@ -234,34 +276,34 @@ export default function AdminLayout({ children }) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`group relative flex items-center justify-between px-3 py-2 rounded-lg text-[13px] transition-all ${
+                      title={item.label}
+                      className={`group relative flex items-center ${
+                        isSidebarCollapsed
+                          ? "justify-center p-2.5"
+                          : "justify-between px-3 py-2"
+                      } rounded-xl text-[13px] transition-all ${
                         isActive
                           ? "bg-blue-600 text-white font-semibold shadow-sm"
                           : "text-slate-300 hover:text-white hover:bg-slate-900 font-medium"
                       }`}
                     >
-                      <span className="flex items-center gap-2.5 truncate">
+                      <span
+                        className={`flex items-center ${
+                          isSidebarCollapsed ? "justify-center" : "gap-2.5 truncate"
+                        }`}
+                      >
                         <Icon
-                          size={15}
+                          size={isSidebarCollapsed ? 18 : 15}
                           className={
                             isActive
                               ? "text-amber-300 shrink-0"
                               : "text-slate-400 group-hover:text-slate-200 shrink-0"
                           }
                         />
-                        <span className="truncate">{item.label}</span>
+                        {!isSidebarCollapsed && (
+                          <span className="truncate">{item.label}</span>
+                        )}
                       </span>
-                      {item.badge && (
-                        <span
-                          className={`text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${
-                            isActive
-                              ? "bg-amber-400 text-slate-950"
-                              : "bg-blue-950 text-amber-400 border border-blue-800"
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
                     </Link>
                   );
                 })}
@@ -271,39 +313,42 @@ export default function AdminLayout({ children }) {
         </nav>
 
         {/* User Footer */}
-        <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 space-y-2">
-          <div className="px-2 py-1 flex items-center justify-between text-[11px] text-slate-400">
-            <span className="truncate font-mono">{userEmail}</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-          </div>
+        <div className="p-2.5 border-t border-slate-800/80 bg-slate-950/60 space-y-2">
+          {!isSidebarCollapsed && (
+            <div className="px-2 py-0.5 flex items-center justify-between text-[11px] text-slate-400">
+              <span className="truncate font-mono">{userEmail}</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+            </div>
+          )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-rose-600 text-slate-300 hover:text-white border border-slate-800 hover:border-rose-500 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+            title="Keluar Sistem"
+            className={`w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-rose-600 text-slate-300 hover:text-white border border-slate-800 hover:border-rose-500 ${
+              isSidebarCollapsed ? "p-2.5" : "px-3 py-2"
+            } rounded-xl text-xs font-bold transition-colors`}
           >
-            <LogOut size={14} /> Keluar Sistem
+            <LogOut size={15} />
+            {!isSidebarCollapsed && <span>Keluar Sistem</span>}
           </button>
         </div>
       </aside>
 
       {/* ==================== 2. MAIN WORKSPACE AREA ==================== */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        {/* Top App Bar (Mobile Native Header + Desktop Context Bar) */}
-        <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between shrink-0 z-30">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center shrink-0 shadow-sm">
-              <CurrentIcon size={17} />
+        {/* Top App Bar (Compact Context Header) */}
+        <header className="bg-[#020617] text-white border-b border-slate-800 px-3.5 sm:px-6 h-14 flex items-center justify-between shrink-0 z-40">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/30 text-amber-400 flex items-center justify-center shrink-0">
+              <CurrentIcon size={16} />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-slate-400">
-                <span>Admin</span>
-                <ChevronRight size={10} />
-                <span className="text-blue-600 font-bold truncate">
-                  {currentModule?.shortLabel || "Panel"}
-                </span>
-              </div>
-              <h1 className="font-black text-slate-900 text-sm sm:text-base truncate leading-tight">
+            <div className="min-w-0 flex items-center gap-2">
+              <span className="hidden sm:inline text-[10px] font-mono uppercase tracking-widest text-slate-400">
+                PANEL ADMIN
+              </span>
+              <ChevronRight size={12} className="hidden sm:inline text-slate-600" />
+              <span className="font-bold text-white text-xs sm:text-sm truncate">
                 {currentModule?.label || "Dashboard Admin"}
-              </h1>
+              </span>
             </div>
           </div>
 
@@ -311,32 +356,32 @@ export default function AdminLayout({ children }) {
             <Link
               href="/bacaan"
               target="_blank"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold transition"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-800 text-xs font-bold transition"
             >
-              <BookOpen size={13} /> Perpustakaan Kader
+              <BookOpen size={13} /> Perpustakaan
             </Link>
             <Link
               href="/"
               target="_blank"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-blue-600 text-slate-200 hover:text-white border border-slate-800 text-xs font-bold transition"
             >
-              <span className="hidden sm:inline">Lihat Web</span>
+              <span className="hidden sm:inline">Lihat Website</span>
               <span className="sm:hidden">Web</span>
               <ExternalLink size={12} />
             </Link>
             <button
               onClick={() => setDrawerOpen(true)}
-              className="lg:hidden p-2 rounded-xl bg-slate-900 text-white hover:bg-blue-600 transition"
+              className="lg:hidden p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition"
               aria-label="Buka Semua Menu Admin"
             >
-              <Grid size={17} />
+              <Grid size={16} />
             </button>
           </div>
         </header>
 
-        {/* Scrollable Content Viewport (padded on mobile for bottom dock) */}
-        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 pb-28 lg:pb-10 scroll-smooth w-full">
-          <div className="max-w-6xl mx-auto">{children}</div>
+        {/* Scrollable Content Viewport — pt-0 so sticky top-0 inside pages sits 100% flush */}
+        <main className="flex-1 overflow-y-auto px-3.5 sm:px-6 pb-28 lg:pb-12 pt-0 scroll-smooth w-full">
+          <div className="max-w-[1600px] mx-auto w-full">{children}</div>
         </main>
       </div>
 
@@ -457,11 +502,6 @@ export default function AdminLayout({ children }) {
                               : "bg-slate-900/90 hover:bg-slate-800 text-slate-200 border-slate-800"
                           }`}
                         >
-                          {item.badge && (
-                            <span className="absolute top-1.5 right-1.5 text-[8px] font-mono font-black uppercase px-1.5 py-0.2 rounded bg-amber-400 text-slate-950">
-                              {item.badge}
-                            </span>
-                          )}
                           <div
                             className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                               isActive

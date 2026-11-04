@@ -360,7 +360,6 @@ export default function ApresiasiClient() {
                 Hall of Fame & Karya Intelektual
               </div>
               <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-[1.08] text-white">
-                Apresiasi &{" "}
                 <span className="text-amber-400">Prestasi Kader</span>
               </h1>
               <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">

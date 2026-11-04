@@ -234,16 +234,18 @@ export default function AdminBerita() {
       {viewMode === "list" && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           
-          <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
+          <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-5">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">Jurnalisme & Postingan</h1>
-              <p className="text-[13px] text-slate-500 mt-1">Kelola artikel, redaksional, dan manajemen portal media.</p>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block">
+                REDAKSI & JURNALISME KOMISARIAT
+              </span>
+              <h1 className="text-base sm:text-lg font-black text-slate-900">Jurnalisme & Postingan</h1>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <input type="file" accept=".xml,.atom" className="hidden" ref={importInputRef} />
-              <button onClick={openEditorForNew} className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-md transition flex items-center gap-2 shadow-sm text-[13px] shrink-0">
-                <Plus size={16} /> Tulis Artikel Baru
+              <button onClick={openEditorForNew} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl transition flex items-center gap-2 shadow-xs text-xs shrink-0">
+                <Plus size={15} /> Tulis Artikel Baru
               </button>
             </div>
           </div>
@@ -364,17 +366,17 @@ export default function AdminBerita() {
       {viewMode === "editor" && (
         <div className="animate-in fade-in zoom-in-95 duration-300">
           
-          <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-slate-200/90 shadow-sm flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3 mb-5">
              <div className="flex items-center gap-3">
-               <button type="button" onClick={() => setViewMode("list")} className="flex items-center gap-1.5 text-[13px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition">
-                 <ChevronLeft size={16}/> Kembali ke Daftar
+               <button type="button" onClick={() => setViewMode("list")} className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition">
+                 <ChevronLeft size={15}/> Kembali ke Daftar
                </button>
                <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-widest hidden sm:flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
                  {isEditing ? <><Edit size={14}/> Edit Mode</> : <><Plus size={14}/> Naskah Baru</>}
                </h2>
              </div>
-             <button type="submit" form="beritaEditorForm" disabled={uploadingField !== null} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 px-5 rounded-xl transition flex items-center justify-center gap-2 shadow-sm text-xs sm:text-[13px]">
-               {uploadingField !== null ? <Loader2 size={16} className="animate-spin"/> : <Save size={16} />}
+             <button type="submit" form="beritaEditorForm" disabled={uploadingField !== null} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-xs text-xs">
+               {uploadingField !== null ? <Loader2 size={15} className="animate-spin"/> : <Save size={15} />}
                {isEditing ? "Simpan & Perbarui Pos" : "Simpan & Publikasikan"}
              </button>
           </div>

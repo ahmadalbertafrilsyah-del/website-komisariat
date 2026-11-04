@@ -323,49 +323,43 @@ export default function AdminTestimoniPage() {
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-5 pb-10">
       {/* ================= STICKY HEADER & TOMBOL AKSI UTAMA ================= */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200/80 text-blue-700 text-[11px] font-mono font-bold uppercase tracking-wider mb-2">
-              <MessageSquareQuote className="w-3.5 h-3.5" />
-              <span>Moderasi & Kurasi Beranda</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Apa Kata Mereka Tentang PMII?
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Kelola dan setujui (ACC) kiriman kesan, pesan, serta testimoni dari
-              kader, alumni, maupun tokoh sebelum ditayangkan di halaman Beranda.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {counts.pending > 0 && (
-              <button
-                type="button"
-                onClick={handleApproveAllPending}
-                disabled={saving}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-sm cursor-pointer disabled:opacity-50"
-              >
-                <CheckCheck className="w-4 h-4" />
-                <span>ACC Semua ({counts.pending})</span>
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleOpenAdd}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-blue-700 text-white font-bold text-xs transition shadow-sm cursor-pointer"
-            >
-              <Plus className="w-4 h-4 text-yellow-400" />
-              <span>Tambah Kata Mereka</span>
-            </button>
-          </div>
+      <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block">
+            Moderasi & Kurasi Beranda // {counts.all} Kiriman
+          </span>
+          <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+            Apa Kata Mereka Tentang PMII?
+          </h1>
         </div>
 
-        {/* Statistik Ringkas 4 Kartu */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-100">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {counts.pending > 0 && (
+            <button
+              type="button"
+              onClick={handleApproveAllPending}
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-xs cursor-pointer disabled:opacity-50"
+            >
+              <CheckCheck className="w-4 h-4" />
+              <span>ACC Semua ({counts.pending})</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-yellow-400" />
+            <span>Tambah Kata Mereka</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Statistik Ringkas 4 Kartu (Tidak ikut sticky agar tidak menutupi konten) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <button
             type="button"
             onClick={() => setActiveTab("all")}
@@ -443,7 +437,6 @@ export default function AdminTestimoniPage() {
             </p>
           </button>
         </div>
-      </div>
 
       {/* ================= BAR PENCARIAN & FILTER TAB ================= */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">

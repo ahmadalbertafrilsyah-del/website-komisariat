@@ -85,8 +85,17 @@ const SafeAvatar = ({ src, alt, className = "", textClass = "text-lg", sizes = "
 };
 
 export default function StrukturPage() {
-  const [strukturData, setStrukturData] = useState([]);
+  const [periodeList, setPeriodeList] = useState([]);
+  const [selectedPeriodeId, setSelectedPeriodeId] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Data struktur mengikuti periode yang dipilih pengunjung
+  const selectedPeriode =
+    periodeList.find((p) => p.id === selectedPeriodeId) || periodeList[0] || null;
+  const strukturData = useMemo(
+    () => selectedPeriode?.listKategori || [],
+    [selectedPeriode]
+  );
 
   // State Interaktif & Inovasi Tampilan
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,8 +110,18 @@ export default function StrukturPage() {
       try {
         const docRef = doc(db, "website_config", "struktur_organisasi");
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().listKategori) {
-          setStrukturData(docSnap.data().listKategori);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          let list = [];
+          if (Array.isArray(data.listPeriode) && data.listPeriode.length > 0) {
+            list = data.listPeriode;
+          } else if (Array.isArray(data.listKategori)) {
+            // Data lama (sebelum ada sistem periode) dianggap Periode 2026
+            list = [{ id: "periode-2026", periode: "2026", listKategori: data.listKategori }];
+          }
+          setPeriodeList(list);
+          const berjalan = list.find((p) => p.id === data.periodeBerjalanId);
+          setSelectedPeriodeId(berjalan ? berjalan.id : list[0]?.id || "");
         }
       } catch (error) {
         console.error("Gagal menarik data struktur:", error);
@@ -112,6 +131,13 @@ export default function StrukturPage() {
     }
     fetchStruktur();
   }, []);
+
+  const handleChangePeriode = (id) => {
+    setSelectedPeriodeId(id);
+    setActiveCategory("SEMUA");
+    setSearchQuery("");
+    setSelectedIndex(null);
+  };
 
   // Ikon Otomatis Berdasarkan Kata Kunci Biro
   const renderIkonBiro = (namaBiro = "") => {
@@ -272,7 +298,7 @@ export default function StrukturPage() {
               </span>
             </div>
             <span className="hidden sm:inline text-yellow-400 font-semibold">
-              MASA KHIDMAT BERJALAN
+              {selectedPeriode ? `MASA KHIDMAT ${String(selectedPeriode.periode).toUpperCase()}` : "MASA KHIDMAT BERJALAN"}
             </span>
           </div>
 
@@ -291,6 +317,35 @@ export default function StrukturPage() {
                 Otonom dalam menggerakkan roda kaderisasi, intelektualitas, dan
                 pengabdian.
               </p>
+
+              {/* Pemilih Periode Kepengurusan */}
+              {periodeList.length > 0 && (
+                <div className="mt-6">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-2">
+                    Periode Kepengurusan
+                  </span>
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {periodeList.map((p) => {
+                      const isActive = selectedPeriode?.id === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => handleChangePeriode(p.id)}
+                          className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-mono font-bold border transition-colors ${
+                            isActive
+                              ? "bg-yellow-400 text-slate-950 border-yellow-400"
+                              : "bg-white/[0.04] text-slate-300 border-white/15 hover:border-yellow-400/60 hover:text-white"
+                          }`}
+                        >
+                          <Calendar className="w-3.5 h-3.5" />
+                          {p.periode}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Papan Telemetri Struktur */}

@@ -174,16 +174,18 @@ export default function AdminBerandaEditor() {
   const labelStyle = "text-[13px] font-semibold text-slate-700 block mb-1.5";
 
   return (
-    <div className="space-y-6 pb-12 w-full">
+    <div className="space-y-5 pb-12 w-full">
       
       {/* STICKY HEADER PANEL & TOMBOL SIMPAN DI ATAS */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Manajemen Beranda</h1>
-          <p className="text-[13px] text-slate-500 mt-0.5">Kelola banner utama, sejarah, nilai dasar, dan ajakan (CTA).</p>
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block">
+            HALAMAN UTAMA PENGUNJUNG
+          </span>
+          <h1 className="text-base sm:text-lg font-black text-slate-900">Manajemen Beranda</h1>
         </div>
-        <button onClick={handleSaveBeranda} disabled={uploadingField !== null} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition-colors flex items-center justify-center gap-2 text-xs sm:text-[13px] shadow-sm shrink-0 disabled:opacity-50">
-          <Save size={16} /> Simpan Pembaruan
+        <button onClick={handleSaveBeranda} disabled={uploadingField !== null} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-xs shadow-xs shrink-0 disabled:opacity-50">
+          <Save size={15} /> Simpan Pembaruan
         </button>
       </div>
 

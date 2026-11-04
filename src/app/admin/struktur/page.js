@@ -3,27 +3,54 @@ import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import * as XLSX from "xlsx"; 
-import { Save, Users, Plus, Trash2, Briefcase, FileSpreadsheet, UploadCloud, Info, Loader2, ChevronDown, ChevronUp, Edit } from "lucide-react";
+import { Save, Users, Plus, Trash2, Briefcase, FileSpreadsheet, UploadCloud, Info, Loader2, ChevronDown, ChevronUp, Edit, CalendarDays, Star } from "lucide-react";
+
+const makePeriodeId = () => `periode-${Date.now()}`;
 
 export default function AdminStrukturEditor() {
   const [loading, setLoading] = useState(true);
-  const [strukturData, setStrukturData] = useState([]);
+  // Setiap periode menyimpan susunan biro & personilnya sendiri
+  const [periodeList, setPeriodeList] = useState([]);
+  const [activePeriodeId, setActivePeriodeId] = useState("");
+  const [periodeBerjalanId, setPeriodeBerjalanId] = useState("");
   const [newKategori, setNewKategori] = useState("");
   
   const [uploadingId, setUploadingId] = useState(null); 
   const [expandedDivisi, setExpandedDivisi] = useState({}); // State untuk mengatur panel buka/tutup
   const fileInputRef = useRef(null);
 
+  const activePeriode = periodeList.find(p => p.id === activePeriodeId) || periodeList[0] || null;
+  const strukturData = activePeriode?.listKategori || [];
+  const setStrukturData = (newList) => {
+    if (!activePeriode) return;
+    setPeriodeList(prev => prev.map(p => (p.id === activePeriode.id ? { ...p, listKategori: newList } : p)));
+  };
+
   useEffect(() => {
     async function loadStruktur() {
       try {
         const docRef = doc(db, "website_config", "struktur_organisasi");
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().listKategori) {
-          setStrukturData(docSnap.data().listKategori);
-        } else {
-          setStrukturData([{ kategori: "Badan Pengurus Harian (BPH)", anggota: [] }]);
+        let list = [];
+        let berjalan = "";
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (Array.isArray(data.listPeriode) && data.listPeriode.length > 0) {
+            list = data.listPeriode;
+            berjalan = data.periodeBerjalanId || list[0].id;
+          } else if (Array.isArray(data.listKategori)) {
+            // Migrasi otomatis: data lama dijadikan Periode 2026
+            list = [{ id: "periode-2026", periode: "2026", listKategori: data.listKategori }];
+            berjalan = "periode-2026";
+          }
         }
+        if (list.length === 0) {
+          list = [{ id: "periode-2026", periode: "2026", listKategori: [{ kategori: "Badan Pengurus Harian (BPH)", anggota: [] }] }];
+          berjalan = "periode-2026";
+        }
+        setPeriodeList(list);
+        setPeriodeBerjalanId(berjalan);
+        setActivePeriodeId(berjalan);
       } catch (error) {
         console.error("Gagal mengambil data struktur:", error);
       } finally {
@@ -33,13 +60,74 @@ export default function AdminStrukturEditor() {
     loadStruktur();
   }, []);
 
-  const saveAllToFirebase = async (currentData) => {
-    try {
-      const docRef = doc(db, "website_config", "struktur_organisasi");
-      await setDoc(docRef, { listKategori: currentData });
-    } catch (error) {
-      alert("Gagal sinkronisasi ke server: " + error.message);
+  const saveAllToFirebase = async (list = periodeList, berjalanId = periodeBerjalanId) => {
+    const berjalan = list.find(p => p.id === berjalanId) || list[0];
+    const docRef = doc(db, "website_config", "struktur_organisasi");
+    // listKategori tetap ditulis (periode berjalan) agar kompatibel dengan komponen lama
+    await setDoc(docRef, {
+      listPeriode: list,
+      periodeBerjalanId: berjalan?.id || "",
+      listKategori: berjalan?.listKategori || [],
+    });
+  };
+
+  // ================= MANAJEMEN PERIODE =================
+  const handleAddPeriode = async () => {
+    const nama = (prompt("Nama periode baru (misal: 2027 atau 2027/2028):") || "").trim();
+    if (!nama) return;
+    if (periodeList.some(p => String(p.periode).toLowerCase() === nama.toLowerCase())) {
+      return alert("Periode dengan nama tersebut sudah ada!");
     }
+    const salinBiro = activePeriode && strukturData.length > 0 && confirm(
+      `Salin NAMA biro/divisi dari periode ${activePeriode.periode}?\n\nOK = salin nama biro saja (personil tetap kosong)\nBatal = mulai benar-benar kosong`
+    );
+    const newPeriode = {
+      id: makePeriodeId(),
+      periode: nama,
+      listKategori: salinBiro
+        ? strukturData.map(b => ({ kategori: b.kategori, anggota: [] }))
+        : [{ kategori: "Badan Pengurus Harian (BPH)", anggota: [] }],
+    };
+    const newList = [newPeriode, ...periodeList];
+    const jadikanBerjalan = confirm(`Jadikan periode ${nama} sebagai periode berjalan (tampil default di halaman pengunjung)?`);
+    const newBerjalan = jadikanBerjalan ? newPeriode.id : periodeBerjalanId;
+    setPeriodeList(newList);
+    setPeriodeBerjalanId(newBerjalan);
+    setActivePeriodeId(newPeriode.id);
+    setExpandedDivisi({});
+    try {
+      await saveAllToFirebase(newList, newBerjalan);
+    } catch (err) {
+      alert("Gagal menyimpan periode baru: " + err.message);
+    }
+  };
+
+  const handleRenamePeriode = () => {
+    if (!activePeriode) return;
+    const nama = (prompt("Ubah nama periode:", activePeriode.periode) || "").trim();
+    if (!nama || nama === activePeriode.periode) return;
+    setPeriodeList(prev => prev.map(p => (p.id === activePeriode.id ? { ...p, periode: nama } : p)));
+  };
+
+  const handleDeletePeriode = async () => {
+    if (!activePeriode) return;
+    if (periodeList.length <= 1) return alert("Minimal harus ada satu periode.");
+    if (!confirm(`HAPUS PERIODE ${activePeriode.periode}? Seluruh biro & personil di periode ini akan terhapus permanen.`)) return;
+    const newList = periodeList.filter(p => p.id !== activePeriode.id);
+    const newBerjalan = periodeBerjalanId === activePeriode.id ? newList[0].id : periodeBerjalanId;
+    setPeriodeList(newList);
+    setPeriodeBerjalanId(newBerjalan);
+    setActivePeriodeId(newBerjalan);
+    try {
+      await saveAllToFirebase(newList, newBerjalan);
+    } catch (err) {
+      alert("Gagal menghapus periode: " + err.message);
+    }
+  };
+
+  const handleSwitchPeriode = (id) => {
+    setActivePeriodeId(id);
+    setExpandedDivisi({});
   };
 
   const handleAddKategori = (e) => {
@@ -175,10 +263,10 @@ export default function AdminStrukturEditor() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await saveAllToFirebase(strukturData);
-      alert("Seluruh susunan data struktur kepengurusan berhasil disimpan ke Database!");
+      await saveAllToFirebase();
+      alert(`Struktur kepengurusan periode ${activePeriode?.periode || ""} berhasil disimpan ke Database!`);
     } catch (err) {
-      alert("Error: " + err.message);
+      alert("Gagal sinkronisasi ke server: " + err.message);
     }
   };
 
@@ -192,20 +280,36 @@ export default function AdminStrukturEditor() {
   if (loading) return <p className="text-slate-500 text-sm font-medium">Memuat database struktur...</p>;
 
   return (
-    <div className="space-y-6 pb-12 w-full">
+    <div className="space-y-5 pb-12 w-full">
       
       {/* STICKY HEADER PANEL & TOMBOL SIMPAN DI ATAS */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block mb-0.5">
-            Organigram Komisariat // {totalPersonil} Total Personil
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block">
+            Organigram Periode {activePeriode?.periode} // {totalPersonil} Total Personil
           </span>
-          <h1 className="text-xl font-bold text-slate-900">Manajemen Struktur Kepengurusan</h1>
-          <p className="text-[13px] text-slate-500 mt-0.5">Kelola pembagian biro, divisi, lembaga, serta penempatan personil komisariat.</p>
+          <h1 className="text-base sm:text-lg font-black text-slate-900">Manajemen Struktur Kepengurusan</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+            <CalendarDays size={15} className="text-amber-600 shrink-0" />
+            <select
+              value={activePeriode?.id || ""}
+              onChange={(e) => handleSwitchPeriode(e.target.value)}
+              className="text-xs font-bold text-slate-800 bg-transparent outline-none cursor-pointer max-w-[140px] truncate"
+            >
+              {periodeList.map(p => (
+                <option key={p.id} value={p.id}>
+                  Periode {p.periode}{p.id === periodeBerjalanId ? " (berjalan)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="button" onClick={handleAddPeriode} className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 px-3.5 rounded-xl transition-colors text-xs shadow-xs shrink-0 flex items-center gap-1.5">
+            <Plus size={14} className="text-amber-400" /> Periode Baru
+          </button>
           {strukturData.length > 0 && (
-            <button type="button" onClick={() => { if(confirm("Yakin ingin menghapus seluruh data struktur yang ada?")) setStrukturData([]) }} className="bg-white hover:bg-red-50 text-red-600 border border-red-200 font-medium py-2.5 px-4 rounded-xl transition-colors text-xs shadow-xs shrink-0">
+            <button type="button" onClick={() => { if(confirm("Yakin ingin menghapus seluruh data struktur yang ada?")) setStrukturData([]) }} className="bg-white hover:bg-red-50 text-red-600 border border-red-200 font-bold py-2 px-3.5 rounded-xl transition-colors text-xs shadow-xs shrink-0">
               Kosongkan Data
             </button>
           )}
@@ -213,12 +317,51 @@ export default function AdminStrukturEditor() {
             type="button"
             onClick={handleSubmit}
             disabled={uploadingId !== null}
-            className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 px-5 rounded-xl transition flex items-center justify-center gap-2 shadow-sm text-xs sm:text-sm whitespace-nowrap shrink-0"
+            className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-xs text-xs whitespace-nowrap shrink-0"
           >
-            <Save size={16} /> Simpan Pembaruan Struktur
+            <Save size={15} /> Simpan Pembaruan Struktur
           </button>
         </div>
       </div>
+
+      {/* PANEL INFO PERIODE AKTIF */}
+      {activePeriode && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0">
+              <CalendarDays size={18} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm font-black text-slate-900">Periode {activePeriode.periode}</h2>
+                {activePeriode.id === periodeBerjalanId ? (
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Periode Berjalan</span>
+                ) : (
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">Arsip</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Semua perubahan biro &amp; personil di bawah hanya berlaku untuk periode ini. Pengunjung dapat memilih periode di halaman Struktur.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {activePeriode.id !== periodeBerjalanId && (
+              <button type="button" onClick={() => setPeriodeBerjalanId(activePeriode.id)} className="text-xs font-bold px-3 py-2 rounded-lg border border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50 flex items-center gap-1.5">
+                <Star size={13} /> Jadikan Berjalan
+              </button>
+            )}
+            <button type="button" onClick={handleRenamePeriode} className="text-xs font-bold px-3 py-2 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 flex items-center gap-1.5">
+              <Edit size={13} /> Ubah Nama
+            </button>
+            {periodeList.length > 1 && (
+              <button type="button" onClick={handleDeletePeriode} className="text-xs font-bold px-3 py-2 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 flex items-center gap-1.5">
+                <Trash2 size={13} /> Hapus Periode
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* GRID: TAMBAH BIRO & IMPORT EXCEL */}
       <div className="grid md:grid-cols-2 gap-5 mb-6">

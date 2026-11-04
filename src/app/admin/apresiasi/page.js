@@ -418,24 +418,20 @@ export default function AdminApresiasi() {
   return (
     <div className="space-y-5 pb-12 w-full text-sm">
       {/* STICKY HEADER PANEL & TOMBOL SIMPAN DI ATAS */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+      <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex flex-col lg:flex-row justify-between lg:items-center gap-3">
         <div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block mb-0.5">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block">
             Hall of Fame // {kaderData.length} Kader Tercatat
           </span>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900">
+          <h1 className="text-base sm:text-lg font-black text-slate-900">
             Manajemen Apresiasi & Prestasi
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Kelola foto profil, identitas rayon, serta daftar karya & kejuaraan
-            kader.
-          </p>
         </div>
         <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full lg:w-auto shrink-0">
           <button
             onClick={handleDownloadTemplate}
             type="button"
-            className="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition"
+            className="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition"
           >
             <Download size={14} /> Template Excel
           </button>
@@ -449,7 +445,7 @@ export default function AdminApresiasi() {
           <button
             onClick={() => excelInputRef.current.click()}
             type="button"
-            className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
+            className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
           >
             <FileSpreadsheet size={14} /> Impor Excel
           </button>
@@ -457,12 +453,12 @@ export default function AdminApresiasi() {
             type="button"
             onClick={handleSaveAll}
             disabled={isSaving}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 disabled:bg-slate-400 text-white font-bold py-2.5 px-5 rounded-xl transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap shrink-0 text-xs sm:text-sm"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 disabled:bg-slate-400 text-white font-bold py-2 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-xs whitespace-nowrap shrink-0 text-xs"
           >
             {isSaving ? (
-              <Loader2 size={16} className="animate-spin" />
+              <Loader2 size={15} className="animate-spin" />
             ) : (
-              <Save size={16} />
+              <Save size={15} />
             )}
             <span>Simpan Perubahan</span>
           </button>

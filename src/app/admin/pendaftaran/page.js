@@ -313,13 +313,27 @@ export default function AdminPendaftaran() {
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 size={32} className="text-blue-600 animate-spin"/></div>;
 
   return (
-    <div className="space-y-6 pb-12 w-full text-sm">
+    <div className="space-y-5 pb-12 w-full text-sm">
       
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-8">
+      <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">Kelola Pendaftaran</h1>
-          <p className="text-sm text-slate-500 mt-1">Buat formulir kegiatan, atur biaya tiket, dan kelola pendaftar secara otomatis.</p>
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block">
+            SISTEM FORMULIR & SELEKSI KADERISASI
+          </span>
+          <h1 className="text-base sm:text-lg font-black text-slate-900">Kelola Portal Pendaftaran</h1>
         </div>
+        {activeTab === "formulir" && (
+          <div className="flex items-center gap-2">
+            {isEditingForm && (
+              <button type="button" onClick={resetFormState} className="text-xs text-red-600 hover:bg-red-50 font-bold border border-red-200 bg-white px-3 py-2 rounded-xl transition">
+                Batal Edit
+              </button>
+            )}
+            <button type="submit" form="formulirKaderisasiForm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-xs transition flex items-center gap-2 text-xs">
+              <Save size={15} /> {isEditingForm ? "Simpan Perubahan Formulir" : "Terbitkan Formulir Baru"}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 border-b border-slate-200">
@@ -335,17 +349,11 @@ export default function AdminPendaftaran() {
       {activeTab === "formulir" && (
         <div className="grid lg:grid-cols-3 gap-6 items-start">
           
-          <div className="bg-white p-5 md:p-6 rounded-lg border border-slate-200 shadow-sm lg:col-span-2">
-            <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 mb-5 border-b border-slate-200 py-3 -mx-2 px-2">
+          <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-xs lg:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-5 border-b border-slate-200 pb-3">
                <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
                  {isEditingForm ? <><Edit size={18} className="text-amber-500" /> Edit Formulir</> : <><Plus size={18} className="text-blue-600" /> Buat Formulir Baru</>}
                </h2>
-               <div className="flex items-center gap-2">
-                 {isEditingForm && <button type="button" onClick={resetFormState} className="text-xs text-red-500 hover:text-red-700 font-semibold border border-red-200 bg-red-50 px-3 py-2 rounded-lg">Batal Edit</button>}
-                 <button type="submit" form="formulirKaderisasiForm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-sm transition flex items-center gap-2 text-xs sm:text-sm">
-                   <Save size={16} /> {isEditingForm ? "Simpan Perubahan Formulir" : "Terbitkan Formulir Baru"}
-                 </button>
-               </div>
             </div>
 
             <form id="formulirKaderisasiForm" onSubmit={handleSaveFormulir} className="space-y-6">

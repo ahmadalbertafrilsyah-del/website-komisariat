@@ -47,12 +47,16 @@ export default function AdminDonasi() {
   if (loading) return <p className="text-slate-500 text-sm font-medium animate-pulse">Memuat pesan masuk...</p>;
 
   return (
-    <div className="space-y-6 pb-12 w-full max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Heart className="text-pink-500" size={24}/> Log Donasi & Pesan Dukungan
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">Balas pesan dan ucapan dari para donatur, senior, atau alumni.</p>
+    <div className="space-y-5 pb-12 w-full">
+      <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block">
+            TRANSPARANSI & DUKUNGAN GERAKAN // {messages.length} PESAN MASUK
+          </span>
+          <h1 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            Log Donasi & Pesan Dukungan
+          </h1>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
