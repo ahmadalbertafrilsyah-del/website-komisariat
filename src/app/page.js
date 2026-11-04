@@ -1128,11 +1128,11 @@ export default function Home() {
                 <span>Bacaan Kader (3D)</span>
               </Link>
               <Link
-                href="/administrasi?tab=pengajuan_sk"
+                href="/administrasi?tab=pengajuan-sk"
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-800/60 text-xs font-semibold hover:bg-blue-600 hover:text-white transition-colors whitespace-nowrap shrink-0"
               >
                 <FileSignature className="w-3.5 h-3.5" />
-                <span>Ajukan SK / RTAR</span>
+                <span>Ajukan Rekom SK</span>
               </Link>
               <Link
                 href="/administrasi?tab=produk_hukum"
