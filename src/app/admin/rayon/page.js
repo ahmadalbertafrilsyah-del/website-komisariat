@@ -186,12 +186,23 @@ export default function AdminRayonEditor() {
 
   return (
     <div className="space-y-6 pb-12 w-full">
-      {/* Header Halaman */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+      {/* Sticky Header Halaman & Tombol Simpan di Atas */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block mb-0.5">
+            Pangkalan Rayon // {rayonData.length} Rayon Terdaftar
+          </span>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">Profil Rayon</h1>
-          <p className="text-[13px] text-slate-500 mt-1">Kelola narasi, logo, basis fakultas, serta data pengurus inti masing-masing rayon.</p>
+          <p className="text-[13px] text-slate-500 mt-0.5">Kelola narasi, logo, basis fakultas, serta data pengurus inti masing-masing rayon.</p>
         </div>
+        <button
+          type="button"
+          onClick={handleSaveGlobal}
+          disabled={uploadingIdx !== null}
+          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 px-5 rounded-xl transition flex items-center justify-center gap-2 shadow-sm text-xs sm:text-sm whitespace-nowrap shrink-0"
+        >
+          <Save size={16} /> Simpan Pembaruan Rayon
+        </button>
       </div>
 
       {/* Grid: Tambah Rayon Manual & Import Excel */}
@@ -383,19 +394,6 @@ export default function AdminRayonEditor() {
                 </div>
               );
             })}
-          </div>
-        )}
-
-        {/* Floating/Bottom Action Bar */}
-        {rayonData.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-md border border-slate-200 sticky bottom-6 z-40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-             <div className="flex items-start gap-2.5 text-[13px] text-slate-600 max-w-2xl">
-               <Info size={16} className="shrink-0 mt-0.5 text-blue-500" />
-               <p>Semua perubahan (profil, struktur inti, maupun unggahan logo) baru akan ditayangkan ke publik setelah Anda menekan tombol simpan.</p>
-             </div>
-             <button type="submit" disabled={uploadingIdx !== null} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2.5 px-6 rounded-md transition flex items-center justify-center gap-2 shadow-sm text-[13px] whitespace-nowrap shrink-0">
-                <Save size={16} /> Simpan Pembaruan Rayon
-             </button>
           </div>
         )}
       </form>

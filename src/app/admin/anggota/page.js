@@ -535,30 +535,45 @@ export default function AdminAnggotaEditor() {
 
   return (
     <div className="space-y-6 pb-12 w-full">
-      {/* HEADER & STATISTIK */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-4">
+      {/* STICKY HEADER & TOMBOL SIMPAN DI ATAS */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block mb-0.5">
+            Pangkalan Data Kader // {anggotaData.length} Kader Aktif
+          </span>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
             Database Anggota & Kaderisasi
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Kelola profil kader, bidang keahlian, jenjang kaderisasi (MAPABA,
             PKD, PKL, SIG, SKP, SKK), serta mutasi otomatis ke Alumni.
           </p>
         </div>
-        <div className="bg-blue-50 px-5 py-3 rounded-xl border border-blue-100 shadow-xs flex items-center gap-4 shrink-0">
-          <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-            <Users size={20} />
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 flex items-center gap-3">
+            <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+              <Users size={16} />
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest leading-none mb-0.5">
+                Total Kader Aktif
+              </p>
+              <p className="text-base font-black text-blue-900 leading-none">
+                {anggotaData.length}{" "}
+                <span className="text-[11px] font-semibold text-blue-600">
+                  Orang
+                </span>
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest leading-none mb-1">
-              Total Kader Aktif
-            </p>
-            <p className="text-xl font-black text-blue-900 leading-none">
-              {anggotaData.length}{" "}
-              <span className="text-xs font-semibold text-blue-600">Orang</span>
-            </p>
-          </div>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-5 rounded-xl transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap shrink-0 text-xs sm:text-sm"
+          >
+            <Save size={16} /> Simpan Pembaruan Data
+          </button>
         </div>
       </div>
 
@@ -1398,24 +1413,6 @@ export default function AdminAnggotaEditor() {
           </div>
         </div>
       )}
-
-      {/* Floating Action Bar (Simpan) */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900 p-4 rounded-xl sticky bottom-6 z-40 shadow-2xl shadow-slate-900/20">
-        <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-300 max-w-2xl px-2">
-          <Info size={20} className="shrink-0 text-blue-400" />
-          <p>
-            Simpan perubahan tabel agar modifikasi jenjang kaderisasi dan bidang
-            keahlian langsung tampil di halaman publik. (Untuk mutasi ke Alumni
-            tersimpan otomatis saat tombol diklik).
-          </p>
-        </div>
-        <button
-          onClick={handleSave}
-          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 whitespace-nowrap shrink-0 text-sm"
-        >
-          <Save size={18} /> Simpan Pembaruan Data
-        </button>
-      </div>
     </div>
   );
 }

@@ -26,10 +26,26 @@ import {
   Check,
   Building2,
   Hash,
+  UserPlus,
+  Plus,
+  Upload,
+  Loader2,
+  Send,
+  Clock,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
+
+const RAYON_OPTIONS = [
+  "PR. PMII “KAWAH” Chondrodimuko",
+  "PR. PMII “Perjuangan” Ibnu Aqil",
+  "PR. PMII “Radikal” Al-Faruq",
+  "PR. PMII “Penakluk” Al-Adawiyah",
+  "PR. PMII “Penyelamat” Dja’far Saifuddin",
+  "PR. PMII Ekonomi “Moch. Hatta”",
+  "PR. PMII Pencerahan Galileo",
+];
 
 const JENJANG_KEYS = ["MAPABA", "PKD", "PKL", "SIG", "SKP", "SKK"];
 
@@ -161,6 +177,148 @@ export default function AlumniClient() {
   const [copiedShare, setCopiedShare] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
 
+  // State Form Input Mandiri Alumni (Menunggu ACC Admin)
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const [selfForm, setSelfForm] = useState({
+    nama: "",
+    asalRayon: RAYON_OPTIONS[0],
+    tahunMapaba: "",
+    nim: "",
+    nia: "",
+    profesiUtama: "",
+    instansiUtama: "",
+    profesiTambahan: "",
+    bidangText: "",
+    foto: "",
+    jenjang: {
+      MAPABA: "",
+      PKD: "",
+      PKL: "",
+      SIG: "",
+      SKP: "",
+      SKK: "",
+    },
+  });
+
+  const handleUploadSelfFoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("Harap pilih file gambar (JPG/PNG/WEBP)!");
+      return;
+    }
+    setUploadingFoto(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.url) {
+        setSelfForm((prev) => ({ ...prev, foto: data.url }));
+      } else {
+        alert("Gagal mengunggah foto profil.");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Terjadi kesalahan saat mengunggah foto.");
+    } finally {
+      setUploadingFoto(false);
+    }
+  };
+
+  const handleSelfSubmitAlumni = async (e) => {
+    e.preventDefault();
+    if (!selfForm.nama.trim() || !selfForm.tahunMapaba.trim()) {
+      alert("Nama Lengkap dan Tahun Angkatan / Mapaba wajib diisi!");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const docRef = doc(db, "website_config", "database_alumni");
+      const docSnap = await getDoc(docRef);
+      const existingList =
+        docSnap.exists() && Array.isArray(docSnap.data().listAlumni)
+          ? docSnap.data().listAlumni
+          : [];
+
+      const profesiArr = [
+        selfForm.profesiUtama.trim(),
+        ...getSafeArray(selfForm.profesiTambahan),
+      ].filter(Boolean);
+
+      const deskripsiProfesiObj = {};
+      if (selfForm.profesiUtama.trim() && selfForm.instansiUtama.trim()) {
+        deskripsiProfesiObj[selfForm.profesiUtama.trim()] =
+          selfForm.instansiUtama.trim();
+      }
+
+      const jenjangClean = {
+        MAPABA:
+          selfForm.jenjang.MAPABA.trim() || selfForm.tahunMapaba.trim(),
+        PKD: selfForm.jenjang.PKD.trim(),
+        PKL: selfForm.jenjang.PKL.trim(),
+        SIG: selfForm.jenjang.SIG.trim(),
+        SKP: selfForm.jenjang.SKP.trim(),
+        SKK: selfForm.jenjang.SKK.trim(),
+      };
+
+      const newEntry = {
+        id: `alm-self-${Date.now()}`,
+        nama: selfForm.nama.trim(),
+        nim: selfForm.nim.trim(),
+        nia: selfForm.nia.trim(),
+        tahunMapaba: selfForm.tahunMapaba.trim(),
+        asalRayon: selfForm.asalRayon,
+        profesi: profesiArr,
+        deskripsiProfesi: deskripsiProfesiObj,
+        bidang: getSafeArray(selfForm.bidangText),
+        jenjang: jenjangClean,
+        foto: selfForm.foto.trim(),
+        status: "pending", // Menunggu ACC Admin
+        submittedBy: "mandiri",
+        createdAt: new Date().toISOString(),
+      };
+
+      await setDoc(
+        docRef,
+        { listAlumni: [newEntry, ...existingList] },
+        { merge: true }
+      );
+
+      setSubmitSuccess(true);
+      setSelfForm({
+        nama: "",
+        asalRayon: RAYON_OPTIONS[0],
+        tahunMapaba: "",
+        nim: "",
+        nia: "",
+        profesiUtama: "",
+        instansiUtama: "",
+        profesiTambahan: "",
+        bidangText: "",
+        foto: "",
+        jenjang: {
+          MAPABA: "",
+          PKD: "",
+          PKL: "",
+          SIG: "",
+          SKP: "",
+          SKK: "",
+        },
+      });
+    } catch (error) {
+      console.error("Gagal mengirim data alumni:", error);
+      alert("Maaf, terjadi kesalahan saat mengirim data. Silakan coba lagi.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     async function fetchAlumni() {
       try {
@@ -170,7 +328,12 @@ export default function AlumniClient() {
           const rawList = docSnap.data().listAlumni;
           const seenIds = new Set();
 
-          const normalized = rawList.map((item, idx) => {
+          // Hanya tampilkan alumni yang sudah di-ACC (atau data lama tanpa field status)
+          const approvedRawList = rawList.filter(
+            (item) => !item.status || item.status === "approved"
+          );
+
+          const normalized = approvedRawList.map((item, idx) => {
             const rawId = item.id ? String(item.id) : `alm-${idx}`;
             const uniqueId = seenIds.has(rawId) ? `${rawId}-${idx}` : rawId;
             seenIds.add(uniqueId);
@@ -404,7 +567,7 @@ export default function AlumniClient() {
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-950/80 border border-blue-800/70 text-amber-400 text-[11px] font-mono uppercase tracking-widest mb-4">
                 <GraduationCap size={14} />
-                Jejaring Profesional & Korps Alumni // UIN Malang
+                Jejaring Profesional & Korps Alumni
               </div>
               <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-[1.08] text-white">
                 Direktori & Jejaring{" "}
@@ -415,6 +578,23 @@ export default function AlumniClient() {
                 bidang keahlian, asal rayon, serta rekam jejak kaderisasi alumni
                 PK. PMII Sunan Ampel Malang.
               </p>
+
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmitSuccess(false);
+                    setIsSubmitModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm transition-all shadow-lg shadow-amber-400/20 cursor-pointer"
+                >
+                  <UserPlus size={16} />
+                  <span>+ Daftarkan Data Alumni Mandiri</span>
+                </button>
+                <span className="text-[11px] font-mono text-slate-400">
+                  Belum terdaftar di direktori? Masukkan profil Anda di sini.
+                </span>
+              </div>
             </div>
 
             {/* Live Telemetry Strip */}
@@ -1260,6 +1440,365 @@ export default function AlumniClient() {
                     })}
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL INPUT DATA ALUMNI MANDIRI (MENUNGGU ACC ADMIN) */}
+      <AnimatePresence>
+        {isSubmitModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSubmitModalOpen(false)}
+            className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col"
+            >
+              {/* Modal Top Bar */}
+              <div className="sticky top-0 z-20 bg-slate-900 text-white px-5 py-4 flex items-center justify-between border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">
+                    Registrasi Mandiri Korps Alumni // PK. PMII Sunan Ampel
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSubmitModalOpen(false)}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-200 hover:text-white transition"
+                  title="Tutup"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="p-5 sm:p-6">
+                {submitSuccess ? (
+                  <div className="py-8 px-4 text-center space-y-4">
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-500 flex items-center justify-center mx-auto">
+                      <CheckCircle2 size={28} />
+                    </div>
+                    <div>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[10px] font-mono font-bold uppercase tracking-wider mb-2">
+                        <Clock size={12} /> Menunggu Verifikasi (ACC) Admin
+                      </span>
+                      <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                        Data Alumni Berhasil Dikirim!
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1.5 max-w-md mx-auto leading-relaxed">
+                        Terima kasih Sahabat/i! Data profil, profesi, dan riwayat
+                        kaderisasi Anda telah masuk ke antrean verifikasi Admin
+                        Komisariat dan akan segera tayang di Direktori Alumni
+                        setelah di-ACC.
+                      </p>
+                    </div>
+                    <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setSubmitSuccess(false)}
+                        className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition"
+                      >
+                        Input Data Alumni Lainnya
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsSubmitModalOpen(false)}
+                        className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition"
+                      >
+                        Selesai & Tutup
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSelfSubmitAlumni} className="space-y-5">
+                    <div className="p-3.5 rounded-xl bg-blue-50/80 dark:bg-slate-800/70 border border-blue-200/80 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                      Silakan lengkapi data diri, kiprah profesi/instansi saat
+                      ini, serta riwayat kaderisasi Anda. Data yang dikirim akan
+                      diverifikasi terlebih dahulu oleh Pengurus Komisariat
+                      sebelum tampil di publik.
+                    </div>
+
+                    {/* Bagian 1: Identitas & Asal Rayon */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                          Nama Lengkap & Gelar *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={selfForm.nama}
+                          onChange={(e) =>
+                            setSelfForm({ ...selfForm, nama: e.target.value })
+                          }
+                          placeholder="Contoh: Dr. H. Ahmad Fauzi, M.HI."
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                          Asal Pangkalan Rayon *
+                        </label>
+                        <select
+                          value={selfForm.asalRayon}
+                          onChange={(e) =>
+                            setSelfForm({
+                              ...selfForm,
+                              asalRayon: e.target.value,
+                            })
+                          }
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        >
+                          {RAYON_OPTIONS.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                          Tahun Angkatan / Mapaba *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={selfForm.tahunMapaba}
+                          onChange={(e) =>
+                            setSelfForm({
+                              ...selfForm,
+                              tahunMapaba: e.target.value,
+                              jenjang: {
+                                ...selfForm.jenjang,
+                                MAPABA:
+                                  selfForm.jenjang.MAPABA || e.target.value,
+                              },
+                            })
+                          }
+                          placeholder="Contoh: 2018"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                          NIM Semasa Kuliah (Opsional)
+                        </label>
+                        <input
+                          type="text"
+                          value={selfForm.nim}
+                          onChange={(e) =>
+                            setSelfForm({ ...selfForm, nim: e.target.value })
+                          }
+                          placeholder="Contoh: 180101..."
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                          Nomor Induk Anggota / NIA (Opsional)
+                        </label>
+                        <input
+                          type="text"
+                          value={selfForm.nia}
+                          onChange={(e) =>
+                            setSelfForm({ ...selfForm, nia: e.target.value })
+                          }
+                          placeholder="Contoh: 04.05..."
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Bagian 2: Profesi, Instansi & Bidang Keahlian */}
+                    <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3.5">
+                      <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-blue-600 dark:text-amber-400">
+                        Kiprah Profesional & Keahlian Saat Ini
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                            Profesi / Pekerjaan Utama
+                          </label>
+                          <input
+                            type="text"
+                            value={selfForm.profesiUtama}
+                            onChange={(e) =>
+                              setSelfForm({
+                                ...selfForm,
+                                profesiUtama: e.target.value,
+                              })
+                            }
+                            placeholder="Contoh: Dosen / Advokat / Wirausaha"
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                            Nama Instansi / Tempat Berkarya
+                          </label>
+                          <input
+                            type="text"
+                            value={selfForm.instansiUtama}
+                            onChange={(e) =>
+                              setSelfForm({
+                                ...selfForm,
+                                instansiUtama: e.target.value,
+                              })
+                            }
+                            placeholder="Contoh: UIN Maulana Malik Ibrahim Malang"
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                            Profesi Lainnya (Opsional, pisahkan koma)
+                          </label>
+                          <input
+                            type="text"
+                            value={selfForm.profesiTambahan}
+                            onChange={(e) =>
+                              setSelfForm({
+                                ...selfForm,
+                                profesiTambahan: e.target.value,
+                              })
+                            }
+                            placeholder="Contoh: Peneliti, Konsultan"
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                            Bidang Keahlian (Pisahkan dengan koma)
+                          </label>
+                          <input
+                            type="text"
+                            value={selfForm.bidangText}
+                            onChange={(e) =>
+                              setSelfForm({
+                                ...selfForm,
+                                bidangText: e.target.value,
+                              })
+                            }
+                            placeholder="Contoh: Hukum Tata Negara, Kebijakan Publik"
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bagian 3: Riwayat Jenjang Kaderisasi */}
+                    <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
+                      <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-blue-600 dark:text-amber-400">
+                        Riwayat Jenjang Kaderisasi (Isi Tahun Lulus)
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
+                        {JENJANG_KEYS.map((jKey) => (
+                          <div
+                            key={jKey}
+                            className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700"
+                          >
+                            <span className="text-[10px] font-mono font-black text-slate-700 dark:text-slate-200 block mb-1">
+                              {jKey}
+                            </span>
+                            <input
+                              type="text"
+                              value={selfForm.jenjang[jKey]}
+                              onChange={(e) =>
+                                setSelfForm({
+                                  ...selfForm,
+                                  jenjang: {
+                                    ...selfForm.jenjang,
+                                    [jKey]: e.target.value,
+                                  },
+                                })
+                              }
+                              placeholder="Thn (2019)"
+                              className="w-full px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bagian 4: Upload Foto Profil */}
+                    <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                        Foto Profil Alumni (Opsional)
+                      </label>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold cursor-pointer transition shrink-0">
+                          {uploadingFoto ? (
+                            <Loader2 size={15} className="animate-spin" />
+                          ) : (
+                            <Upload size={15} />
+                          )}
+                          <span>
+                            {uploadingFoto
+                              ? "Mengunggah Foto..."
+                              : "Upload Foto Profil"}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleUploadSelfFoto}
+                            className="hidden"
+                            disabled={uploadingFoto}
+                          />
+                        </label>
+                        <input
+                          type="text"
+                          value={selfForm.foto}
+                          onChange={(e) =>
+                            setSelfForm({ ...selfForm, foto: e.target.value })
+                          }
+                          placeholder="Atau tempel URL foto profil..."
+                          className="w-full flex-1 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Submit Footer */}
+                    <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setIsSubmitModalOpen(false)}
+                        className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || uploadingFoto}
+                        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-black transition shadow-lg shadow-blue-600/20 disabled:opacity-50 cursor-pointer"
+                      >
+                        {isSubmitting ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Send size={15} />
+                        )}
+                        <span>Kirim Data Alumni</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </motion.div>
           </motion.div>

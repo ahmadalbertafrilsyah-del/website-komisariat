@@ -90,12 +90,12 @@ export default function AdminDashboardUtama() {
 
   return (
     <div className="space-y-6 pb-12 w-full">
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Pusat Pengendalian Website</h1>
-          <p className="text-[13px] text-slate-500 mt-1">Kelola komponen inti, identitas organisasi, logo, dan teks utama.</p>
+          <p className="text-[13px] text-slate-500 mt-0.5">Kelola komponen inti, identitas organisasi, logo, dan teks utama.</p>
         </div>
-        <button onClick={handleSaveGlobal} className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-md transition-colors flex items-center justify-center gap-2 text-[13px] shadow-sm shrink-0">
+        <button onClick={handleSaveGlobal} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition-colors flex items-center justify-center gap-2 text-xs sm:text-[13px] shadow-sm shrink-0">
           <Save size={16} /> Simpan Perubahan
         </button>
       </div>

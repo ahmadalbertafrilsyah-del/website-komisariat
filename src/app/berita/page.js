@@ -233,7 +233,7 @@ export default function Berita() {
               <div className="max-w-2xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-950/80 border border-blue-800/70 text-amber-400 text-[11px] font-mono uppercase tracking-widest mb-4">
                   <Sparkles size={13} />
-                  Pers & Dialektika Intelektual // UIN Malang
+                  Pers & Dialektika Intelektual
                 </div>
                 <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-[1.08] text-white">
                   Kabar & Wacana{" "}

@@ -396,7 +396,7 @@ export default function DetailRayonPage() {
 
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-950/80 border border-blue-800/70 text-amber-400 text-[11px] font-mono uppercase tracking-widest">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-              Pangkalan Rayon // UIN Malang
+              Pangkalan Rayon
             </div>
           </div>
 

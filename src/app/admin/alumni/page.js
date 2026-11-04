@@ -19,6 +19,10 @@ import {
   ChevronDown,
   ChevronUp,
   Award,
+  CheckCircle2,
+  Clock,
+  EyeOff,
+  CheckCheck,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -151,7 +155,9 @@ export default function AdminAlumni() {
 
   const [newFoto, setNewFoto] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // all | pending | approved | hidden
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const excelInputRef = useRef(null);
 
   useEffect(() => {
@@ -437,6 +443,7 @@ export default function AdminAlumni() {
 
   const handleSaveAll = async (e) => {
     if (e) e.preventDefault();
+    setIsSaving(true);
     try {
       await setDoc(doc(db, "website_config", "database_alumni"), {
         listAlumni: alumniData,
@@ -446,10 +453,66 @@ export default function AdminAlumni() {
       );
     } catch (error) {
       alert("Gagal menyimpan: " + error.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  // Fitur Moderasi / ACC Langsung (Simpan Otomatis ke Server)
+  const handleSetAlumniStatus = async (id, newStatus) => {
+    setIsSaving(true);
+    try {
+      const updatedList = alumniData.map((item) =>
+        item.id === id ? { ...item, status: newStatus } : item
+      );
+      await setDoc(doc(db, "website_config", "database_alumni"), {
+        listAlumni: updatedList,
+      });
+      setAlumniData(updatedList);
+    } catch (error) {
+      alert("Gagal mengubah status ACC: " + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleApproveAllPending = async () => {
+    const pendingCount = alumniData.filter((a) => a.status === "pending").length;
+    if (pendingCount === 0) return;
+    if (
+      !confirm(
+        `Setujui (ACC) dan tampilkan seluruh ${pendingCount} data alumni yang sedang menunggu verifikasi?`
+      )
+    )
+      return;
+    setIsSaving(true);
+    try {
+      const updatedList = alumniData.map((item) =>
+        item.status === "pending" ? { ...item, status: "approved" } : item
+      );
+      await setDoc(doc(db, "website_config", "database_alumni"), {
+        listAlumni: updatedList,
+      });
+      setAlumniData(updatedList);
+      alert(`Berhasil meng-ACC ${pendingCount} data alumni!`);
+    } catch (error) {
+      alert("Gagal meng-ACC semua data: " + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const pendingCount = alumniData.filter((a) => a.status === "pending").length;
+  const approvedCount = alumniData.filter(
+    (a) => !a.status || a.status === "approved"
+  ).length;
+  const hiddenCount = alumniData.filter((a) => a.status === "hidden").length;
+
   const filteredData = alumniData.filter((a) => {
+    const itemStatus = a.status || "approved";
+    const matchStatus =
+      statusFilter === "all" ? true : itemStatus === statusFilter;
+
     const searchLower = searchQuery.toLowerCase();
     const profesiString = Array.isArray(a.profesi)
       ? a.profesi.join(" ")
@@ -464,13 +527,14 @@ export default function AdminAlumni() {
         ? a.deskripsiProfesi
         : "";
 
-    return (
+    const matchSearch =
       (a.nama || "").toLowerCase().includes(searchLower) ||
       profesiString.toLowerCase().includes(searchLower) ||
       bidangString.toLowerCase().includes(searchLower) ||
       deskripsiString.toLowerCase().includes(searchLower) ||
-      (a.asalRayon || "").toLowerCase().includes(searchLower)
-    );
+      (a.asalRayon || "").toLowerCase().includes(searchLower);
+
+    return matchStatus && matchSearch;
   });
 
   const inputStandardClass =
@@ -487,24 +551,39 @@ export default function AdminAlumni() {
 
   return (
     <div className="space-y-6 pb-12 w-full text-sm">
-      {/* HEADER PANEL */}
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-8">
+      {/* STICKY HEADER PANEL & TOMBOL SIMPAN DI ATAS */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col lg:flex-row justify-between lg:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            Direktori Alumni ({alumniData.length})
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 block mb-0.5">
+            Database & Moderasi Korps Alumni // {alumniData.length} Total Data
+          </span>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+            Direktori Alumni ({approvedCount} Tayang
+            {pendingCount > 0 ? `, ${pendingCount} Menunggu ACC` : ""})
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Kelola data profil, profesi, bidang keahlian, dan rekam jejak
-            kaderisasi alumni PMII Komisariat.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Kelola profil, profesi, keahlian, jenjang kaderisasi, serta ACC
+            kiriman data mandiri dari alumni.
           </p>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
+
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+          {pendingCount > 0 && (
+            <button
+              onClick={handleApproveAllPending}
+              disabled={isSaving}
+              type="button"
+              className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
+            >
+              <CheckCheck size={15} /> ACC Semua ({pendingCount})
+            </button>
+          )}
           <button
             onClick={handleDownloadTemplate}
             type="button"
-            className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm"
+            className="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition"
           >
-            <Download size={16} /> Unduh Template
+            <Download size={14} /> Template Excel
           </button>
           <input
             type="file"
@@ -516,9 +595,22 @@ export default function AdminAlumni() {
           <button
             onClick={() => excelInputRef.current.click()}
             type="button"
-            className="flex-1 md:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-md text-sm flex items-center justify-center gap-2 transition shadow-sm"
+            className="flex-1 sm:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
           >
-            <FileSpreadsheet size={16} /> Impor Data (Excel)
+            <FileSpreadsheet size={14} /> Impor Excel
+          </button>
+          <button
+            onClick={handleSaveAll}
+            disabled={isSaving}
+            type="button"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-sm shrink-0"
+          >
+            {isSaving ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Save size={16} />
+            )}
+            <span>Simpan Perubahan</span>
           </button>
         </div>
       </div>
@@ -803,14 +895,46 @@ export default function AdminAlumni() {
         )}
       </div>
 
-      {/* DAFTAR KARTU ALUMNI (EDIT) */}
+      {/* DAFTAR KARTU ALUMNI (EDIT & MODERASI ACC) */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50">
-          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-            <Users size={18} className="text-slate-500" /> Database Alumni
-            Terdaftar
-          </h3>
-          <div className="relative w-full sm:w-72">
+        <div className="p-4 md:p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50/50">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+              <Users size={18} className="text-slate-500" /> Database Alumni
+              Terdaftar
+            </h3>
+
+            {/* Tab Filter Status ACC */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {[
+                { id: "all", label: `Semua (${alumniData.length})` },
+                {
+                  id: "pending",
+                  label: `Menunggu ACC (${pendingCount})`,
+                  highlight: pendingCount > 0,
+                },
+                { id: "approved", label: `Tayang (${approvedCount})` },
+                { id: "hidden", label: `Disembunyikan (${hiddenCount})` },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition ${
+                    statusFilter === tab.id
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : tab.highlight
+                      ? "bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200"
+                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative w-full lg:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
@@ -827,192 +951,274 @@ export default function AdminAlumni() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {filteredData.length === 0 ? (
               <div className="col-span-full py-10 text-center text-slate-500 font-medium">
-                Data alumni tidak ditemukan.
+                Data alumni tidak ditemukan pada filter ini.
               </div>
             ) : (
               filteredData.map((a, idx) => {
                 const jenjangObj = normalizeJenjangObj(a);
+                const itemStatus = a.status || "approved";
+                const isPending = itemStatus === "pending";
+                const isApproved = itemStatus === "approved";
+
                 return (
                   <div
                     key={`${a.id || "alm"}-${idx}`}
-                    className="border border-slate-200 p-4 rounded-lg flex flex-row items-start gap-4 bg-white relative group hover:border-slate-300 transition-colors"
+                    className={`border p-4 rounded-xl flex flex-col justify-between gap-3 bg-white relative group transition-all ${
+                      isPending
+                        ? "border-amber-400 ring-2 ring-amber-400/20"
+                        : isApproved
+                        ? "border-slate-200 hover:border-slate-300"
+                        : "border-slate-200 opacity-75"
+                    }`}
                   >
-                    {/* FOTO */}
-                    <label className="shrink-0 cursor-pointer w-16 h-16 md:w-20 md:h-20 rounded-md overflow-hidden bg-slate-50 border border-slate-200 flex items-center justify-center relative shadow-sm">
-                      {a.foto ? (
-                        <img
-                          src={a.foto}
-                          alt="profil"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <ImageIcon size={24} className="text-slate-300" />
-                      )}
-                      <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                        <UploadCloud size={18} className="text-white" />
+                    {/* BARIS STATUS & MODERASI ACC */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        {isPending ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-mono font-bold uppercase">
+                            <Clock size={12} /> Menunggu ACC Admin
+                          </span>
+                        ) : isApproved ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold uppercase">
+                            <CheckCircle2 size={12} /> Tayang di Publik
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-mono font-bold uppercase">
+                            <EyeOff size={12} /> Disembunyikan
+                          </span>
+                        )}
+                        {a.submittedBy === "mandiri" && (
+                          <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+                            Input Mandiri Alumni
+                          </span>
+                        )}
                       </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) =>
-                          handleUploadCloudinary(e.target.files[0], a.id)
-                        }
-                      />
-                    </label>
 
-                    <div className="flex-1 min-w-0 space-y-3">
-                      <div className="flex justify-between items-start gap-3">
-                        <input
-                          type="text"
-                          value={a.nama}
-                          onChange={(e) =>
-                            handleInputChange(a.id, "nama", e.target.value)
-                          }
-                          className="w-full font-bold text-slate-800 bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-sm md:text-base outline-none px-2 py-1 rounded transition-colors truncate -ml-2"
-                          placeholder="Nama Lengkap"
-                        />
+                      <div className="flex items-center gap-1.5">
+                        {!isApproved ? (
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() =>
+                              handleSetAlumniStatus(a.id, "approved")
+                            }
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 transition shadow-xs"
+                          >
+                            <CheckCircle2 size={13} />
+                            <span>ACC & Tampilkan</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() =>
+                              handleSetAlumniStatus(a.id, "pending")
+                            }
+                            className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold flex items-center gap-1 transition"
+                          >
+                            <Clock size={12} />
+                            <span>Pending</span>
+                          </button>
+                        )}
+                        {itemStatus !== "hidden" && (
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() =>
+                              handleSetAlumniStatus(a.id, "hidden")
+                            }
+                            className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 text-[11px] font-semibold flex items-center gap-1 transition"
+                            title="Sembunyikan dari Publik"
+                          >
+                            <EyeOff size={12} />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleDelete(a.id)}
-                          className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-colors border border-transparent hover:border-red-200"
+                          className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1 rounded-md transition-colors border border-transparent hover:border-red-200"
                           title="Hapus Alumni"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
+                    </div>
 
-                      {/* EDIT PROFESI */}
-                      <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
-                          Profesi & Karir
-                        </span>
-                        <EditTags
-                          data={a.profesi}
-                          onChange={(newArr) =>
-                            handleInputChange(a.id, "profesi", newArr)
+                    <div className="flex flex-row items-start gap-4">
+                      {/* FOTO */}
+                      <label className="shrink-0 cursor-pointer w-16 h-16 md:w-20 md:h-20 rounded-md overflow-hidden bg-slate-50 border border-slate-200 flex items-center justify-center relative shadow-sm">
+                        {a.foto ? (
+                          <img
+                            src={a.foto}
+                            alt="profil"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <ImageIcon size={24} className="text-slate-300" />
+                        )}
+                        <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                          <UploadCloud size={18} className="text-white" />
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) =>
+                            handleUploadCloudinary(e.target.files[0], a.id)
                           }
-                          placeholderText="+ Profesi..."
-                          theme="blue"
                         />
+                      </label>
 
-                        {a.profesi && a.profesi.length > 0 && (
-                          <div className="mt-2 space-y-1.5 pt-2 border-t border-slate-200/60">
-                            {a.profesi.map((p, pIdx) => (
-                              <div
-                                key={pIdx}
-                                className="flex items-center gap-2"
-                              >
-                                <span className="text-[10px] font-medium bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md max-w-[80px] truncate shadow-sm">
-                                  {p}
+                      <div className="flex-1 min-w-0 space-y-3">
+                        <div className="flex justify-between items-start gap-3">
+                          <input
+                            type="text"
+                            value={a.nama}
+                            onChange={(e) =>
+                              handleInputChange(a.id, "nama", e.target.value)
+                            }
+                            className="w-full font-bold text-slate-800 bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-sm md:text-base outline-none px-2 py-1 rounded transition-colors truncate -ml-2"
+                            placeholder="Nama Lengkap"
+                          />
+                        </div>
+
+                        {/* EDIT PROFESI */}
+                        <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
+                            Profesi & Karir
+                          </span>
+                          <EditTags
+                            data={a.profesi}
+                            onChange={(newArr) =>
+                              handleInputChange(a.id, "profesi", newArr)
+                            }
+                            placeholderText="+ Profesi..."
+                            theme="blue"
+                          />
+
+                          {a.profesi && a.profesi.length > 0 && (
+                            <div className="mt-2 space-y-1.5 pt-2 border-t border-slate-200/60">
+                              {a.profesi.map((p, pIdx) => (
+                                <div
+                                  key={pIdx}
+                                  className="flex items-center gap-2"
+                                >
+                                  <span className="text-[10px] font-medium bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md max-w-[80px] truncate shadow-sm">
+                                    {p}
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={
+                                      typeof a.deskripsiProfesi === "object" &&
+                                      a.deskripsiProfesi !== null
+                                        ? a.deskripsiProfesi[p] || ""
+                                        : ""
+                                    }
+                                    onChange={(e) => {
+                                      const updatedDesk =
+                                        typeof a.deskripsiProfesi ===
+                                          "object" &&
+                                        a.deskripsiProfesi !== null
+                                          ? { ...a.deskripsiProfesi }
+                                          : {};
+                                      updatedDesk[p] = e.target.value;
+                                      handleInputChange(
+                                        a.id,
+                                        "deskripsiProfesi",
+                                        updatedDesk
+                                      );
+                                    }}
+                                    className="flex-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-[11px] md:text-xs outline-none px-2 py-1 rounded transition-colors text-slate-700"
+                                    placeholder={`Detail ${p}...`}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* EDIT BIDANG KEAHLIAN */}
+                        <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
+                            Bidang Keahlian
+                          </span>
+                          <EditTags
+                            data={a.bidang}
+                            onChange={(newArr) =>
+                              handleInputChange(a.id, "bidang", newArr)
+                            }
+                            placeholderText="+ Keahlian..."
+                            theme="violet"
+                          />
+                        </div>
+
+                        {/* EDIT JENJANG KADERISASI + TAHUN */}
+                        <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                            <Award size={11} className="text-amber-500" />{" "}
+                            Jenjang Kaderisasi & Tahun
+                          </span>
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                            {JENJANG_KEYS.map((key) => (
+                              <div key={key}>
+                                <span className="text-[9px] font-mono font-bold text-slate-400 block">
+                                  {key}
                                 </span>
                                 <input
                                   type="text"
-                                  value={
-                                    typeof a.deskripsiProfesi === "object" &&
-                                    a.deskripsiProfesi !== null
-                                      ? a.deskripsiProfesi[p] || ""
-                                      : ""
-                                  }
-                                  onChange={(e) => {
-                                    const updatedDesk =
-                                      typeof a.deskripsiProfesi === "object" &&
-                                      a.deskripsiProfesi !== null
-                                        ? { ...a.deskripsiProfesi }
-                                        : {};
-                                    updatedDesk[p] = e.target.value;
-                                    handleInputChange(
+                                  value={jenjangObj[key] || ""}
+                                  onChange={(e) =>
+                                    handleJenjangChange(
                                       a.id,
-                                      "deskripsiProfesi",
-                                      updatedDesk
-                                    );
-                                  }}
-                                  className="flex-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-[11px] md:text-xs outline-none px-2 py-1 rounded transition-colors text-slate-700"
-                                  placeholder={`Detail ${p}...`}
+                                      key,
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Thn"
+                                  className="w-full px-1.5 py-1 bg-white border border-slate-200 rounded text-[11px] font-mono text-slate-700 focus:border-blue-500 outline-none"
                                 />
                               </div>
                             ))}
                           </div>
-                        )}
-                      </div>
-
-                      {/* EDIT BIDANG KEAHLIAN */}
-                      <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
-                          Bidang Keahlian
-                        </span>
-                        <EditTags
-                          data={a.bidang}
-                          onChange={(newArr) =>
-                            handleInputChange(a.id, "bidang", newArr)
-                          }
-                          placeholderText="+ Keahlian..."
-                          theme="violet"
-                        />
-                      </div>
-
-                      {/* EDIT JENJANG KADERISASI + TAHUN */}
-                      <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                          <Award size={11} className="text-amber-500" /> Jenjang
-                          Kaderisasi & Tahun
-                        </span>
-                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                          {JENJANG_KEYS.map((key) => (
-                            <div key={key}>
-                              <span className="text-[9px] font-mono font-bold text-slate-400 block">
-                                {key}
-                              </span>
-                              <input
-                                type="text"
-                                value={jenjangObj[key] || ""}
-                                onChange={(e) =>
-                                  handleJenjangChange(a.id, key, e.target.value)
-                                }
-                                placeholder="Thn"
-                                className="w-full px-1.5 py-1 bg-white border border-slate-200 rounded text-[11px] font-mono text-slate-700 focus:border-blue-500 outline-none"
-                              />
-                            </div>
-                          ))}
                         </div>
-                      </div>
 
-                      {/* Mapaba & Rayon di Kartu Edit */}
-                      <div className="flex gap-3 pt-1">
-                        <div className="w-1/3">
-                          <input
-                            type="text"
-                            value={a.tahunMapaba || ""}
-                            onChange={(e) =>
-                              handleInputChange(
-                                a.id,
-                                "tahunMapaba",
-                                e.target.value
-                              )
-                            }
-                            className="w-full bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-xs outline-none text-slate-600 px-2 py-1.5 rounded transition-colors"
-                            placeholder="Thn Mapaba"
-                          />
-                        </div>
-                        <div className="w-2/3">
-                          <select
-                            value={a.asalRayon || ""}
-                            onChange={(e) =>
-                              handleInputChange(
-                                a.id,
-                                "asalRayon",
-                                e.target.value
-                              )
-                            }
-                            className="w-full bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-xs outline-none text-slate-600 px-2 py-1.5 rounded transition-colors appearance-none truncate"
-                          >
-                            <option value="">Pilih Rayon</option>
-                            {RAYON_OPTIONS.map((r) => (
-                              <option key={r} value={r}>
-                                {r}
-                              </option>
-                            ))}
-                          </select>
+                        {/* Mapaba & Rayon di Kartu Edit */}
+                        <div className="flex gap-3 pt-1">
+                          <div className="w-1/3">
+                            <input
+                              type="text"
+                              value={a.tahunMapaba || ""}
+                              onChange={(e) =>
+                                handleInputChange(
+                                  a.id,
+                                  "tahunMapaba",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-xs outline-none text-slate-600 px-2 py-1.5 rounded transition-colors"
+                              placeholder="Thn Mapaba"
+                            />
+                          </div>
+                          <div className="w-2/3">
+                            <select
+                              value={a.asalRayon || ""}
+                              onChange={(e) =>
+                                handleInputChange(
+                                  a.id,
+                                  "asalRayon",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-400 text-xs outline-none text-slate-600 px-2 py-1.5 rounded transition-colors appearance-none truncate"
+                            >
+                              <option value="">Pilih Rayon</option>
+                              {RAYON_OPTIONS.map((r) => (
+                                <option key={r} value={r}>
+                                  {r}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1022,24 +1228,6 @@ export default function AdminAlumni() {
             )}
           </div>
         </div>
-      </div>
-
-      {/* Floating Action Bar (Simpan) */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg border border-slate-200 sticky bottom-6 z-40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-        <div className="flex items-start gap-2.5 text-sm text-slate-600 max-w-2xl">
-          <Info size={18} className="shrink-0 mt-0.5 text-blue-500" />
-          <p>
-            Semua perubahan pada kartu alumni (termasuk profesi, bidang
-            keahlian, dan tahun jenjang kaderisasi) baru akan diperbarui ke
-            sistem publik setelah Anda menekan tombol simpan.
-          </p>
-        </div>
-        <button
-          onClick={handleSaveAll}
-          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap shrink-0 text-sm"
-        >
-          <Save size={16} /> Simpan Perubahan Direktori
-        </button>
       </div>
     </div>
   );

@@ -30,6 +30,11 @@ import {
   ExternalLink,
   CheckCircle2,
   Layers,
+  MessageSquareQuote,
+  Send,
+  Plus,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -37,6 +42,7 @@ import { db } from "@/lib/firebase";
 import {
   doc,
   getDoc,
+  setDoc,
   collection,
   query,
   orderBy,
@@ -305,6 +311,122 @@ const KADERISASI_STEPS = [
   },
 ];
 
+const STARTER_HOME_BOOKS = [
+  {
+    id: "starter-ndp-pmii",
+    judul: "Nilai Dasar Pergerakan (NDP) PMII",
+    penulis: "Tim Kaderisasi PB PMII",
+    kategori: "Materi Wajib",
+    tahun: "2024",
+    tebalHalaman: "24 Hlm",
+    deskripsi:
+      "Rumusan filosofis dan kerangka ideologis utama kader PMII dalam memaknai Tauhid, Habluminallah, Habluminannas, dan Habluminal'alam.",
+    coverUrl: "",
+  },
+  {
+    id: "starter-aswaja-manhaj",
+    judul: "Aswaja sebagai Manhajul Fikr wal Harakah",
+    penulis: "Lembaga Kajian Komisariat Sunan Ampel",
+    kategori: "Aswaja & Keislaman",
+    tahun: "2024",
+    tebalHalaman: "32 Hlm",
+    deskripsi:
+      "Kajian metodologi berpikir Ahlussunnah Wal Jama'ah An-Nahdliyah: Tawassuth, Tawazun, Ta'adul, dan Tasamuh dalam realitas kontemporer.",
+    coverUrl: "",
+  },
+  {
+    id: "starter-ansos-transformasi",
+    judul: "Modul Analisis Sosial & Paradigma Kritis Transformatif",
+    penulis: "Biro Kaderisasi PK. PMII Sunan Ampel Malang",
+    kategori: "Modul Kaderisasi",
+    tahun: "2025",
+    tebalHalaman: "40 Hlm",
+    deskripsi:
+      "Panduan praktis membedah struktur sosial, pemetaan aktor kebijakan, dan strategi advokasi kerakyatan bagi kader Mujahid.",
+    coverUrl: "",
+  },
+  {
+    id: "starter-kopri-malang",
+    judul: "Gerakan Perempuan, Islam & Keadilan Gender (SIG & SKP)",
+    penulis: "KOPRI PK. PMII Sunan Ampel Malang",
+    kategori: "Kajian Putri (KOPRI)",
+    tahun: "2025",
+    tebalHalaman: "28 Hlm",
+    deskripsi:
+      "Bahan bacaan Sekolah Islam & Gender (SIG) serta Sekolah Kader Putri (SKP) ranah Kota Malang dalam mengawal keadilan sosial.",
+    coverUrl: "",
+  },
+];
+
+const STARTER_HOME_TESTIMONI = [
+  {
+    id: "testi-starter-1",
+    nama: "Sahabat M. Rizky Pratama",
+    statusPeran: "Alumni PMII",
+    rayonAtauInstansi: "Alumni PK. PMII Sunan Ampel Malang",
+    angkatan: "2019",
+    fotoUrl: "",
+    pesan:
+      "PMII Sunan Ampel Malang bukan sekadar ruang berorganisasi, melainkan kawah candradimuka tempat kami belajar memadukan kedalaman dzikir, ketajaman fikir, dan keberpihakan nyata lewat amal sholeh.",
+    status: "approved",
+  },
+  {
+    id: "testi-starter-2",
+    nama: "Sahabati Nadia Zahra, S.Sos.",
+    statusPeran: "Kader KOPRI / Alumni",
+    rayonAtauInstansi: "KOPRI PK. PMII Sunan Ampel Malang",
+    angkatan: "2020",
+    fotoUrl: "",
+    pesan:
+      "Lewat ruang kaderisasi SIG dan SKP di lingkungan Komisariat Sunan Ampel, saya menemukan kepercayaan diri untuk bersuara, menulis, dan mengawal isu-isu keadilan gender berlandaskan nilai Aswaja.",
+    status: "approved",
+  },
+  {
+    id: "testi-starter-3",
+    nama: "Ahmad Fauzan Al-Farisi",
+    statusPeran: "Kader Aktif",
+    rayonAtauInstansi: "PR. PMII Kawah Chondrodimuko",
+    angkatan: "2023",
+    fotoUrl: "",
+    pesan:
+      "Tradisi diskusi intelektual, bedah buku, dan pendampingan masyarakat di PMII membentuk cara pandang kritis yang tidak saya dapatkan di bangku perkuliahan formal semata.",
+    status: "approved",
+  },
+  {
+    id: "testi-starter-4",
+    nama: "Sahabat Bagus Setiawan, M.Pd.",
+    statusPeran: "Alumni PMII",
+    rayonAtauInstansi: "IKA PMII Sunan Ampel Malang",
+    angkatan: "2017",
+    fotoUrl: "",
+    pesan:
+      "Jejaring persahabatan dan etos kerja organisasi yang ditempa di Komisariat Sunan Ampel menjadi bekal paling berharga ketika terjun mengabdi di tengah masyarakat.",
+    status: "approved",
+  },
+  {
+    id: "testi-starter-5",
+    nama: "Sahabati Siti Nurhaliza",
+    statusPeran: "Pengurus Komisariat",
+    rayonAtauInstansi: "PK. PMII Sunan Ampel Malang",
+    angkatan: "2022",
+    fotoUrl: "",
+    pesan:
+      "Di PMII kami diajarkan bahwa ilmu pengetahuan harus memiliki daya ubah sosial. Setiap kajian dan gerakan selalu bermuara pada kemaslahatan umat dan bangsa.",
+    status: "approved",
+  },
+  {
+    id: "testi-starter-6",
+    nama: "M. Ilham Maulana",
+    statusPeran: "Kader Aktif",
+    rayonAtauInstansi: "PR. PMII Sunan Bonang",
+    angkatan: "2024",
+    fotoUrl: "",
+    pesan:
+      "Sejak mengikuti MAPABA, saya merasakan kekeluargaan yang hangat sekaligus bimbingan intelektual yang terarah dari para senior dan pengurus.",
+    status: "approved",
+  },
+];
+
 export default function Home() {
   const [config, setConfig] = useState(null);
   const [globalConfig, setGlobalConfig] = useState(null);
@@ -324,6 +446,23 @@ export default function Home() {
   const [allAnggota, setAllAnggota] = useState([]);
   const [allRayon, setAllRayon] = useState([]);
   const [allProker, setAllProker] = useState([]);
+  const [allBuku, setAllBuku] = useState(STARTER_HOME_BOOKS);
+  const [allTestimoni, setAllTestimoni] = useState(STARTER_HOME_TESTIMONI);
+
+  // STATE FORM KIRIM TESTIMONI ("APA KATA MEREKA") & SLIDER 5 DETIK
+  const [testimoniStartIndex, setTestimoniStartIndex] = useState(0);
+  const [showTestimoniForm, setShowTestimoniForm] = useState(false);
+  const [submittingTestimoni, setSubmittingTestimoni] = useState(false);
+  const [uploadingTestimoniFoto, setUploadingTestimoniFoto] = useState(false);
+  const [testimoniSuccess, setTestimoniSuccess] = useState(false);
+  const [testimoniForm, setTestimoniForm] = useState({
+    nama: "",
+    statusPeran: "Kader Aktif",
+    rayonAtauInstansi: "",
+    angkatan: "",
+    fotoUrl: "",
+    pesan: "",
+  });
 
   // STATE APRESIASI KADER
   const [topAkademik, setTopAkademik] = useState([]);
@@ -348,6 +487,8 @@ export default function Home() {
           adminSnap,
           alumniSnap,
           apresiasiSnap,
+          bukuSnap,
+          testimoniSnap,
         ] = await Promise.all([
           getDoc(doc(db, "website_config", "settings")),
           getDoc(doc(db, "website_config", "global")),
@@ -356,9 +497,24 @@ export default function Home() {
           getDoc(doc(db, "website_config", "database_administrasi")),
           getDoc(doc(db, "website_config", "database_alumni")),
           getDoc(doc(db, "website_config", "database_apresiasi")),
+          getDoc(doc(db, "website_config", "database_buku")),
+          getDoc(doc(db, "website_config", "database_testimoni")),
         ]);
 
         if (berandaSnap.exists()) setConfig(berandaSnap.data());
+        if (
+          bukuSnap.exists() &&
+          Array.isArray(bukuSnap.data().listBuku) &&
+          bukuSnap.data().listBuku.length > 0
+        ) {
+          setAllBuku(bukuSnap.data().listBuku);
+        }
+        if (
+          testimoniSnap.exists() &&
+          Array.isArray(testimoniSnap.data().listTestimoni)
+        ) {
+          setAllTestimoni(testimoniSnap.data().listTestimoni);
+        }
         if (globalSnap.exists()) {
           const gData = globalSnap.data();
           setGlobalConfig(gData);
@@ -520,6 +676,99 @@ export default function Home() {
     setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
   };
 
+  // ================= HANDLER FORM KIRIM KATA MEREKA (TESTIMONI) =================
+  const handleUploadTestimoniFoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingTestimoniFoto(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.url) {
+        setTestimoniForm((prev) => ({ ...prev, fotoUrl: data.url }));
+      }
+    } catch (err) {
+      console.error("Gagal mengunggah foto testimoni:", err);
+    } finally {
+      setUploadingTestimoniFoto(false);
+    }
+  };
+
+  const handleSubmitTestimoni = async (e) => {
+    e.preventDefault();
+    if (!testimoniForm.nama.trim() || !testimoniForm.pesan.trim()) return;
+
+    setSubmittingTestimoni(true);
+    try {
+      const docRef = doc(db, "website_config", "database_testimoni");
+      const docSnap = await getDoc(docRef);
+      const existingList =
+        docSnap.exists() && Array.isArray(docSnap.data().listTestimoni)
+          ? docSnap.data().listTestimoni
+          : allTestimoni;
+
+      const newEntry = {
+        id: `testi-${Date.now()}`,
+        nama: testimoniForm.nama.trim(),
+        statusPeran: testimoniForm.statusPeran || "Kader Aktif",
+        rayonAtauInstansi: testimoniForm.rayonAtauInstansi.trim(),
+        angkatan: testimoniForm.angkatan.trim(),
+        fotoUrl: testimoniForm.fotoUrl.trim(),
+        pesan: testimoniForm.pesan.trim(),
+        status: "pending", // Menunggu ACC Admin di /admin/testimoni
+        createdAt: new Date().toISOString(),
+      };
+
+      const updatedList = [newEntry, ...existingList];
+      await setDoc(docRef, { listTestimoni: updatedList }, { merge: true });
+      setAllTestimoni(updatedList);
+      setTestimoniForm({
+        nama: "",
+        statusPeran: "Kader Aktif",
+        rayonAtauInstansi: "",
+        angkatan: "",
+        fotoUrl: "",
+        pesan: "",
+      });
+      setTestimoniSuccess(true);
+    } catch (err) {
+      console.error("Gagal mengirim testimoni:", err);
+      alert("Gagal mengirim kata-kata. Silakan coba lagi.");
+    } finally {
+      setSubmittingTestimoni(false);
+    }
+  };
+
+  const approvedTestimoni = allTestimoni.filter(
+    (item) => item.status === "approved" || !item.status
+  );
+
+  // Efek Geser 1 Kartu Tiap 5 Detik (Infinite Circular Loop)
+  useEffect(() => {
+    if (approvedTestimoni.length <= 1) return;
+    const timer = setInterval(() => {
+      setTestimoniStartIndex(
+        (prev) => (prev + 1) % approvedTestimoni.length
+      );
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [approvedTestimoni.length]);
+
+  const handleNextTestimoni = () => {
+    if (approvedTestimoni.length === 0) return;
+    setTestimoniStartIndex((prev) => (prev + 1) % approvedTestimoni.length);
+  };
+
+  const handlePrevTestimoni = () => {
+    if (approvedTestimoni.length === 0) return;
+    setTestimoniStartIndex(
+      (prev) =>
+        (prev - 1 + approvedTestimoni.length) % approvedTestimoni.length
+    );
+  };
+
   // ================= LOGIKA PENCARIAN PINTAR BERANDA =================
   const trimmedSearch = quickSearch.trim().toLowerCase();
   const matchedAnggota = trimmedSearch
@@ -559,11 +808,23 @@ export default function Home() {
         .slice(0, 2)
     : [];
 
+  const matchedBuku = trimmedSearch
+    ? allBuku
+        .filter(
+          (b) =>
+            (b.judul || "").toLowerCase().includes(trimmedSearch) ||
+            (b.penulis || "").toLowerCase().includes(trimmedSearch) ||
+            (b.kategori || "").toLowerCase().includes(trimmedSearch)
+        )
+        .slice(0, 3)
+    : [];
+
   const totalQuickMatches =
     matchedAnggota.length +
     matchedRayon.length +
     matchedProker.length +
-    matchedNews.length;
+    matchedNews.length +
+    matchedBuku.length;
 
   if (loading) {
     return (
@@ -754,7 +1015,7 @@ export default function Home() {
       </section>
 
       {/* ================= STATS LEDGER + FITUR PENCARIAN PINTAR TERPADU ================= */}
-      <section className="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 sm:-mt-12 mb-12 sm:mb-16 w-full space-y-4">
+      <section className="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 sm:-mt-12 mb-6 sm:mb-8 w-full space-y-3.5">
         {/* Baris 1: 4 Statistik Utama */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -859,6 +1120,13 @@ export default function Home() {
               <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 dark:text-slate-500 hidden sm:inline mr-1">
                 Akses Cepat:
               </span>
+              <Link
+                href="/bacaan"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-yellow-400/10 text-amber-800 dark:text-yellow-300 border border-amber-300/80 dark:border-yellow-400/30 text-xs font-bold hover:bg-yellow-400 hover:text-slate-950 transition-colors whitespace-nowrap shrink-0"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Bacaan Kader (3D)</span>
+              </Link>
               <Link
                 href="/administrasi?tab=pengajuan_sk"
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-800/60 text-xs font-semibold hover:bg-blue-600 hover:text-white transition-colors whitespace-nowrap shrink-0"
@@ -982,21 +1250,40 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* Hasil Proker & Berita */}
-                      {(matchedProker.length > 0 || matchedNews.length > 0) && (
+                      {/* Hasil Proker, Buku & Berita */}
+                      {(matchedProker.length > 0 ||
+                        matchedNews.length > 0 ||
+                        matchedBuku.length > 0) && (
                         <div className="bg-slate-50 dark:bg-slate-900/80 rounded-xl p-3.5 border border-slate-200/70 dark:border-slate-800">
                           <div className="flex items-center justify-between mb-2.5">
                             <span className="text-[11px] font-mono font-bold uppercase text-blue-600 dark:text-yellow-400">
-                              Proker & Publikasi
+                              Bacaan, Proker & Berita
                             </span>
                             <Link
-                              href="/administrasi?tab=proker"
+                              href="/bacaan"
                               className="text-[11px] font-semibold text-slate-500 hover:underline"
                             >
-                              Detail →
+                              Perpustakaan →
                             </Link>
                           </div>
                           <div className="space-y-2">
+                            {matchedBuku.map((b, i) => (
+                              <Link
+                                key={`b-${i}`}
+                                href={`/bacaan?buku=${encodeURIComponent(b.id)}`}
+                                className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 hover:border-blue-500 transition-colors"
+                              >
+                                <div className="min-w-0 pr-2">
+                                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                    {b.judul}
+                                  </p>
+                                  <p className="text-[11px] text-amber-600 dark:text-yellow-400 truncate">
+                                    Buku 3D • {b.kategori || "Bacaan Kader"}
+                                  </p>
+                                </div>
+                                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              </Link>
+                            ))}
                             {matchedProker.map((p, i) => (
                               <Link
                                 key={`p-${i}`}
@@ -1044,7 +1331,7 @@ export default function Home() {
       </section>
 
       {/* ================= APRESIASI KADER SECTION (SUDAH ANTI-NABRAK) ================= */}
-      <section className="py-12 md:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      <section className="py-5 md:py-7 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 mb-8 border-b border-slate-200 dark:border-slate-800">
           <div>
             <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest text-blue-600 dark:text-yellow-400 mb-2">
@@ -1152,9 +1439,192 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ================= PERPUSTAKAAN DIGITAL & BACAAN KADER (MODE BUKU 3D) ================= */}
+      <section className="py-5 md:py-7 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="relative rounded-2xl sm:rounded-3xl bg-[#070e1c] text-white border border-slate-800 p-5 sm:p-8 lg:p-12 overflow-hidden shadow-xl">
+          {/* Latar Grid Arsitektural */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px] pointer-events-none" />
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-600 via-yellow-400 to-blue-600" />
+
+          <div className="relative z-10">
+            {/* Header Perpustakaan Digital */}
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5 pb-7 mb-8 border-b border-slate-800/90">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 text-[11px] font-mono font-bold uppercase tracking-widest mb-3">
+                  <BookOpen className="w-3.5 h-3.5 text-yellow-400" />
+                  <span>Perpustakaan Digital</span>
+                </div>
+                <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+                  Bacaan Kader & Modul Pergerakan
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300/85 mt-2 leading-relaxed">
+                  Akses materi wajib MAPABA, PKD, SIG, SKP, kajian Aswaja, hingga
+                  modul analisis sosial dengan pengalaman membuka lembaran buku
+                  fisik 3D langsung dari HP maupun laptop.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                <div className="px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-mono text-slate-300 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>{allBuku.length} Koleksi Modul</span>
+                </div>
+                <Link
+                  href="/bacaan"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs sm:text-sm transition shadow-lg shadow-yellow-400/10"
+                >
+                  <span>Buka Ruang Baca 3D</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Grid Rak Buku Hardcover 3D (4 Buku Pilihan) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {allBuku.slice(0, 4).map((buku, idx) => {
+                const spineColors = [
+                  "from-[#1e3a8a] via-[#0f172a] to-[#020617]",
+                  "from-[#065f46] via-[#064e3b] to-[#022c22]",
+                  "from-[#78350f] via-[#451a03] to-[#1c1917]",
+                  "from-[#312e81] via-[#1e1b4b] to-[#090d16]",
+                ];
+                const bgGradient = spineColors[idx % spineColors.length];
+
+                return (
+                  <motion.div
+                    key={buku.id || idx}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: idx * 0.08, duration: 0.35 }}
+                    className="group bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-yellow-400/50 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300"
+                  >
+                    <div>
+                      {/* Visual Buku Hardcover 3D */}
+                      <Link
+                        href={`/bacaan?buku=${encodeURIComponent(buku.id)}`}
+                        className="block relative pt-2 pb-4 px-3 mb-4 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-center overflow-hidden"
+                      >
+                        <div className="relative w-32 sm:w-36 aspect-[3/4] transition-transform duration-500 group-hover:-translate-y-1.5 group-hover:rotate-[-2deg]">
+                          {/* Bayangan Bawah Buku */}
+                          <div className="absolute -bottom-2.5 inset-x-2 h-4 bg-black/70 blur-md rounded-full" />
+
+                          {/* Lembaran Kertas Sisi Kanan (Efek Tebal Buku) */}
+                          <div className="absolute top-1 bottom-1 -right-2 w-2.5 bg-gradient-to-r from-slate-200 via-amber-50 to-slate-300 rounded-r-sm border-y border-r border-slate-400/60 shadow-inner" />
+
+                          {/* Sampul Depan Hardcover */}
+                          <div
+                            className={`relative w-full h-full rounded-r-lg rounded-l-[3px] overflow-hidden border border-white/15 bg-gradient-to-br ${bgGradient} shadow-[6px_8px_20px_rgba(0,0,0,0.65)] flex flex-col justify-between p-3`}
+                          >
+                            {/* Lipatan Engsel Punggung Buku (Book Spine) */}
+                            <div className="absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/60 via-white/10 to-transparent pointer-events-none z-20" />
+                            <div className="absolute inset-1.5 border border-yellow-400/25 rounded-r-md pointer-events-none z-20" />
+
+                            {buku.coverUrl ? (
+                              <img
+                                src={buku.coverUrl}
+                                alt={buku.judul}
+                                className="absolute inset-0 w-full h-full object-cover z-10"
+                              />
+                            ) : (
+                              <>
+                                <div className="relative z-10 pl-1.5">
+                                  <span className="inline-block px-1.5 py-0.5 rounded bg-yellow-400/20 border border-yellow-400/40 text-yellow-300 text-[8px] font-mono font-bold uppercase tracking-wider">
+                                    {buku.kategori || "MODUL PMII"}
+                                  </span>
+                                </div>
+                                <div className="relative z-10 pl-1.5 my-auto">
+                                  <h4 className="text-[11px] sm:text-xs font-black text-white leading-snug line-clamp-4 drop-shadow-xs">
+                                    {buku.judul}
+                                  </h4>
+                                </div>
+                                <div className="relative z-10 pl-1.5 pt-1.5 border-t border-white/15 flex items-center justify-between text-[8px] font-mono text-amber-300/90">
+                                  <span className="truncate max-w-[75px]">
+                                    {buku.penulis || "PK. PMII"}
+                                  </span>
+                                  <span>{buku.tahun || "2025"}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* Metadata Buku */}
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-yellow-400 truncate">
+                          {buku.kategori || "Bahan Bacaan"}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                          {buku.tebalHalaman || "Modul"}
+                        </span>
+                      </div>
+
+                      <Link
+                        href={`/bacaan?buku=${encodeURIComponent(buku.id)}`}
+                      >
+                        <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-yellow-400 transition-colors line-clamp-2 leading-snug mb-1.5">
+                          {buku.judul}
+                        </h3>
+                      </Link>
+
+                      <p className="text-[11px] text-slate-400 line-clamp-1 mb-2">
+                        Oleh: {buku.penulis || "Tim Kaderisasi PMII"}
+                      </p>
+
+                      <p className="text-xs text-slate-400/90 line-clamp-2 leading-relaxed mb-4">
+                        {buku.deskripsi ||
+                          "Baca modul dan materi pergerakan dalam format buku interaktif 3D."}
+                      </p>
+                    </div>
+
+                    {/* Tombol Buka Buku 3D */}
+                    <Link
+                      href={`/bacaan?buku=${encodeURIComponent(buku.id)}`}
+                      className="w-full py-2.5 px-3.5 rounded-xl bg-white/[0.06] group-hover:bg-yellow-400 text-slate-200 group-hover:text-slate-950 border border-white/10 group-hover:border-yellow-400 font-bold text-xs flex items-center justify-between transition-all"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5" />
+                        <span>Baca Mode Buku 3D</span>
+                      </span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Footer Strip Fitur Ruang Baca */}
+            <div className="mt-7 pt-5 border-t border-slate-800/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-400">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400" />
+                  <span>Animasi Balik Lembaran Kertas 3D</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400" />
+                  <span>Mode Kertas Sepia, Putih & Malam</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400" />
+                  <span>Nyaman Dibaca di HP (Swipe) & Laptop</span>
+                </span>
+              </div>
+              <Link
+                href="/bacaan"
+                className="font-mono font-bold text-yellow-400 hover:underline inline-flex items-center gap-1 shrink-0"
+              >
+                <span>LIHAT SEMUA KOLEKSI ({allBuku.length})</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ================= FITUR INTERAKTIF BARU: EKSPLORASI BASIS RAYON & AGENDA PROKER ================= */}
       {(allRayon.length > 0 || allProker.length > 0) && (
-        <section className="py-12 md:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <section className="py-5 md:py-7 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
           <div className="bg-white dark:bg-[#0d1526] rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-8 lg:p-10 shadow-xs">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 mb-6 border-b border-slate-200 dark:border-slate-800">
               <div>
@@ -1314,7 +1784,7 @@ export default function Home() {
       )}
 
       {/* ================= SEJARAH / JEJAK PERGERAKAN SECTION ================= */}
-      <section className="py-12 md:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      <section className="py-5 md:py-7 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="bg-white dark:bg-[#0d1526] rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 p-6 sm:p-10 lg:p-14 shadow-xs">
           <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             <motion.div
@@ -1399,7 +1869,7 @@ export default function Home() {
       </section>
 
       {/* ================= NILAI DASAR & ALUR KADERISASI INTERAKTIF SECTION ================= */}
-      <section className="bg-[#091122] py-16 md:py-24 px-4 sm:px-6 lg:px-8 text-white relative overflow-hidden w-full border-y border-white/10">
+      <section className="bg-[#091122] my-5 md:my-7 py-12 md:py-16 px-4 sm:px-6 lg:px-8 text-white relative overflow-hidden w-full border-y border-white/10">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:48px_48px] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto relative z-10 space-y-16 md:space-y-20">
@@ -1613,7 +2083,7 @@ export default function Home() {
       </section>
 
       {/* ================= BERITA TERBARU SECTION ================= */}
-      <section className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      <section className="py-6 md:py-9 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 pb-6 mb-10 border-b border-slate-200 dark:border-slate-800">
           <div>
             <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest text-blue-600 dark:text-yellow-400 mb-2">
@@ -1699,8 +2169,389 @@ export default function Home() {
         )}
       </section>
 
+      {/* ================= APA KATA MEREKA TENTANG PMII? (TESTIMONI & FORM KIRIM) ================= */}
+      <section className="py-6 md:py-9 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="bg-white dark:bg-[#0d1526] rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-8 lg:p-10 shadow-xs">
+          {/* Header Seksi Apa Kata Mereka */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 mb-7 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest text-blue-600 dark:text-yellow-400 mb-2">
+                <MessageSquareQuote className="w-4 h-4" />
+                <span>Refleksi & Suara Pergerakan</span>
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                Apa Kata Mereka Tentang PMII?
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5 max-w-2xl">
+                Kesan, refleksi, dan pandangan dari para kader, alumni, serta
+                keluarga besar PK. PMII Sunan Ampel Malang.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowTestimoniForm((prev) => !prev);
+                setTestimoniSuccess(false);
+              }}
+              className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer shrink-0 ${
+                showTestimoniForm
+                  ? "bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                  : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20"
+              }`}
+            >
+              {showTestimoniForm ? (
+                <>
+                  <X className="w-4 h-4" />
+                  <span>Tutup Form Isian</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 text-yellow-300" />
+                  <span>Tulis Kata-Kata Anda</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Notifikasi Sukses Kirim (Menunggu ACC Admin) */}
+          <AnimatePresence>
+            {testimoniSuccess && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              >
+                <div className="flex items-start sm:items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                      Kata-Kata Anda Berhasil Dikirim!
+                    </h4>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300/90 mt-0.5">
+                      Kiriman Anda sedang menunggu persetujuan (ACC) dari
+                      Pengurus Admin sebelum ditampilkan secara publik di
+                      halaman Beranda.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTestimoniSuccess(false)}
+                  className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline self-end sm:self-center shrink-0"
+                >
+                  Tutup
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Form Isian Pengunjung ("Kirim Kata-Kata Tentang PMII") */}
+          <AnimatePresence>
+            {showTestimoniForm && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <form
+                  onSubmit={handleSubmitTestimoni}
+                  className="mb-8 p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-4"
+                >
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                    <div>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-600 dark:text-yellow-400 block">
+                        Formulir Kontribusi Suara Kader & Alumni
+                      </span>
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                        Bagikan Kesan & Pandangan Anda Tentang PMII
+                      </h3>
+                    </div>
+                    <span className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold">
+                      Moderasi Admin (ACC)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    <div className="sm:col-span-1">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Nama Lengkap *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={testimoniForm.nama}
+                        onChange={(e) =>
+                          setTestimoniForm({
+                            ...testimoniForm,
+                            nama: e.target.value,
+                          })
+                        }
+                        placeholder="Nama lengkap Anda..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-yellow-400"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-1">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Status / Peran *
+                      </label>
+                      <select
+                        value={testimoniForm.statusPeran}
+                        onChange={(e) =>
+                          setTestimoniForm({
+                            ...testimoniForm,
+                            statusPeran: e.target.value,
+                          })
+                        }
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-yellow-400"
+                      >
+                        <option value="Kader Aktif">Kader Aktif</option>
+                        <option value="Alumni PMII">Alumni PMII</option>
+                        <option value="Pengurus Rayon / Komisariat">
+                          Pengurus Rayon / Komisariat
+                        </option>
+                        <option value="Kader KOPRI">Kader KOPRI</option>
+                        <option value="Tokoh / Mabincab / Dosen">
+                          Tokoh / Mabincab / Dosen
+                        </option>
+                        <option value="Mahasiswa / Umum">
+                          Mahasiswa / Umum
+                        </option>
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-1">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Asal Rayon / Instansi
+                      </label>
+                      <input
+                        type="text"
+                        value={testimoniForm.rayonAtauInstansi}
+                        onChange={(e) =>
+                          setTestimoniForm({
+                            ...testimoniForm,
+                            rayonAtauInstansi: e.target.value,
+                          })
+                        }
+                        placeholder="Misal: PR. PMII Al-Kindi"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-yellow-400"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-1">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Tahun Angkatan (Opsional)
+                      </label>
+                      <input
+                        type="text"
+                        value={testimoniForm.angkatan}
+                        onChange={(e) =>
+                          setTestimoniForm({
+                            ...testimoniForm,
+                            angkatan: e.target.value,
+                          })
+                        }
+                        placeholder="Contoh: 2022"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-yellow-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Kata-Kata / Kesan & Pesan Tentang PMII *
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      maxLength={450}
+                      value={testimoniForm.pesan}
+                      onChange={(e) =>
+                        setTestimoniForm({
+                          ...testimoniForm,
+                          pesan: e.target.value,
+                        })
+                      }
+                      placeholder="Tuliskan kesan, pengalaman berharga, atau pandangan Anda tentang PMII..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-yellow-400"
+                    />
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                    {/* Upload Foto Opsional */}
+                    <div className="flex items-center gap-3">
+                      <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-blue-500 cursor-pointer transition">
+                        {uploadingTestimoniFoto ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5 text-blue-600 dark:text-yellow-400" />
+                        )}
+                        <span>
+                          {uploadingTestimoniFoto
+                            ? "Mengunggah Foto..."
+                            : testimoniForm.fotoUrl
+                            ? "Ganti Foto Profil"
+                            : "Upload Foto (Opsional)"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleUploadTestimoniFoto}
+                          className="hidden"
+                        />
+                      </label>
+                      {testimoniForm.fotoUrl && (
+                        <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                          ✓ Foto terlampir
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={submittingTestimoni || uploadingTestimoniFoto}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs sm:text-sm transition shadow-sm cursor-pointer disabled:opacity-50"
+                    >
+                      {submittingTestimoni ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                      <span>
+                        {submittingTestimoni
+                          ? "Mengirim..."
+                          : "Kirim Kata-Kata"}
+                      </span>
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Carousel Otomatis (2 Kartu di HP, 4 Kartu di Laptop/Tab — Geser 1 Kartu Tiap 5 Detik) */}
+          {approvedTestimoni.length > 0 ? (
+            <div>
+              <div className="overflow-hidden">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {[0, 1, 2, 3].map((slot) => {
+                      const realIndex =
+                        (testimoniStartIndex + slot) %
+                        approvedTestimoni.length;
+                      const item = approvedTestimoni[realIndex];
+                      if (!item) return null;
+
+                      const cardKey =
+                        approvedTestimoni.length >= 4
+                          ? `testi-card-${realIndex}-${item.id || realIndex}`
+                          : `testi-slot-${slot}-${testimoniStartIndex}`;
+
+                      return (
+                        <motion.div
+                          layout
+                          key={cardKey}
+                          initial={{ opacity: 0, x: 48 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -48 }}
+                          transition={{
+                            duration: 0.45,
+                            ease: [0.22, 1, 0.36, 1],
+                          }}
+                          className={`${
+                            slot >= 2 ? "hidden md:flex" : "flex"
+                          } group relative rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-900 hover:border-blue-500/50 dark:hover:border-yellow-400/50 p-3.5 sm:p-5 flex-col justify-between gap-4 transition-colors min-h-[210px] sm:min-h-[235px]`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-1.5 mb-2.5 sm:mb-3">
+                              <span className="px-2 py-0.5 rounded-md bg-blue-600/10 dark:bg-yellow-400/10 text-blue-700 dark:text-yellow-400 text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider truncate">
+                                {item.statusPeran || "Kader PMII"}
+                              </span>
+                              <MessageSquareQuote className="w-4 h-4 text-slate-300 dark:text-slate-700 group-hover:text-blue-500/40 dark:group-hover:text-yellow-400/40 shrink-0 transition-colors" />
+                            </div>
+
+                            <p className="text-slate-700 dark:text-slate-200 text-xs sm:text-sm leading-relaxed italic line-clamp-4 sm:line-clamp-5">
+                              &ldquo;{item.pesan}&rdquo;
+                            </p>
+                          </div>
+
+                          <div className="pt-3 border-t border-slate-200/70 dark:border-slate-800 flex items-center gap-2.5">
+                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 dark:bg-slate-800 text-yellow-400 font-black text-[10px] sm:text-xs flex items-center justify-center overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
+                              {item.fotoUrl ? (
+                                <img
+                                  src={item.fotoUrl}
+                                  alt={item.nama}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span>{getInitials(item.nama)}</span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-[11px] sm:text-xs font-bold text-slate-900 dark:text-white truncate">
+                                {item.nama}
+                              </h4>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                {item.rayonAtauInstansi ||
+                                  "PK. PMII Sunan Ampel"}
+                                {item.angkatan ? ` • ${item.angkatan}` : ""}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Baris Bawah Rentetan Kartu: Indikator Geser & Tautan "Lainnya" */}
+              <div className="mt-5 pt-4 border-t border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePrevTestimoni}
+                    aria-label="Sebelumnya"
+                    className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center transition cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextTestimoni}
+                    aria-label="Selanjutnya"
+                    className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center transition cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 ml-1">
+                    {testimoniStartIndex + 1} / {approvedTestimoni.length} Suara
+                  </span>
+                </div>
+
+                <Link
+                  href="/testimoni"
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-blue-600 dark:text-yellow-400 hover:underline"
+                >
+                  <span>Lainnya</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="py-10 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              Belum ada testimoni yang ditayangkan. Jadilah yang pertama menulis
+              kesan tentang PMII!
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* ================= CTA SECTION ================= */}
-      <section className="px-4 sm:px-6 lg:px-8 pb-16 md:pb-24 max-w-7xl mx-auto w-full">
+      <section className="px-4 sm:px-6 lg:px-8 pt-4 pb-12 md:pb-16 max-w-7xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}

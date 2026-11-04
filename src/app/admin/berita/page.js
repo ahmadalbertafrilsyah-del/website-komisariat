@@ -364,16 +364,22 @@ export default function AdminBerita() {
       {viewMode === "editor" && (
         <div className="animate-in fade-in zoom-in-95 duration-300">
           
-          <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
-             <button onClick={() => setViewMode("list")} className="flex items-center gap-1.5 text-[13px] font-bold text-slate-500 hover:text-slate-800 transition">
-               <ChevronLeft size={16}/> Kembali ke Daftar
+          <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-slate-200/90 shadow-sm flex flex-wrap items-center justify-between gap-3 mb-6">
+             <div className="flex items-center gap-3">
+               <button type="button" onClick={() => setViewMode("list")} className="flex items-center gap-1.5 text-[13px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition">
+                 <ChevronLeft size={16}/> Kembali ke Daftar
+               </button>
+               <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-widest hidden sm:flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
+                 {isEditing ? <><Edit size={14}/> Edit Mode</> : <><Plus size={14}/> Naskah Baru</>}
+               </h2>
+             </div>
+             <button type="submit" form="beritaEditorForm" disabled={uploadingField !== null} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 px-5 rounded-xl transition flex items-center justify-center gap-2 shadow-sm text-xs sm:text-[13px]">
+               {uploadingField !== null ? <Loader2 size={16} className="animate-spin"/> : <Save size={16} />}
+               {isEditing ? "Simpan & Perbarui Pos" : "Simpan & Publikasikan"}
              </button>
-             <h2 className="text-[13px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-100">
-               {isEditing ? <><Edit size={16}/> Edit Mode</> : <><Plus size={16}/> Naskah Baru</>}
-             </h2>
           </div>
 
-          <form onSubmit={handleSaveArticle} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <form id="beritaEditorForm" onSubmit={handleSaveArticle} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
              
              {/* KIRI: AREA PENGETIKAN UTAMA & REDAKSI */}
              <div className="lg:col-span-8 space-y-6">

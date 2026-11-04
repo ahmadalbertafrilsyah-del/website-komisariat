@@ -336,14 +336,19 @@ export default function AdminPendaftaran() {
         <div className="grid lg:grid-cols-3 gap-6 items-start">
           
           <div className="bg-white p-5 md:p-6 rounded-lg border border-slate-200 shadow-sm lg:col-span-2">
-            <div className="flex items-center justify-between mb-5 border-b border-slate-100 pb-3">
+            <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 mb-5 border-b border-slate-200 py-3 -mx-2 px-2">
                <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
                  {isEditingForm ? <><Edit size={18} className="text-amber-500" /> Edit Formulir</> : <><Plus size={18} className="text-blue-600" /> Buat Formulir Baru</>}
                </h2>
-               {isEditingForm && <button type="button" onClick={resetFormState} className="text-xs text-red-500 hover:text-red-700 font-semibold border border-red-200 bg-red-50 px-3 py-1.5 rounded-md">Batal Edit</button>}
+               <div className="flex items-center gap-2">
+                 {isEditingForm && <button type="button" onClick={resetFormState} className="text-xs text-red-500 hover:text-red-700 font-semibold border border-red-200 bg-red-50 px-3 py-2 rounded-lg">Batal Edit</button>}
+                 <button type="submit" form="formulirKaderisasiForm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-sm transition flex items-center gap-2 text-xs sm:text-sm">
+                   <Save size={16} /> {isEditingForm ? "Simpan Perubahan Formulir" : "Terbitkan Formulir Baru"}
+                 </button>
+               </div>
             </div>
 
-            <form onSubmit={handleSaveFormulir} className="space-y-6">
+            <form id="formulirKaderisasiForm" onSubmit={handleSaveFormulir} className="space-y-6">
               
               {/* BAGIAN 1: INFO DASAR */}
               <div className="bg-slate-50/50 p-5 rounded-lg border border-slate-200 space-y-4">
@@ -542,12 +547,6 @@ export default function AdminPendaftaran() {
                        </div>
                     </div>
                  </div>
-              </div>
-
-              <div className="flex justify-end pt-4">
-                 <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-8 rounded-lg shadow-md transition flex items-center gap-2 w-full sm:w-auto justify-center text-base">
-                   <Save size={18} /> {isEditingForm ? "Simpan Perubahan Formulir" : "Terbitkan Formulir Baru"}
-                 </button>
               </div>
             </form>
           </div>
