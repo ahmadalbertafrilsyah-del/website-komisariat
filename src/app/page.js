@@ -261,56 +261,122 @@ const AppreciationCard = ({ data, index, maxScore = 1 }) => {
 };
 
 // ================= DATA TAHAPAN KADERISASI INTERAKTIF =================
-const KADERISASI_STEPS = [
-  {
-    code: "01",
-    short: "MAPABA",
-    title: "Masa Penerimaan Anggota Baru",
-    statusKader: "Kader Mu'taqid",
-    desc: "Gerbang awal pengenalan nilai-nilai ke-PMII-an, sejarah pergerakan, serta penanaman keyakinan terhadap Ahlussunnah Wal Jama'ah sebagai manhajul fikr.",
-    fokus: [
-      "Pengenalan Organisasi & Aswaja",
-      "Nilai Dasar Pergerakan (NDP)",
-      "Kemandirian & Solidaritas Mahasiswa",
+const KADERISASI_DATA = {
+  pmii: {
+    id: "pmii",
+    name: "Kaderisasi Formal PMII",
+    shortName: "PMII",
+    badge: "4 Jenjang Formal",
+    desc: "Alur kaderisasi kader pergerakan dari tingkat dasar hingga kepemimpinan nasional PB PMII.",
+    steps: [
+      {
+        code: "01",
+        short: "MAPABA",
+        title: "Masa Penerimaan Anggota Baru",
+        statusKader: "Kader Mu'taqid",
+        desc: "Gerbang awal pengenalan nilai-nilai ke-PMII-an, sejarah perjuangan organisasi, serta doktrin Ahlussunnah Wal Jama'ah sebagai manhajul fikr wa manhajul harakah.",
+        fokus: [
+          "Pengenalan Organisasi & Sejarah PMII",
+          "Ahlussunnah Wal Jama'ah (Aswaja)",
+          "Nilai Dasar Pergerakan (NDP)",
+        ],
+      },
+      {
+        code: "02",
+        short: "PKD",
+        title: "Pelatihan Kader Dasar",
+        statusKader: "Kader Mujahid",
+        desc: "Fase pembentukan militansi ideologis, penguasaan analisis sosial, pemetaan relasi kuasa, serta kesiapan memimpin dan menggerakkan roda organisasi di tingkat rayon & komisariat.",
+        fokus: [
+          "Analisis Sosial (Ansos) & Rekayasa Sosial",
+          "Paradigma Kritis Transformatif (PKT)",
+          "Manajemen Aksi, Advokasi & Keorganisasian",
+        ],
+      },
+      {
+        code: "03",
+        short: "PKL",
+        title: "Pelatihan Kader Lanjut",
+        statusKader: "Kader Mujtahid",
+        desc: "Jenjang kaderisasi formal tingkat menengah untuk melahirkan kader konseptor, analis kebijakan publik, perancang strategi gerakan, serta kepemimpinan di tingkat Pengurus Cabang (PC).",
+        fokus: [
+          "Analisis Kebijakan Publik & Wacana Kritis",
+          "Strategi Taktik Gerakan & Resolusi Konflik",
+          "Kepemimpinan Transformatif & Manajemen Isu Strategis",
+        ],
+      },
+      {
+        code: "04",
+        short: "PKN",
+        title: "Pelatihan Kader Nasional",
+        statusKader: "Kader Muharrik",
+        desc: "Puncak kaderisasi formal PMII untuk melahirkan negarawan pergerakan, pemikir strategis bangsa, arsitek transformasi peradaban, dan pengambil kebijakan di tingkat PKC hingga Pengurus Besar (PB).",
+        fokus: [
+          "Geopolitik Global & Tata Kelola Negara",
+          "Desain Arah Gerak Keindonesiaan & Keislaman",
+          "Kepemimpinan Negarawan & Sektor Strategis Nasional",
+        ],
+      },
     ],
   },
-  {
-    code: "02",
-    short: "PKD",
-    title: "Pelatihan Kader Dasar",
-    statusKader: "Kader Mujahid",
-    desc: "Fase pembentukan militansi ideologis, analisis sosial kritis, serta kesiapan menggerakkan roda organisasi di tingkat rayon dan komisariat.",
-    fokus: [
-      "Analisis Sosial & Rekayasa Sosial",
-      "Paradigma Kritis Transformatif",
-      "Manajemen Aksi & Advokasi",
+  kopri: {
+    id: "kopri",
+    name: "Kaderisasi Formal KOPRI",
+    shortName: "KOPRI",
+    badge: "4 Jenjang Formal",
+    desc: "Alur kaderisasi Korps PMII Putri untuk mencetak kader perempuan yang militan, mandiri, dan berkeadilan gender.",
+    steps: [
+      {
+        code: "01",
+        short: "SIG",
+        title: "Sekolah Islam dan Gender",
+        statusKader: "Kader Berperspektif Adil Gender",
+        desc: "Gerbang kaderisasi formal pertama KOPRI untuk membangun kesadaran kritis relasi keislaman, keadilan gender, serta penguatan martabat perempuan dalam bingkai Aswaja.",
+        fokus: [
+          "Konsep Keadilan & Kesetaraan Gender dalam Islam",
+          "Fiqih Perempuan & Dekonstruksi Tafsir Kemanusiaan",
+          "Analisis Gender & Kelembagaan KOPRI",
+        ],
+      },
+      {
+        code: "02",
+        short: "SKP",
+        title: "Sekolah Kader Putri (Formal Lokal Kota Malang)",
+        statusKader: "Kader Putri Penggerak (Lokal Malang)",
+        desc: "Jenjang kaderisasi formal lokal mandatori khas PC PMII Kota Malang yang difokuskan pada pematangan ideologi gerakan perempuan, ketajaman analisis advokasi, dan kemandirian kader putri.",
+        fokus: [
+          "Ideologi Gerakan Perempuan PMII Kota Malang",
+          "Analisis Sosial Berperspektif Gender & Advokasi Kasus",
+          "Pengorganisasian Basis & Kepemimpinan Kader Putri",
+        ],
+      },
+      {
+        code: "03",
+        short: "SKK",
+        title: "Sekolah Kader KOPRI",
+        statusKader: "Kader KOPRI Mujahidah",
+        desc: "Jenjang kaderisasi formal KOPRI tingkat lanjutan untuk melahirkan kader perempuan berjiwa kepemimpinan strategis, mahir dalam diplomasi publik, dan instrumen advokasi kebijakan.",
+        fokus: [
+          "Kepemimpinan Perempuan & Komunikasi Politik",
+          "Advokasi Kebijakan Publik Berperspektif Gender",
+          "Metodologi Riset & Gerakan Perempuan Progresif",
+        ],
+      },
+      {
+        code: "04",
+        short: "SKKN",
+        title: "Sekolah Kader KOPRI Nasional",
+        statusKader: "Kader KOPRI Muharrikah",
+        desc: "Puncak kaderisasi formal KOPRI tingkat nasional untuk mencetak tokoh perempuan penggerak peradaban, inisiator kebijakan makro, dan negarawan perempuan berintegritas tinggi.",
+        fokus: [
+          "Feminisme Islam & Dinamika Geopolitik Internasional",
+          "Strategi Kebijakan Nasional Pro-Keadilan Gender",
+          "Kepemimpinan Eksekutif & Negarawan KOPRI",
+        ],
+      },
     ],
   },
-  {
-    code: "03",
-    short: "SIG",
-    title: "Sekolah Islam dan Gender",
-    statusKader: "Kader Berperspektif Adil Gender",
-    desc: "Ruang kaderisasi KOPRI untuk membangun kesadaran kritis tentang relasi keislaman, keadilan gender, serta penguatan kapasitas intelektual kader dalam mengawal isu-isu perempuan dan kemanusiaan.",
-    fokus: [
-      "Konsep Keadilan & Kesetaraan Gender dalam Islam",
-      "Fiqih Perempuan & Tafsir Kemanusiaan",
-      "Analisis Gender & Penguatan Kelembagaan KOPRI",
-    ],
-  },
-  {
-    code: "04",
-    short: "SKP",
-    title: "Sekolah Kader Putri",
-    statusKader: "Kader Putri Penggerak (Malang)",
-    desc: "Jenjang kaderisasi putri khas di ranah PMII Kota Malang yang difokuskan pada pematangan ideologi pergerakan perempuan, kepemimpinan strategis KOPRI, dan advokasi sosial-kemasyarakatan.",
-    fokus: [
-      "Ideologi Gerakan Perempuan PMII Kota Malang",
-      "Kepemimpinan Strategis & Advokasi Kebijakan",
-      "Pengorganisasian Basis & Pemberdayaan Kader Putri",
-    ],
-  },
-];
+};
 
 const STARTER_HOME_BOOKS = [
   {
@@ -472,6 +538,7 @@ export default function Home() {
   // STATE FITUR INTERAKTIF BERANDA
   const [quickSearch, setQuickSearch] = useState("");
   const [activeExplorerTab, setActiveExplorerTab] = useState("rayon");
+  const [kaderisasiTrack, setKaderisasiTrack] = useState("pmii");
   const [activeKaderisasiIdx, setActiveKaderisasiIdx] = useState(0);
   const [rayonSpotIdx, setRayonSpotIdx] = useState(0);
   const [rayonSpotPaused, setRayonSpotPaused] = useState(false);
@@ -883,7 +950,11 @@ export default function Home() {
   const activeSlide = HERO_SLIDES[currentSlide] || HERO_SLIDES[0];
   const maxAkademikScore = topAkademik[0]?.jumlahPrestasi || 1;
   const maxNonAkademikScore = topNonAkademik[0]?.jumlahPrestasi || 1;
-  const activeStep = KADERISASI_STEPS[activeKaderisasiIdx];
+  const currentKaderisasiTrack =
+    KADERISASI_DATA[kaderisasiTrack] || KADERISASI_DATA.pmii;
+  const currentKaderisasiSteps = currentKaderisasiTrack.steps;
+  const activeStep =
+    currentKaderisasiSteps[activeKaderisasiIdx] || currentKaderisasiSteps[0];
 
   return (
     <main className="min-h-screen bg-[#f8fafc] dark:bg-[#070d19] font-sans text-slate-900 dark:text-slate-100 overflow-x-hidden w-full transition-colors duration-300 pb-16 xl:pb-0">
@@ -2072,11 +2143,11 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="lg:col-span-8 grid grid-cols-2 gap-2.5 sm:gap-5">
               {[
                 {
                   num: "01",
-                  icon: <Target className="w-5 h-5" />,
+                  icon: <Target className="w-4 h-4 sm:w-5 sm:h-5" />,
                   title: config?.nilai1Title || "Intelektualitas",
                   desc:
                     config?.nilai1Desc ||
@@ -2084,7 +2155,7 @@ export default function Home() {
                 },
                 {
                   num: "02",
-                  icon: <ShieldCheck className="w-5 h-5" />,
+                  icon: <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />,
                   title: config?.nilai2Title || "Ketakwaan",
                   desc:
                     config?.nilai2Desc ||
@@ -2092,7 +2163,7 @@ export default function Home() {
                 },
                 {
                   num: "03",
-                  icon: <Handshake className="w-5 h-5" />,
+                  icon: <Handshake className="w-4 h-4 sm:w-5 sm:h-5" />,
                   title: config?.nilai3Title || "Pengabdian",
                   desc:
                     config?.nilai3Desc ||
@@ -2100,7 +2171,7 @@ export default function Home() {
                 },
                 {
                   num: "04",
-                  icon: <Landmark className="w-5 h-5" />,
+                  icon: <Landmark className="w-4 h-4 sm:w-5 sm:h-5" />,
                   title: config?.nilai4Title || "Kebangsaan",
                   desc:
                     config?.nilai4Desc ||
@@ -2113,21 +2184,21 @@ export default function Home() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.08 }}
-                  className="group bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-yellow-400/50 rounded-2xl p-6 sm:p-7 transition-all flex flex-col justify-between"
+                  className="group bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-yellow-400/50 rounded-xl sm:rounded-2xl p-3.5 sm:p-7 transition-all flex flex-col justify-between"
                 >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="w-11 h-11 rounded-xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center text-yellow-400 group-hover:bg-yellow-400 group-hover:text-slate-950 transition-colors">
+                  <div className="flex items-center justify-between mb-3 sm:mb-6">
+                    <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center text-yellow-400 group-hover:bg-yellow-400 group-hover:text-slate-950 transition-colors">
                       {item.icon}
                     </div>
-                    <span className="text-2xl font-mono font-black text-white/15 group-hover:text-yellow-400/40 transition-colors">
+                    <span className="text-base sm:text-2xl font-mono font-black text-white/20 group-hover:text-yellow-400/40 transition-colors">
                       {item.num}
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-white mb-2 tracking-tight">
+                    <h3 className="text-xs sm:text-xl font-bold text-white mb-1 sm:mb-2 tracking-tight">
                       {item.title}
                     </h3>
-                    <p className="text-slate-300/80 text-xs sm:text-sm leading-relaxed">
+                    <p className="text-slate-300/80 text-[10px] sm:text-sm leading-snug sm:leading-relaxed line-clamp-2 sm:line-clamp-none">
                       {item.desc}
                     </p>
                   </div>
@@ -2136,31 +2207,71 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Bagian B: FITUR INTERAKTIF BARU — Peta Jalan Kaderisasi PMII */}
+          {/* Bagian B: FITUR INTERAKTIF — Kurikulum Pergerakan (PMII & KOPRI) */}
           <div className="pt-12 border-t border-white/10">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
               <div>
                 <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest text-yellow-400 mb-2">
                   <Layers className="w-3.5 h-3.5" />
                   <span>Kurikulum Pergerakan</span>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                  Alur & Jenjang Kaderisasi PMII
+                  Alur & Jenjang Kaderisasi
                 </h3>
               </div>
               <p className="text-xs sm:text-sm text-slate-400 max-w-md">
-                Pilih tahapan di bawah untuk melihat fokus pembentukan dan
-                kompetensi kader di setiap jenjang.
+                Pilih rumpun kaderisasi (Formal PMII / KOPRI) dan klik tahapan di bawah untuk melihat fokus pembentukan dan kompetensi kader.
               </p>
+            </div>
+
+            {/* TAB SWITCHER RUMPUN KADERISASI */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-6 p-1.5 bg-slate-950/50 border border-white/10 rounded-2xl w-fit">
+              <button
+                type="button"
+                onClick={() => {
+                  setKaderisasiTrack("pmii");
+                  setActiveKaderisasiIdx(0);
+                }}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  kaderisasiTrack === "pmii"
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30 border border-blue-400/40"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-300" />
+                <span>Kaderisasi Formal PMII</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/25 text-blue-200">
+                  4 Jenjang
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setKaderisasiTrack("kopri");
+                  setActiveKaderisasiIdx(0);
+                }}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  kaderisasiTrack === "kopri"
+                    ? "bg-yellow-400 text-slate-950 shadow-lg shadow-yellow-400/30 border border-yellow-300 font-black"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                <span>Kaderisasi Formal KOPRI</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/20 text-slate-900 font-bold">
+                  4 Jenjang
+                </span>
+              </button>
             </div>
 
             {/* Pemilih Tahap (4 Step Selector) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mb-6">
-              {KADERISASI_STEPS.map((step, idx) => {
+              {currentKaderisasiSteps.map((step, idx) => {
                 const isSelected = idx === activeKaderisasiIdx;
                 return (
                   <button
-                    key={step.code}
+                    key={`${kaderisasiTrack}-${step.code}`}
                     onClick={() => setActiveKaderisasiIdx(idx)}
                     className={`text-left p-3.5 sm:p-4 rounded-xl border transition-all ${
                       isSelected
@@ -2190,6 +2301,7 @@ export default function Home() {
                       className={`text-xs sm:text-sm font-bold line-clamp-1 ${
                         isSelected ? "text-slate-950" : "text-white"
                       }`}
+                      title={step.title}
                     >
                       {step.title}
                     </p>
@@ -2201,7 +2313,7 @@ export default function Home() {
             {/* Detail Tahap Aktif */}
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeStep.code}
+                key={`${kaderisasiTrack}-${activeStep.code}`}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -2273,17 +2385,17 @@ export default function Home() {
         </div>
 
         {latestNews.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-2 sm:gap-6">
             {latestNews.map((berita) => {
               const dateObj = formatNewsDate(berita.createdAt);
               return (
                 <article
                   key={berita.id}
-                  className="bg-white dark:bg-[#0d1526] rounded-2xl overflow-hidden border border-slate-200/90 dark:border-slate-800 hover:border-blue-500/50 dark:hover:border-yellow-400/50 transition-all group flex flex-col h-full shadow-xs hover:shadow-xl"
+                  className="bg-white dark:bg-[#0d1526] rounded-xl sm:rounded-2xl overflow-hidden border border-slate-200/90 dark:border-slate-800 hover:border-blue-500/50 dark:hover:border-yellow-400/50 transition-all group flex flex-col h-full shadow-xs hover:shadow-xl"
                 >
                   <Link
                     href={`/berita/${berita.id}`}
-                    className="relative h-48 sm:h-52 bg-slate-100 dark:bg-slate-800 overflow-hidden block"
+                    className="relative h-20 sm:h-52 bg-slate-100 dark:bg-slate-800 overflow-hidden block"
                   >
                     {berita.imageUrl ? (
                       <Image
@@ -2291,37 +2403,37 @@ export default function Home() {
                         alt={berita.title || "Berita"}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        sizes="(max-width: 768px) 100vw, 33vw"
+                        sizes="(max-width: 768px) 33vw, 33vw"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-600">
-                        <Newspaper size={36} strokeWidth={1.5} />
+                        <Newspaper size={20} strokeWidth={1.5} className="sm:w-9 sm:h-9" />
                       </div>
                     )}
-                    <div className="absolute top-3 left-3 bg-slate-950/85 backdrop-blur-md text-white rounded-lg px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider border border-white/10">
+                    <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-slate-950/85 backdrop-blur-md text-white rounded sm:rounded-lg px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[8px] sm:text-[11px] font-mono font-bold uppercase tracking-wider border border-white/10">
                       {berita.kategori || "Kabar"}
                     </div>
                   </Link>
 
-                  <div className="p-5 sm:p-6 flex flex-col flex-1">
-                    <div className="flex items-center gap-2 text-xs font-mono text-slate-400 dark:text-slate-500 mb-2.5">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>{dateObj.full}</span>
+                  <div className="p-2 sm:p-6 flex flex-col flex-1">
+                    <div className="flex items-center gap-1 sm:gap-2 text-[9px] sm:text-xs font-mono text-slate-400 dark:text-slate-500 mb-1 sm:mb-2.5 truncate">
+                      <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                      <span className="truncate">{dateObj.short || dateObj.full}</span>
                     </div>
 
                     <Link href={`/berita/${berita.id}`}>
-                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg sm:text-xl mb-2.5 line-clamp-2 leading-snug group-hover:text-blue-600 dark:group-hover:text-yellow-400 transition-colors">
+                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-[11px] sm:text-xl mb-1 sm:mb-2.5 line-clamp-2 leading-snug group-hover:text-blue-600 dark:group-hover:text-yellow-400 transition-colors">
                         {berita.title}
                       </h3>
                     </Link>
 
-                    <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm line-clamp-2 mb-5 leading-relaxed flex-1">
+                    <p className="hidden sm:block text-slate-600 dark:text-slate-400 text-xs sm:text-sm line-clamp-2 mb-5 leading-relaxed flex-1">
                       {berita.excerpt}
                     </p>
 
                     <Link
                       href={`/berita/${berita.id}`}
-                      className="inline-flex items-center justify-between text-xs font-bold text-slate-900 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-yellow-400 transition-colors pt-4 border-t border-slate-100 dark:border-slate-800"
+                      className="hidden sm:inline-flex items-center justify-between text-xs font-bold text-slate-900 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-yellow-400 transition-colors pt-4 border-t border-slate-100 dark:border-slate-800"
                     >
                       <span>BACA SELENGKAPNYA</span>
                       <ArrowUpRight size={16} />

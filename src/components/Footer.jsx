@@ -10,9 +10,7 @@ import {
   Clock,
   Lock,
   MapPin,
-  Heart,
   BookOpen,
-  FileSignature,
   Compass,
   ExternalLink,
   ShieldCheck,
@@ -78,72 +76,7 @@ export default function Footer() {
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* ================= 1. TOP QUICK ACCESS BANNER ================= */}
-        <div className="py-7 sm:py-8 border-b border-slate-800/90 grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
-          <Link
-            href="/bacaan"
-            className="group flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-yellow-400/50 transition-all"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-11 h-11 rounded-xl bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 flex items-center justify-center shrink-0 group-hover:bg-yellow-400 group-hover:text-slate-950 transition-colors">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-yellow-400">
-                    Perpustakaan
-                  </span>
-                </div>
-                <p className="text-sm font-bold text-white truncate">
-                  Bacaan & Modul Kader 3D
-                </p>
-              </div>
-            </div>
-            <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-yellow-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
-          </Link>
-
-          <Link
-            href="/administrasi"
-            className="group flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-blue-400/50 transition-all"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                <FileSignature className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-400 block">
-                  Layanan Terpadu
-                </span>
-                <p className="text-sm font-bold text-white truncate">
-                  Arsip Surat, Proker & Pengajuan SK
-                </p>
-              </div>
-            </div>
-            <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
-          </Link>
-
-          <Link
-            href="/donasi"
-            className="group flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-emerald-400/50 transition-all"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
-                <Heart className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400 block">
-                  Kemandirian Gerakan
-                </span>
-                <p className="text-sm font-bold text-white truncate">
-                  Dukung Donasi Digital (QRIS)
-                </p>
-              </div>
-            </div>
-            <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
-          </Link>
-        </div>
-
-        {/* ================= 2. MAIN 4-COLUMN ARCHITECTURAL GRID ================= */}
+        {/* ================= MAIN 4-COLUMN ARCHITECTURAL GRID ================= */}
         <div className="py-12 sm:py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
           {/* Kolom 1: Identitas Organisasi & Sekretariat (4 cols) */}
           <div className="lg:col-span-4 space-y-6">

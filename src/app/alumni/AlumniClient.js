@@ -47,38 +47,61 @@ const RAYON_OPTIONS = [
   "PR. PMII Pencerahan Galileo",
 ];
 
-const JENJANG_KEYS = ["MAPABA", "PKD", "PKL", "SIG", "SKP", "SKK"];
+// Jenjang Kaderisasi Formal PMII & KOPRI
+const JENJANG_KEYS_PMII = ["MAPABA", "PKD", "PKL", "PKN"];
+const JENJANG_KEYS_KOPRI = ["SIG", "SKP", "SKK", "SKKN"];
+const JENJANG_KEYS = [...JENJANG_KEYS_PMII, ...JENJANG_KEYS_KOPRI];
 
 const JENJANG_META = {
+  // Formal PMII
   MAPABA: {
     label: "MAPABA",
     full: "Masa Penerimaan Anggota Baru",
+    track: "PMII",
     soft: "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
   },
   PKD: {
     label: "PKD",
     full: "Pelatihan Kader Dasar",
+    track: "PMII",
     soft: "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
   },
   PKL: {
     label: "PKL",
-    full: "Pelatihan Kader Lanjut",
+    full: "Pelatihan Kader Lanjutan",
+    track: "PMII",
     soft: "bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800",
   },
+  PKN: {
+    label: "PKN",
+    full: "Pelatihan Kader Nasional",
+    track: "PMII",
+    soft: "bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800",
+  },
+  // Formal KOPRI
   SIG: {
     label: "SIG",
-    full: "Sekolah Islam & Gender",
+    full: "Sekolah Islam dan Gender",
+    track: "KOPRI",
     soft: "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
   },
   SKP: {
     label: "SKP",
-    full: "Sekolah Kader Putri",
+    full: "Sekolah Kader Putri (Formal Lokal Kota Malang)",
+    track: "KOPRI",
     soft: "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800",
   },
   SKK: {
     label: "SKK",
-    full: "Sekolah Kader Komisariat / Keprofesian",
+    full: "Sekolah Kader KOPRI",
+    track: "KOPRI",
     soft: "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+  },
+  SKKN: {
+    label: "SKKN",
+    full: "Sekolah Kader KOPRI Nasional",
+    track: "KOPRI",
+    soft: "bg-fuchsia-50 dark:bg-fuchsia-950/60 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-200 dark:border-fuchsia-800",
   },
 };
 
@@ -121,7 +144,7 @@ function normalizeJenjang(jenjang, fallbackTahun) {
 }
 
 function getHighestJenjang(jenjangObj) {
-  const order = ["PKL", "SKK", "SKP", "SIG", "PKD", "MAPABA"];
+  const order = ["PKN", "SKKN", "PKL", "SKK", "SKP", "SIG", "PKD", "MAPABA"];
   for (const k of order) {
     if (jenjangObj && jenjangObj[k]) {
       return { key: k, year: jenjangObj[k], ...JENJANG_META[k] };
@@ -198,9 +221,11 @@ export default function AlumniClient() {
       MAPABA: "",
       PKD: "",
       PKL: "",
+      PKN: "",
       SIG: "",
       SKP: "",
       SKK: "",
+      SKKN: "",
     },
   });
 
@@ -262,9 +287,11 @@ export default function AlumniClient() {
           selfForm.jenjang.MAPABA.trim() || selfForm.tahunMapaba.trim(),
         PKD: selfForm.jenjang.PKD.trim(),
         PKL: selfForm.jenjang.PKL.trim(),
+        PKN: (selfForm.jenjang.PKN || "").trim(),
         SIG: selfForm.jenjang.SIG.trim(),
         SKP: selfForm.jenjang.SKP.trim(),
         SKK: selfForm.jenjang.SKK.trim(),
+        SKKN: (selfForm.jenjang.SKKN || "").trim(),
       };
 
       const newEntry = {
@@ -306,9 +333,11 @@ export default function AlumniClient() {
           MAPABA: "",
           PKD: "",
           PKL: "",
+          PKN: "",
           SIG: "",
           SKP: "",
           SKK: "",
+          SKKN: "",
         },
       });
     } catch (error) {
@@ -396,7 +425,16 @@ export default function AlumniClient() {
 
   // Telemetry counts
   const jenjangCounts = useMemo(() => {
-    const counts = { MAPABA: 0, PKD: 0, PKL: 0, SIG: 0, SKP: 0, SKK: 0 };
+    const counts = {
+      MAPABA: 0,
+      PKD: 0,
+      PKL: 0,
+      PKN: 0,
+      SIG: 0,
+      SKP: 0,
+      SKK: 0,
+      SKKN: 0,
+    };
     alumniData.forEach((a) => {
       JENJANG_KEYS.forEach((k) => {
         if (a.jenjangMap && a.jenjangMap[k]) counts[k]++;
@@ -645,7 +683,7 @@ export default function AlumniClient() {
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
               {JENJANG_KEYS.map((key) => {
                 const isSelected = selectedJenjang === key;
                 return (
@@ -1709,7 +1747,7 @@ export default function AlumniClient() {
                       <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-blue-600 dark:text-amber-400">
                         Riwayat Jenjang Kaderisasi (Isi Tahun Lulus)
                       </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2">
                         {JENJANG_KEYS.map((jKey) => (
                           <div
                             key={jKey}

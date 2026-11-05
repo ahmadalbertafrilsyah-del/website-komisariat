@@ -40,7 +40,16 @@ const RAYON_OPTIONS = [
   "PR. PMII Pencerahan Galileo",
 ];
 
-const JENJANG_KEYS = ["MAPABA", "PKD", "PKL", "SIG", "SKP", "SKK"];
+const JENJANG_KEYS = [
+  "MAPABA",
+  "PKD",
+  "PKL",
+  "PKN",
+  "SIG",
+  "SKP",
+  "SKK",
+  "SKKN",
+];
 
 function normalizeJenjangObj(item) {
   const raw = item?.jenjang && typeof item.jenjang === "object" ? item.jenjang : {};
@@ -49,9 +58,11 @@ function normalizeJenjangObj(item) {
     MAPABA: String(raw.MAPABA || mapabaFallback || "").trim(),
     PKD: String(raw.PKD || "").trim(),
     PKL: String(raw.PKL || "").trim(),
+    PKN: String(raw.PKN || "").trim(),
     SIG: String(raw.SIG || "").trim(),
     SKP: String(raw.SKP || "").trim(),
     SKK: String(raw.SKK || "").trim(),
+    SKKN: String(raw.SKKN || "").trim(),
   };
 }
 
@@ -141,9 +152,11 @@ export default function AdminAlumni() {
     MAPABA: "",
     PKD: "",
     PKL: "",
+    PKN: "",
     SIG: "",
     SKP: "",
     SKK: "",
+    SKKN: "",
   });
 
   const [newProfesi, setNewProfesi] = useState([]);
@@ -226,9 +239,11 @@ export default function AdminAlumni() {
         "Bidang yang Dikuasai": "Web Development, AI",
         PKD: "2025",
         PKL: "",
+        PKN: "",
         SIG: "2024",
         SKP: "",
         SKK: "",
+        SKKN: "",
         "URL Foto Profil": "https://...",
       },
     ];
@@ -300,9 +315,11 @@ export default function AdminAlumni() {
             MAPABA: mapabaYr,
             PKD: String(row["PKD"] || "").trim(),
             PKL: String(row["PKL"] || "").trim(),
+            PKN: String(row["PKN"] || "").trim(),
             SIG: String(row["SIG"] || "").trim(),
             SKP: String(row["SKP"] || "").trim(),
             SKK: String(row["SKK"] || "").trim(),
+            SKKN: String(row["SKKN"] || "").trim(),
           };
 
           if (index === -1) {
@@ -333,9 +350,11 @@ export default function AdminAlumni() {
                 MAPABA: jenjangImported.MAPABA || existingJenjang.MAPABA,
                 PKD: jenjangImported.PKD || existingJenjang.PKD,
                 PKL: jenjangImported.PKL || existingJenjang.PKL,
+                PKN: jenjangImported.PKN || existingJenjang.PKN,
                 SIG: jenjangImported.SIG || existingJenjang.SIG,
                 SKP: jenjangImported.SKP || existingJenjang.SKP,
                 SKK: jenjangImported.SKK || existingJenjang.SKK,
+                SKKN: jenjangImported.SKKN || existingJenjang.SKKN,
               },
               foto: row["URL Foto Profil"] || updatedAlumni[index].foto,
               deskripsiProfesi: {
@@ -395,9 +414,11 @@ export default function AdminAlumni() {
       MAPABA: "",
       PKD: "",
       PKL: "",
+      PKN: "",
       SIG: "",
       SKP: "",
       SKK: "",
+      SKKN: "",
     });
     setNewProfesi([]);
     setInputProfesi("");
@@ -720,7 +741,7 @@ export default function AdminAlumni() {
                   <Award size={14} className="text-amber-500" /> Tahun Lulus
                   Jenjang Kaderisasi (Kosongkan jika belum)
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                   {JENJANG_KEYS.map((key) => (
                     <div key={key}>
                       <span className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
@@ -1153,7 +1174,7 @@ export default function AdminAlumni() {
                             <Award size={11} className="text-amber-500" />{" "}
                             Jenjang Kaderisasi & Tahun
                           </span>
-                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
                             {JENJANG_KEYS.map((key) => (
                               <div key={key}>
                                 <span className="text-[9px] font-mono font-bold text-slate-400 block">

@@ -103,9 +103,10 @@ function loadPdfJs() {
   return pdfjsLibPromise;
 }
 
-// Komponen Render 1 Halaman PDF di atas Canvas Buku
+// Komponen Render 1 Halaman PDF di atas Canvas Buku yang Pas Proporsional (A4, A5, F4)
 function PdfPageCanvas({ pdfDoc, pageNumber, zoom = 1 }) {
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
   const [rendering, setRendering] = useState(true);
 
   useEffect(() => {
@@ -113,21 +114,34 @@ function PdfPageCanvas({ pdfDoc, pageNumber, zoom = 1 }) {
     let renderTask = null;
 
     async function renderPage() {
-      if (!pdfDoc || !canvasRef.current) return;
+      if (!pdfDoc || !canvasRef.current || !containerRef.current) return;
       setRendering(true);
       try {
         const page = await pdfDoc.getPage(pageNumber);
         if (isCancelled) return;
 
         const baseViewport = page.getViewport({ scale: 1 });
-        const desiredWidth = 680 * zoom;
-        const scale = desiredWidth / baseViewport.width;
-        const viewport = page.getViewport({ scale });
+        const container = containerRef.current;
+        const availW = Math.max(220, (container.clientWidth || 500) - 8);
+        const availH = Math.max(280, (container.clientHeight || 650) - 8);
+
+        // Skala pas proporsional dengan kertas (A4, A5, F4) tanpa terpotong atau harus di-scroll
+        const scaleW = availW / baseViewport.width;
+        const scaleH = availH / baseViewport.height;
+        const fitScale = Math.min(scaleW, scaleH);
+
+        const dpr = typeof window !== "undefined" ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+        const targetScale = fitScale * zoom;
+        const viewport = page.getViewport({ scale: targetScale * dpr });
 
         const canvas = canvasRef.current;
         const context = canvas.getContext("2d");
         canvas.height = viewport.height;
         canvas.width = viewport.width;
+
+        // Set CSS size agar pas dan tajam
+        canvas.style.width = `${viewport.width / dpr}px`;
+        canvas.style.height = `${viewport.height / dpr}px`;
 
         renderTask = page.render({
           canvasContext: context,
@@ -155,18 +169,21 @@ function PdfPageCanvas({ pdfDoc, pageNumber, zoom = 1 }) {
   }, [pdfDoc, pageNumber, zoom]);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center overflow-auto p-2 sm:p-4">
+    <div
+      ref={containerRef}
+      className="relative w-full h-full flex items-center justify-center p-0.5 sm:p-1 overflow-hidden select-none"
+    >
       {rendering && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-amber-50/40 dark:bg-slate-900/40 backdrop-blur-[1px] z-10">
-          <Loader2 className="w-6 h-6 text-blue-600 animate-spin mb-1.5" />
+          <Loader2 className="w-5 h-5 text-blue-600 animate-spin mb-1" />
           <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
-            Membuka Halaman {pageNumber}...
+            Membuka Lembar {pageNumber}...
           </span>
         </div>
       )}
       <canvas
         ref={canvasRef}
-        className="max-w-full h-auto rounded shadow-sm bg-white"
+        className="max-w-full max-h-full rounded shadow-sm bg-white object-contain"
       />
     </div>
   );
@@ -221,7 +238,7 @@ export default function BacaanKaderPage() {
   const [currentSheetIndex, setCurrentSheetIndex] = useState(0);
   const [flipDirection, setFlipDirection] = useState(1); // 1 = next, -1 = prev
   const [paperTheme, setPaperTheme] = useState("sepia"); // "sepia" | "white" | "dark"
-  const [spreadMode, setSpreadMode] = useState("double"); // "double" (2 halaman di desktop) | "single"
+  const [spreadMode, setSpreadMode] = useState("double"); // "double" (2 halaman di layar laptop/PC) | "single"
   const [zoomLevel, setZoomLevel] = useState(1);
 
   // PDF Document state
@@ -365,18 +382,52 @@ export default function BacaanKaderPage() {
 
   const totalPages = virtualPages.length;
 
-  // Navigasi membalik halaman
+  // Kalkulasi spread halaman aktif (2 Halaman Terbuka vs 1 Halaman)
+  const isDoubleSpread =
+    spreadMode === "double" &&
+    currentSheetIndex > 0 &&
+    currentSheetIndex < totalPages - 1;
+
+  const leftPageIndex = isDoubleSpread
+    ? currentSheetIndex % 2 === 1
+      ? currentSheetIndex
+      : currentSheetIndex - 1
+    : currentSheetIndex;
+
+  const rightPageIndex = isDoubleSpread ? leftPageIndex + 1 : null;
+
+  // Navigasi membalik lembaran halaman buku (Mendukung 1 Halaman & 2 Halaman Terbuka)
   const handleTurnPage = useCallback(
-    (delta) => {
-      setFlipDirection(delta > 0 ? 1 : -1);
+    (dir) => {
+      const step = dir > 0 ? 1 : -1;
+      setFlipDirection(step);
       setCurrentSheetIndex((prev) => {
-        const next = prev + delta;
-        if (next < 0) return 0;
-        if (next >= totalPages) return totalPages - 1;
-        return next;
+        if (spreadMode === "double") {
+          if (step > 0) {
+            // Balik ke lembaran berikutnya
+            if (prev === 0) return Math.min(1, totalPages - 1);
+            const next = prev + 2;
+            if (next >= totalPages - 1) return totalPages - 1;
+            return next;
+          } else {
+            // Balik ke lembaran sebelumnya
+            if (prev <= 1) return 0;
+            if (prev === totalPages - 1) {
+              const lastSpread =
+                totalPages % 2 === 0 ? totalPages - 3 : totalPages - 2;
+              return Math.max(1, lastSpread);
+            }
+            return Math.max(1, prev - 2);
+          }
+        } else {
+          const next = prev + step;
+          if (next < 0) return 0;
+          if (next >= totalPages) return totalPages - 1;
+          return next;
+        }
       });
     },
-    [totalPages]
+    [spreadMode, totalPages]
   );
 
   // Keyboard arrow navigation when reader modal is open
@@ -424,35 +475,36 @@ export default function BacaanKaderPage() {
   // Warna kertas bacaan
   const paperThemeClasses = {
     sepia:
-      "bg-[#fbf7ee] text-[#2c221e] border-[#e6dcc8] shadow-[inset_0_0_40px_rgba(180,150,100,0.12)]",
+      "bg-[#faf6ee] text-[#2c221e] border-[#e4d8c1] shadow-[inset_0_0_50px_rgba(180,150,100,0.12)]",
     white:
-      "bg-white text-slate-900 border-slate-200 shadow-[inset_0_0_30px_rgba(0,0,0,0.03)]",
-    dark: "bg-[#0f172a] text-slate-100 border-slate-800 shadow-[inset_0_0_40px_rgba(0,0,0,0.4)]",
+      "bg-white text-slate-800 border-slate-200 shadow-[inset_0_0_35px_rgba(0,0,0,0.03)]",
+    dark:
+      "bg-[#0a0f1d] text-slate-100 border-slate-800 shadow-[inset_0_0_50px_rgba(0,0,0,0.5)]",
   };
 
-  // Render isi 1 lembar halaman buku
-  const renderSinglePageContent = (pageObj, pageIndex) => {
+  // Render isi 1 lembar halaman buku (Mendukung Single Page, Sisi Kiri, atau Sisi Kanan 2-Page)
+  const renderSinglePageContent = (pageObj, pageIndex, side = "single") => {
     if (!pageObj) return null;
 
     if (pageObj.type === "cover") {
       return (
-        <div className="w-full h-full min-h-[460px] sm:min-h-[560px] bg-gradient-to-br from-[#020617] via-[#1e3a8a] to-[#0f172a] text-white p-6 sm:p-10 flex flex-col justify-between relative overflow-hidden select-none">
-          {/* Ornamen Bingkai Buku */}
-          <div className="absolute inset-3 sm:inset-5 border-2 border-amber-400/35 rounded-lg pointer-events-none" />
-          <div className="absolute top-0 left-0 bottom-0 w-5 bg-gradient-to-r from-black/55 to-transparent pointer-events-none" />
+        <div className="w-full h-full flex flex-col justify-between bg-gradient-to-br from-[#020617] via-[#1e3a8a] to-[#0f172a] text-white p-4 sm:p-7 relative overflow-hidden select-none">
+          {/* Ornamen Bingkai Buku Elegan */}
+          <div className="absolute inset-2.5 sm:inset-4 border-2 border-amber-400/35 rounded-lg pointer-events-none" />
+          <div className="absolute top-0 left-0 bottom-0 w-6 bg-gradient-to-r from-black/60 to-transparent pointer-events-none" />
 
           <div className="relative z-10 flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-amber-400 bg-white/10 px-3 py-1 rounded-md border border-white/10">
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-amber-400 bg-white/10 px-2.5 py-0.5 rounded border border-white/10">
               {activeBook.kategori || "Pustaka Kader"}
             </span>
-            <span className="text-xs font-mono text-slate-300">
+            <span className="text-[11px] font-mono text-slate-300">
               {activeBook.tahun || "2026"}
             </span>
           </div>
 
-          <div className="relative z-10 my-auto py-6 text-center max-w-md mx-auto">
+          <div className="relative z-10 my-auto py-2 text-center max-w-sm mx-auto">
             {activeBook.coverUrl && (
-              <div className="relative w-32 h-44 sm:w-40 sm:h-52 mx-auto mb-5 rounded-lg overflow-hidden shadow-2xl border-2 border-amber-400/50">
+              <div className="relative w-28 h-36 sm:w-36 sm:h-48 mx-auto mb-3 rounded-lg overflow-hidden shadow-2xl border-2 border-amber-400/50">
                 <SafeBookCover
                   src={activeBook.coverUrl}
                   title={activeBook.judul}
@@ -460,23 +512,27 @@ export default function BacaanKaderPage() {
                 />
               </div>
             )}
-            <p className="text-[11px] font-mono uppercase tracking-[0.25em] text-amber-300 mb-2">
+            <p className="text-[9px] sm:text-[10px] font-mono uppercase tracking-[0.25em] text-amber-300 mb-1.5">
               Khazanah Literasi Pergerakan
             </p>
-            <h2 className="text-xl sm:text-3xl font-serif font-black leading-snug text-white">
+            <h2 className="text-base sm:text-2xl font-serif font-black leading-snug text-white line-clamp-3">
               {activeBook.judul}
             </h2>
-            <div className="w-16 h-1 bg-amber-400 mx-auto my-4 rounded-full" />
-            <p className="text-xs sm:text-sm font-medium text-blue-200">
-              Disusun oleh: {activeBook.penulis || "Tim Kaderisasi PMII"}
+            <div className="w-12 h-1 bg-amber-400 mx-auto my-2.5 rounded-full" />
+            <p className="text-xs sm:text-sm font-medium text-blue-200 truncate">
+              {activeBook.penulis || "Tim Kaderisasi PMII"}
             </p>
           </div>
 
-          <div className="relative z-10 flex items-center justify-between pt-4 border-t border-white/15 text-[11px] font-mono text-slate-300">
-            <span>PK. PMII SUNAN AMPEL MALANG</span>
-            <span className="text-amber-400 font-bold animate-pulse">
-              Balik Halaman →
-            </span>
+          <div className="relative z-10 flex items-center justify-between pt-3 border-t border-white/15 text-[10px] font-mono text-slate-300">
+            <span>PK. PMII SUNAN AMPEL</span>
+            <button
+              type="button"
+              onClick={() => handleTurnPage(1)}
+              className="text-amber-400 font-bold hover:underline flex items-center gap-1 transition text-xs"
+            >
+              Mulai Membaca →
+            </button>
           </div>
         </div>
       );
@@ -484,59 +540,71 @@ export default function BacaanKaderPage() {
 
     if (pageObj.type === "intro") {
       return (
-        <div className="w-full h-full min-h-[460px] sm:min-h-[560px] p-6 sm:p-10 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3 mb-6 border-b border-current/10 text-[11px] font-mono opacity-60">
+        <div className="w-full h-full flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden">
+          {/* Bayangan Lipatan Tulang Buku */}
+          {side === "left" && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-12 z-10 bg-gradient-to-l from-black/15 to-transparent" />
+          )}
+          {side === "right" && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-12 z-10 bg-gradient-to-r from-black/15 to-transparent" />
+          )}
+          {side === "single" && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-12 z-10 bg-gradient-to-r from-black/20 to-transparent" />
+          )}
+
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex items-center justify-between pb-2 mb-3 border-b border-current/10 text-[10px] font-mono opacity-60 shrink-0">
               <span>LEMBAR PENGANTAR</span>
               <span>HALAMAN {pageIndex + 1}</span>
             </div>
 
-            <span className="text-[10px] font-mono uppercase tracking-widest text-blue-600 dark:text-amber-400 font-bold">
+            <span className="text-[9px] font-mono uppercase tracking-widest text-blue-600 dark:text-amber-400 font-bold block shrink-0">
               Katalog Pustaka Komisariat
             </span>
-            <h3 className="text-lg sm:text-2xl font-serif font-black mt-1 mb-4">
+            <h3 className="text-base sm:text-xl font-serif font-black mt-0.5 mb-2.5 leading-snug shrink-0">
               {activeBook.judul}
             </h3>
 
-            <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 mb-6 text-xs">
+            <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-black/5 dark:bg-white/5 mb-3 text-[11px] shrink-0">
               <div>
-                <span className="text-[10px] font-mono uppercase opacity-60 block">
+                <span className="text-[9px] font-mono uppercase opacity-60 block">
                   Penulis / Penyusun
                 </span>
-                <strong className="font-semibold">
+                <strong className="font-semibold truncate block">
                   {activeBook.penulis || "Tim Kaderisasi"}
                 </strong>
               </div>
               <div>
-                <span className="text-[10px] font-mono uppercase opacity-60 block">
+                <span className="text-[9px] font-mono uppercase opacity-60 block">
                   Kategori & Tahun
                 </span>
-                <strong className="font-semibold">
+                <strong className="font-semibold truncate block">
                   {activeBook.kategori} ({activeBook.tahun || "2026"})
                 </strong>
               </div>
             </div>
 
-            <h4 className="text-xs font-mono font-bold uppercase tracking-wider opacity-70 mb-2">
+            <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider opacity-70 mb-1.5 shrink-0">
               Sinopsis & Pokok Bahasan
             </h4>
-            <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-line opacity-90">
-              {activeBook.deskripsi ||
-                "Bahan bacaan dan modul kaderisasi resmi Pergerakan Mahasiswa Islam Indonesia (PMII) Komisariat Sunan Ampel Malang. Geser atau klik tombol panah halaman untuk membuka lembar berikutnya."}
-            </p>
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+              <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-line opacity-90 text-justify">
+                {activeBook.deskripsi ||
+                  "Bahan bacaan dan modul kaderisasi resmi Pergerakan Mahasiswa Islam Indonesia (PMII) Komisariat Sunan Ampel Malang. Geser atau klik tombol panah halaman untuk membuka lembar berikutnya."}
+              </p>
+            </div>
 
             {pdfLoading && (
-              <div className="mt-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center gap-3 text-xs">
+              <div className="mt-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center gap-2 text-xs shrink-0">
                 <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0" />
-                <span>
-                  Sedang menyiapkan lembaran halaman PDF agar dapat dibalik
-                  seperti buku...
+                <span className="text-[11px]">
+                  Menyiapkan halaman PDF pas frame A4/A5/F4...
                 </span>
               </div>
             )}
           </div>
 
-          <div className="pt-4 border-t border-current/10 flex items-center justify-between text-[11px] font-mono opacity-60">
+          <div className="pt-2 mt-2 border-t border-current/10 flex items-center justify-between text-[10px] font-mono opacity-60 shrink-0">
             <span>Perpustakaan Digital PMII</span>
             <span>Hal. {pageIndex + 1}</span>
           </div>
@@ -546,13 +614,24 @@ export default function BacaanKaderPage() {
 
     if (pageObj.type === "pdf-page") {
       return (
-        <div className="w-full h-full min-h-[460px] sm:min-h-[560px] flex flex-col justify-between">
-          <div className="px-5 pt-3 pb-2 border-b border-current/10 flex items-center justify-between text-[10px] font-mono opacity-60">
+        <div className="w-full h-full flex flex-col justify-between relative overflow-hidden">
+          {side === "left" && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-12 z-10 bg-gradient-to-l from-black/15 to-transparent" />
+          )}
+          {side === "right" && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-12 z-10 bg-gradient-to-r from-black/15 to-transparent" />
+          )}
+          {side === "single" && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-12 z-10 bg-gradient-to-r from-black/20 to-transparent" />
+          )}
+
+          <div className="px-3.5 py-1.5 border-b border-current/10 flex items-center justify-between text-[10px] font-mono opacity-60 shrink-0">
             <span className="truncate max-w-[70%]">{activeBook.judul}</span>
             <span>LEMBAR PDF #{pageObj.pageNumber}</span>
           </div>
 
-          <div className="flex-1 flex items-center justify-center overflow-hidden">
+          {/* Area Canvas PDF: min-h-0 agar pas 100% frame (A4, A5, F4) tanpa scroll vertikal */}
+          <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-0.5 sm:p-1 overflow-hidden">
             <PdfPageCanvas
               pdfDoc={pdfDoc}
               pageNumber={pageObj.pageNumber}
@@ -560,7 +639,7 @@ export default function BacaanKaderPage() {
             />
           </div>
 
-          <div className="px-5 py-2.5 border-t border-current/10 flex items-center justify-between text-[10px] font-mono opacity-60">
+          <div className="px-3.5 py-1.5 border-t border-current/10 flex items-center justify-between text-[10px] font-mono opacity-60 shrink-0">
             <span>PK. PMII Sunan Ampel Malang</span>
             <span>
               Halaman {pageIndex + 1} / {totalPages}
@@ -572,27 +651,37 @@ export default function BacaanKaderPage() {
 
     if (pageObj.type === "embed-doc") {
       return (
-        <div className="w-full h-full min-h-[480px] sm:min-h-[560px] flex flex-col justify-between">
-          <div className="px-5 py-3 border-b border-current/10 flex items-center justify-between text-[11px] font-mono">
+        <div className="w-full h-full flex flex-col justify-between relative overflow-hidden">
+          {side === "left" && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-12 z-10 bg-gradient-to-l from-black/15 to-transparent" />
+          )}
+          {side === "right" && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-12 z-10 bg-gradient-to-r from-black/15 to-transparent" />
+          )}
+          {side === "single" && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-12 z-10 bg-gradient-to-r from-black/20 to-transparent" />
+          )}
+
+          <div className="px-4 py-2 border-b border-current/10 flex items-center justify-between text-[10px] font-mono shrink-0">
             <span>DOKUMEN BACAAN DIGITAL</span>
             <a
               href={activeBook.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 dark:text-amber-400 font-sans font-bold flex items-center gap-1 hover:underline"
+              className="text-blue-600 dark:text-amber-400 font-sans font-bold flex items-center gap-1 hover:underline text-xs"
             >
-              Buka Tab Penuh <ExternalLink size={12} />
+              Buka Tab Penuh <ExternalLink size={11} />
             </a>
           </div>
-          <div className="flex-1 w-full bg-slate-100 dark:bg-slate-950 relative min-h-[420px]">
+          <div className="flex-1 w-full min-h-0 bg-slate-100 dark:bg-slate-950 relative overflow-hidden">
             <iframe
               src={pageObj.url}
               title={activeBook.judul}
-              className="w-full h-full min-h-[420px] sm:min-h-[500px] border-0"
+              className="w-full h-full border-0"
               allow="autoplay"
             />
           </div>
-          <div className="px-5 py-2.5 border-t border-current/10 flex items-center justify-between text-[10px] font-mono opacity-60">
+          <div className="px-4 py-1.5 border-t border-current/10 flex items-center justify-between text-[10px] font-mono opacity-60 shrink-0">
             <span>Mode Pratinjau Dokumen</span>
             <span>Halaman {pageIndex + 1}</span>
           </div>
@@ -603,34 +692,46 @@ export default function BacaanKaderPage() {
     if (pageObj.type === "chapter") {
       const { bab, chapterIndex } = pageObj;
       return (
-        <div className="w-full h-full min-h-[460px] sm:min-h-[560px] p-6 sm:p-10 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3 mb-6 border-b border-current/10 text-[10px] font-mono uppercase opacity-60">
+        <div className="w-full h-full flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden">
+          {side === "left" && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-12 z-10 bg-gradient-to-l from-black/15 to-transparent" />
+          )}
+          {side === "right" && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-12 z-10 bg-gradient-to-r from-black/15 to-transparent" />
+          )}
+          {side === "single" && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-12 z-10 bg-gradient-to-r from-black/20 to-transparent" />
+          )}
+
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex items-center justify-between pb-2 mb-3 border-b border-current/10 text-[10px] font-mono uppercase opacity-60 shrink-0">
               <span className="truncate max-w-[70%]">{activeBook.judul}</span>
               <span>BAGIAN 0{chapterIndex}</span>
             </div>
 
-            <h3 className="text-lg sm:text-2xl font-serif font-black mb-5 leading-snug">
+            <h3 className="text-base sm:text-xl font-serif font-black mb-3 leading-snug shrink-0">
               {bab.judulBab}
             </h3>
 
-            <div
-              className="font-serif leading-[1.85] whitespace-pre-line opacity-95"
-              style={{
-                fontSize:
-                  zoomLevel > 1.1
-                    ? "1.1rem"
-                    : zoomLevel < 0.95
-                    ? "0.88rem"
-                    : "0.98rem",
-              }}
-            >
-              {bab.isi}
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+              <div
+                className="font-serif leading-[1.8] whitespace-pre-line opacity-95 text-justify"
+                style={{
+                  fontSize:
+                    zoomLevel > 1.1
+                      ? "1.05rem"
+                      : zoomLevel < 0.95
+                      ? "0.85rem"
+                      : "0.95rem",
+                }}
+              >
+                {bab.isi}
+              </div>
             </div>
           </div>
 
-          <div className="pt-4 mt-6 border-t border-current/10 flex items-center justify-between text-[11px] font-mono opacity-60">
-            <span>{activeBook.penulis}</span>
+          <div className="pt-2 mt-2 border-t border-current/10 flex items-center justify-between text-[10px] font-mono opacity-60 shrink-0">
+            <span>{activeBook.penulis || "PMII Sunan Ampel"}</span>
             <span>
               Halaman {pageIndex + 1} dari {totalPages}
             </span>
@@ -641,40 +742,40 @@ export default function BacaanKaderPage() {
 
     // Back Cover
     return (
-      <div className="w-full h-full min-h-[460px] sm:min-h-[560px] bg-gradient-to-br from-[#020617] via-slate-900 to-[#1e3a8a] text-white p-6 sm:p-10 flex flex-col items-center justify-center text-center relative select-none">
-        <div className="absolute inset-4 border border-amber-400/30 rounded-lg pointer-events-none" />
-        <BookOpen size={42} className="text-amber-400 mb-3" />
-        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-amber-400">
+      <div className="w-full h-full flex flex-col items-center justify-center text-center bg-gradient-to-br from-[#020617] via-slate-900 to-[#1e3a8a] text-white p-4 sm:p-7 relative select-none overflow-hidden">
+        <div className="absolute inset-3 border border-amber-400/30 rounded-lg pointer-events-none" />
+        <BookOpen size={36} className="text-amber-400 mb-2.5" />
+        <span className="text-[9px] font-mono uppercase tracking-[0.25em] text-amber-400">
           Akhir Lembar Bacaan
         </span>
-        <h3 className="text-lg sm:text-2xl font-serif font-black mt-1 mb-2 max-w-md">
+        <h3 className="text-base sm:text-xl font-serif font-black mt-1 mb-2 max-w-sm">
           {activeBook.judul}
         </h3>
-        <p className="text-xs text-slate-300 max-w-sm leading-relaxed mb-6">
+        <p className="text-xs text-slate-300 max-w-xs leading-relaxed mb-4">
           &ldquo;Dzikir, Fikir, dan Amal Shaleh.&rdquo; Teruslah membaca,
           mendiskusikan, dan mengamalkan ilmu pengetahuan demi kemaslahatan umat
           dan bangsa.
         </p>
 
-        <div className="flex flex-wrap items-center justify-center gap-2.5 relative z-10">
+        <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
           <button
             type="button"
             onClick={() => {
               setFlipDirection(-1);
               setCurrentSheetIndex(0);
             }}
-            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15 transition"
+            className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15 transition"
           >
-            ↺ Kembali ke Sampul Depan
+            ↺ Ke Sampul Depan
           </button>
           {activeBook.fileUrl && (
             <a
               href={activeBook.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition"
+              className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition"
             >
-              <Download size={14} /> Unduh Berkas PDF Asli
+              <Download size={13} /> Unduh PDF
             </a>
           )}
         </div>
@@ -682,34 +783,127 @@ export default function BacaanKaderPage() {
     );
   };
 
-  // Variants animasi 3D membalik lembaran buku (Page Flipping 3D)
-  const pageFlipVariants = {
+  // Variants animasi halaman tunggal / mobile (Soft Single Page Flip)
+  const singlePageVariants = {
     enter: (dir) => ({
-      rotateY: dir > 0 ? 88 : -88,
+      rotateY: dir > 0 ? 20 : -20,
+      x: dir > 0 ? 20 : -20,
       opacity: 0,
       scale: 0.98,
       transformOrigin: dir > 0 ? "left center" : "right center",
     }),
     center: {
       rotateY: 0,
+      x: 0,
       opacity: 1,
       scale: 1,
       transformOrigin: "center center",
       transition: {
-        duration: 0.48,
-        ease: [0.22, 1, 0.36, 1],
+        duration: 0.3,
+        ease: [0.2, 1, 0.35, 1],
       },
     },
     exit: (dir) => ({
-      rotateY: dir > 0 ? -88 : 88,
+      rotateY: dir > 0 ? -20 : 20,
+      x: dir > 0 ? -20 : 20,
       opacity: 0,
       scale: 0.98,
       transformOrigin: dir > 0 ? "left center" : "right center",
       transition: {
-        duration: 0.38,
+        duration: 0.22,
         ease: [0.4, 0, 0.2, 1],
       },
     }),
+  };
+
+  // Variants animasi halaman kiri pada mode 2 halaman (Left Page in 2-Page Open Book)
+  const leftPageTurnVariants = {
+    enter: (dir) =>
+      dir > 0
+        ? {
+            // Ketika maju: lembaran yang dibalik dari kanan mendarat di sisi kiri
+            rotateY: 80,
+            opacity: 0.25,
+            scale: 0.98,
+            transformOrigin: "right center",
+          }
+        : {
+            // Ketika mundur: lembaran baru di bawahnya muncul
+            opacity: 0.4,
+            scale: 0.99,
+            transformOrigin: "right center",
+          },
+    center: {
+      rotateY: 0,
+      opacity: 1,
+      scale: 1,
+      transformOrigin: "right center",
+      transition: {
+        duration: 0.36,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
+    exit: (dir) =>
+      dir > 0
+        ? {
+            // Ketika maju: halaman kiri lama tertutup lembaran baru
+            opacity: 0.4,
+            scale: 0.99,
+            transition: { duration: 0.24 },
+          }
+        : {
+            // Ketika mundur: halaman kiri diangkat membalik ke arah kanan
+            rotateY: 80,
+            opacity: 0.2,
+            scale: 0.98,
+            transformOrigin: "right center",
+            transition: { duration: 0.34, ease: [0.36, 0, 0.66, -0.56] },
+          },
+  };
+
+  // Variants animasi halaman kanan pada mode 2 halaman (Right Page in 2-Page Open Book)
+  const rightPageTurnVariants = {
+    enter: (dir) =>
+      dir > 0
+        ? {
+            // Ketika maju: halaman kanan baru di bawahnya mulai terlihat
+            opacity: 0.4,
+            scale: 0.99,
+            transformOrigin: "left center",
+          }
+        : {
+            // Ketika mundur: lembaran dari kiri mendarat kembali ke kanan
+            rotateY: -80,
+            opacity: 0.25,
+            scale: 0.98,
+            transformOrigin: "left center",
+          },
+    center: {
+      rotateY: 0,
+      opacity: 1,
+      scale: 1,
+      transformOrigin: "left center",
+      transition: {
+        duration: 0.36,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
+    exit: (dir) =>
+      dir > 0
+        ? {
+            // Ketika maju: halaman kanan diangkat membalik ke arah kiri
+            rotateY: -80,
+            opacity: 0.2,
+            scale: 0.98,
+            transformOrigin: "left center",
+            transition: { duration: 0.34, ease: [0.36, 0, 0.66, -0.56] },
+          }
+        : {
+            // Ketika mundur: halaman kanan lama tertutup
+            opacity: 0.4,
+            scale: 0.99,
+            transition: { duration: 0.24 },
+          },
   };
 
   return (
@@ -958,13 +1152,32 @@ export default function BacaanKaderPage() {
                     {activeBook.judul}
                   </h3>
                   <p className="text-[10px] font-mono text-amber-400">
-                    Lembar {currentSheetIndex + 1} dari {totalPages}
+                    {isDoubleSpread && rightPageIndex < totalPages
+                      ? `Halaman ${leftPageIndex + 1}-${rightPageIndex + 1} dari ${totalPages}`
+                      : `Halaman ${currentSheetIndex + 1} dari ${totalPages}`}
                   </p>
                 </div>
               </div>
 
               {/* Reader Controls (Paper Theme, Zoom, 1/2 Page Spread, Download, Close) */}
               <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* Desktop 2-Page Spread Toggle (Buku Terbuka vs Fokus 1 Lembar) */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSpreadMode((m) => (m === "double" ? "single" : "double"))
+                  }
+                  className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition ${
+                    spreadMode === "double"
+                      ? "bg-blue-600 text-white border-blue-500 shadow-sm"
+                      : "bg-slate-900 text-slate-300 border-slate-800 hover:text-white"
+                  }`}
+                  title="Ganti Mode Tampilan (2 Halaman Buku Terbuka / 1 Halaman)"
+                >
+                  <Columns size={14} />
+                  <span>{spreadMode === "double" ? "2 Hal" : "1 Hal"}</span>
+                </button>
+
                 {/* Paper Theme Selector */}
                 <div className="hidden sm:inline-flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
                   <button
@@ -1054,23 +1267,6 @@ export default function BacaanKaderPage() {
                   </button>
                 </div>
 
-                {/* Desktop 2-Page Spread Toggle */}
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSpreadMode((m) => (m === "double" ? "single" : "double"))
-                  }
-                  className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition ${
-                    spreadMode === "double"
-                      ? "bg-blue-600 text-white border-blue-500"
-                      : "bg-slate-900 text-slate-300 border-slate-800"
-                  }`}
-                  title="Mode Buku Terbuka 2 Halaman / 1 Halaman"
-                >
-                  <Columns size={14} />
-                  <span>{spreadMode === "double" ? "2 Hal" : "1 Hal"}</span>
-                </button>
-
                 {activeBook.fileUrl && (
                   <a
                     href={activeBook.fileUrl}
@@ -1094,9 +1290,9 @@ export default function BacaanKaderPage() {
               </div>
             </div>
 
-            {/* 2. 3D BOOK STAGE (TENGAH) */}
+            {/* 2. 3D BOOK STAGE (TENGAH - REALISTIC OPEN BOOK) */}
             <div
-              className="flex-1 relative flex items-center justify-center p-2 sm:p-6 overflow-y-auto"
+              className="flex-1 relative flex items-center justify-center p-1 sm:p-3 overflow-hidden"
               style={{ perspective: "2200px" }}
               onTouchStart={(e) => {
                 touchStartX.current = e.touches[0].clientX;
@@ -1117,78 +1313,246 @@ export default function BacaanKaderPage() {
                 type="button"
                 disabled={currentSheetIndex === 0}
                 onClick={() => handleTurnPage(-1)}
-                className="hidden sm:flex fixed left-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-2xl bg-slate-900/90 hover:bg-blue-600 disabled:opacity-25 text-white border border-slate-700 items-center justify-center shadow-2xl transition"
+                className="hidden sm:flex fixed left-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-2xl bg-slate-900/90 hover:bg-blue-600 disabled:opacity-20 text-white border border-slate-700 items-center justify-center shadow-2xl transition hover:scale-105 active:scale-95"
                 title="Halaman Sebelumnya (Panah Kiri)"
               >
                 <ChevronLeft size={24} />
               </button>
 
-              {/* THE 3D PHYSICAL BOOK CONTAINER */}
+              {/* THE 3D PHYSICAL BOOK CONTAINER (PAS PROPORSI BUKU ASLI A4, A5, F4 TANPA GEPENG) */}
               <div
-                className={`relative w-full ${
-                  spreadMode === "double" &&
-                  currentSheetIndex > 0 &&
-                  currentSheetIndex < totalPages - 1
-                    ? "max-w-5xl"
-                    : "max-w-2xl"
-                } my-auto transition-all duration-300`}
+                style={{
+                  width: isDoubleSpread
+                    ? "min(94vw, calc((100dvh - 130px) * 1.414))"
+                    : "min(92vw, calc((100dvh - 130px) * 0.707))",
+                  height: isDoubleSpread
+                    ? "min(calc(100dvh - 130px), calc(94vw / 1.414))"
+                    : "min(calc(100dvh - 130px), calc(92vw / 0.707))",
+                  maxWidth: isDoubleSpread ? "1180px" : "620px",
+                  maxHeight: "820px",
+                }}
+                className="relative mx-auto my-auto transition-all duration-300 flex flex-col justify-center select-none"
               >
-                {/* Efek Tumpukan Lembar Kertas Buku di Sisi Luar */}
-                <div className="relative rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.65)] border-4 border-[#1e293b] bg-[#1e293b] p-1 sm:p-2">
-                  <AnimatePresence initial={false} custom={flipDirection} mode="wait">
-                    <motion.div
-                      key={`${currentSheetIndex}-${spreadMode}`}
-                      custom={flipDirection}
-                      variants={pageFlipVariants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
+                {/* Pita Pembatas Buku Fisik (Satin Bookmark Ribbon) */}
+                <div
+                  className={`pointer-events-none absolute -top-3 ${
+                    isDoubleSpread
+                      ? "left-1/2 -translate-x-1/2"
+                      : "left-10 sm:left-14"
+                  } z-40 flex flex-col items-center transition-all duration-300`}
+                >
+                  <div className="w-4 h-8 sm:w-5 sm:h-10 bg-amber-500 shadow-md rounded-b-[2px] border-b-2 border-amber-600" />
+                </div>
+
+                {/* Efek Lapisan Kertas Bertumpuk (Deckle Edges) */}
+                {isDoubleSpread ? (
+                  <>
+                    <div
+                      className="pointer-events-none absolute inset-y-1 -left-2.5 sm:-left-3.5 w-2.5 sm:w-3.5 rounded-l-md z-0"
+                      style={{
+                        background:
+                          "repeating-linear-gradient(to bottom, #d6cdbd, #d6cdbd 1px, #fbf7ee 1px, #fbf7ee 3px)",
+                        boxShadow: "-3px 4px 14px rgba(0,0,0,0.45)",
+                      }}
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-y-1 -right-2.5 sm:-right-3.5 w-2.5 sm:w-3.5 rounded-r-md z-0"
+                      style={{
+                        background:
+                          "repeating-linear-gradient(to bottom, #d6cdbd, #d6cdbd 1px, #fbf7ee 1px, #fbf7ee 3px)",
+                        boxShadow: "3px 4px 14px rgba(0,0,0,0.45)",
+                      }}
+                    />
+                  </>
+                ) : (
+                  <div
+                    className="pointer-events-none absolute inset-y-1 -right-2 sm:-right-3 w-2.5 sm:w-3.5 rounded-r-md z-0"
+                    style={{
+                      background:
+                        "repeating-linear-gradient(to bottom, #d6cdbd, #d6cdbd 1px, #fbf7ee 1px, #fbf7ee 3px)",
+                      boxShadow: "3px 4px 14px rgba(0,0,0,0.45)",
+                    }}
+                  />
+                )}
+
+                {/* Hardcover Casing & Lembaran Buku */}
+                <div
+                  className={`relative w-full h-full rounded-2xl sm:rounded-3xl shadow-[0_28px_90px_rgba(0,0,0,0.85)] flex flex-col ${
+                    isDoubleSpread
+                      ? "border-4 border-[#090e17] bg-[#0c1424] p-1 sm:p-2.5"
+                      : "border-l-[10px] sm:border-l-[14px] border-l-[#090d16] border border-slate-800/80 bg-[#0d1527] p-1 sm:p-2.5"
+                  }`}
+                >
+                  {isDoubleSpread ? (
+                    /* ================= MODE 2 HALAMAN (BUKU TERBUKA DENGAN REALISTIC PAGE FLIP) ================= */
+                    <div
+                      className={`w-full h-full rounded-xl sm:rounded-2xl overflow-hidden border ${paperThemeClasses[paperTheme]} relative grid grid-cols-1 lg:grid-cols-2`}
                       style={{ transformStyle: "preserve-3d" }}
-                      className={`w-full rounded-xl overflow-hidden border ${paperThemeClasses[paperTheme]} relative`}
                     >
-                      {/* Bayangan Lipatan Buku (Book Spine Shadow) */}
+                      {/* Garis Lipatan Tengah Buku (Realistic Book Center Spine Crease & Shadow) */}
                       <div
-                        className="pointer-events-none absolute inset-y-0 left-0 w-8 z-20"
+                        className="hidden lg:block pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 w-12 z-30"
                         style={{
                           background:
-                            "linear-gradient(to right, rgba(0,0,0,0.18), rgba(0,0,0,0.04) 60%, transparent)",
+                            "linear-gradient(to right, transparent, rgba(0,0,0,0.08) 35%, rgba(0,0,0,0.26) 48%, rgba(0,0,0,0.36) 50%, rgba(255,255,255,0.08) 52%, rgba(0,0,0,0.08) 65%, transparent)",
                         }}
                       />
 
-                      {/* Jika di Desktop, mode 2 halaman aktif, dan bukan di sampul depan: tampilkan 2 halaman berdampingan */}
-                      {spreadMode === "double" &&
-                      currentSheetIndex > 0 &&
-                      currentSheetIndex + 1 < totalPages ? (
-                        <div className="grid grid-cols-1 xl:grid-cols-2 relative">
-                          {/* Garis Lipatan Tengah Buku (Center Spine Crease) */}
-                          <div
-                            className="hidden xl:block pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 w-10 z-20"
-                            style={{
-                              background:
-                                "linear-gradient(to right, transparent, rgba(0,0,0,0.16) 45%, rgba(0,0,0,0.28) 50%, rgba(255,255,255,0.12) 55%, transparent)",
-                            }}
-                          />
-                          <div className="border-b xl:border-b-0 xl:border-r border-current/10">
+                      {/* HALAMAN KIRI */}
+                      <div
+                        className="relative border-b lg:border-b-0 lg:border-r border-current/10 overflow-hidden h-full"
+                        style={{ perspective: "1800px" }}
+                      >
+                        <AnimatePresence initial={false} custom={flipDirection} mode="wait">
+                          <motion.div
+                            key={`left-${leftPageIndex}`}
+                            custom={flipDirection}
+                            variants={leftPageTurnVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            style={{ transformStyle: "preserve-3d" }}
+                            className="w-full h-full relative"
+                          >
                             {renderSinglePageContent(
-                              virtualPages[currentSheetIndex],
-                              currentSheetIndex
+                              virtualPages[leftPageIndex],
+                              leftPageIndex,
+                              "left"
                             )}
-                          </div>
-                          <div className="hidden xl:block">
-                            {renderSinglePageContent(
-                              virtualPages[currentSheetIndex + 1],
-                              currentSheetIndex + 1
+                          </motion.div>
+                        </AnimatePresence>
+
+                        {/* Tombol Balik Mundur di Sisi Kiri */}
+                        {currentSheetIndex > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleTurnPage(-1)}
+                            className="hidden md:flex absolute inset-y-0 left-0 w-16 sm:w-20 z-20 items-center justify-start pl-3 text-slate-400 hover:text-amber-500 opacity-0 hover:opacity-100 transition-opacity cursor-pointer group"
+                            title="Balik ke Halaman Sebelumnya"
+                            aria-label="Halaman sebelumnya"
+                          >
+                            <span className="p-2 rounded-full bg-black/15 dark:bg-white/10 backdrop-blur-xs shadow-xs group-hover:scale-110 transition-transform">
+                              <ChevronLeft size={20} />
+                            </span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* HALAMAN KANAN */}
+                      <div
+                        className="hidden lg:block relative overflow-hidden h-full"
+                        style={{ perspective: "1800px" }}
+                      >
+                        <AnimatePresence initial={false} custom={flipDirection} mode="wait">
+                          <motion.div
+                            key={`right-${rightPageIndex}`}
+                            custom={flipDirection}
+                            variants={rightPageTurnVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            style={{ transformStyle: "preserve-3d" }}
+                            className="w-full h-full relative"
+                          >
+                            {rightPageIndex < totalPages ? (
+                              renderSinglePageContent(
+                                virtualPages[rightPageIndex],
+                                rightPageIndex,
+                                "right"
+                              )
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center opacity-30 italic text-xs">
+                                Akhir Lembar Modul
+                              </div>
                             )}
-                          </div>
-                        </div>
-                      ) : (
-                        renderSinglePageContent(
+                          </motion.div>
+                        </AnimatePresence>
+
+                        {/* Tombol Balik Maju di Sisi Kanan */}
+                        {rightPageIndex < totalPages - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleTurnPage(1)}
+                            className="hidden md:flex absolute inset-y-0 right-0 w-16 sm:w-20 z-20 items-center justify-end pr-3 text-slate-400 hover:text-amber-500 opacity-0 hover:opacity-100 transition-opacity cursor-pointer group"
+                            title="Balik ke Halaman Selanjutnya"
+                            aria-label="Halaman selanjutnya"
+                          >
+                            <span className="p-2 rounded-full bg-black/15 dark:bg-white/10 backdrop-blur-xs shadow-xs group-hover:scale-110 transition-transform">
+                              <ChevronRight size={20} />
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    /* ================= MODE 1 HALAMAN (SAMPUL DEPAN, BELAKANG, HP, ATAU MODE FOKUS) ================= */
+                    <AnimatePresence initial={false} custom={flipDirection} mode="wait">
+                      <motion.div
+                        key={currentSheetIndex}
+                        custom={flipDirection}
+                        variants={singlePageVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        style={{ transformStyle: "preserve-3d" }}
+                        className={`w-full h-full rounded-xl sm:rounded-2xl overflow-hidden border ${paperThemeClasses[paperTheme]} relative flex flex-col justify-between`}
+                      >
+                        {/* Gradasi Lengkungan Tulang Buku di Sisi Kiri */}
+                        <div
+                          className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-14 z-20"
+                          style={{
+                            background:
+                              "linear-gradient(to right, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.07) 40%, rgba(0,0,0,0.01) 75%, transparent 100%)",
+                          }}
+                        />
+
+                        {/* Gradasi Lembut Tepi Kertas di Sisi Kanan */}
+                        <div
+                          className="pointer-events-none absolute inset-y-0 right-0 w-5 sm:w-8 z-20"
+                          style={{
+                            background:
+                              "linear-gradient(to left, rgba(0,0,0,0.06) 0%, transparent 100%)",
+                          }}
+                        />
+
+                        {renderSinglePageContent(
                           virtualPages[currentSheetIndex],
-                          currentSheetIndex
-                        )
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
+                          currentSheetIndex,
+                          "single"
+                        )}
+
+                        {/* Klik Sisi Kiri untuk Balik Mundur */}
+                        {currentSheetIndex > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleTurnPage(-1)}
+                            className="hidden md:flex absolute inset-y-0 left-0 w-16 sm:w-20 z-20 items-center justify-start pl-3 text-slate-400 hover:text-amber-500 opacity-0 hover:opacity-100 transition-opacity cursor-pointer group"
+                            title="Klik untuk membalik ke halaman sebelumnya"
+                            aria-label="Halaman sebelumnya"
+                          >
+                            <span className="p-2 rounded-full bg-black/15 dark:bg-white/10 backdrop-blur-xs shadow-xs group-hover:scale-110 transition-transform">
+                              <ChevronLeft size={20} />
+                            </span>
+                          </button>
+                        )}
+
+                        {/* Klik Sisi Kanan untuk Balik Maju */}
+                        {currentSheetIndex < totalPages - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleTurnPage(1)}
+                            className="hidden md:flex absolute inset-y-0 right-0 w-16 sm:w-20 z-20 items-center justify-end pr-3 text-slate-400 hover:text-amber-500 opacity-0 hover:opacity-100 transition-opacity cursor-pointer group"
+                            title="Klik untuk membalik ke halaman selanjutnya"
+                            aria-label="Halaman selanjutnya"
+                          >
+                            <span className="p-2 rounded-full bg-black/15 dark:bg-white/10 backdrop-blur-xs shadow-xs group-hover:scale-110 transition-transform">
+                              <ChevronRight size={20} />
+                            </span>
+                          </button>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
+                  )}
                 </div>
               </div>
 
@@ -1197,7 +1561,7 @@ export default function BacaanKaderPage() {
                 type="button"
                 disabled={currentSheetIndex >= totalPages - 1}
                 onClick={() => handleTurnPage(1)}
-                className="hidden sm:flex fixed right-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-2xl bg-slate-900/90 hover:bg-blue-600 disabled:opacity-25 text-white border border-slate-700 items-center justify-center shadow-2xl transition"
+                className="hidden sm:flex fixed right-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-2xl bg-slate-900/90 hover:bg-blue-600 disabled:opacity-20 text-white border border-slate-700 items-center justify-center shadow-2xl transition hover:scale-105 active:scale-95"
                 title="Halaman Selanjutnya (Panah Kanan)"
               >
                 <ChevronRight size={24} />
@@ -1230,7 +1594,9 @@ export default function BacaanKaderPage() {
                   className="w-full accent-amber-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
                 />
                 <span className="text-[11px] font-mono text-amber-400 whitespace-nowrap">
-                  {currentSheetIndex + 1}/{totalPages}
+                  {isDoubleSpread && rightPageIndex < totalPages
+                    ? `${leftPageIndex + 1}-${rightPageIndex + 1}/${totalPages}`
+                    : `${currentSheetIndex + 1}/${totalPages}`}
                 </span>
               </div>
 

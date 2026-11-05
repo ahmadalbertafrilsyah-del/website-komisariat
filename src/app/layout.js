@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from 'next-themes';
+import PwaRegister from "@/components/PwaRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,6 +48,12 @@ export const metadata = {
   description: "Website Resmi PK. PMII Sunan Ampel Malang. Wadah pergerakan mahasiswa Islam berlandaskan Ahlussunnah Wal Jama'ah.",
   keywords: ["PMII", "Sunan Ampel", "Malang", "Pergerakan Mahasiswa Islam Indonesia", "UIN Malang", "Kaderisasi", "Mahasiswa"],
   authors: [{ name: "PMII Sunan Ampel Malang" }],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "PMII Malang",
+  },
   icons: { icon: siteLogo, apple: siteLogo },
   creator: "PMII Sunan Ampel Malang",
   openGraph: {
@@ -92,6 +99,14 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning // Penting agar next-themes tidak error saat memuat tema awal
     >
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="PMII Malang" />
+        <meta name="theme-color" content="#0b1528" />
+        <link rel="apple-touch-icon" href="/logo.png" />
+      </head>
       <body className="min-h-full flex flex-col transition-colors duration-300 dark:bg-[#0a0a0a] dark:text-[#ededed]">
         <script
           type="application/ld+json"
@@ -101,6 +116,7 @@ export default function RootLayout({ children }) {
         />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
+          <PwaRegister />
         </ThemeProvider>
       </body>
     </html>

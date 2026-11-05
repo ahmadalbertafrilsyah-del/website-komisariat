@@ -134,7 +134,7 @@ export default function LoginAdmin() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none transition-all text-sm bg-slate-50 focus:bg-white text-slate-900 font-medium"
-                    placeholder="redaktur@pmii-uinmalang.or.id"
+                    placeholder="admin@pmii-uinmalang.or.id"
                   />
                 </div>
               </div>
@@ -153,7 +153,7 @@ export default function LoginAdmin() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-10 pr-11 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none transition-all text-sm bg-slate-50 focus:bg-white text-slate-900 font-medium"
-                    placeholder="••••••••"
+                    placeholder="apa hayoo???"
                   />
                   <button
                     type="button"

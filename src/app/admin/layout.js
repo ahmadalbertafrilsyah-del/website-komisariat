@@ -203,7 +203,7 @@ export default function AdminLayout({ children }) {
   const CurrentIcon = currentModule?.icon || LayoutDashboard;
 
   return (
-    <div className="flex h-screen w-full bg-[#f1f5f9] overflow-hidden font-sans text-slate-900">
+    <div className="fixed inset-0 flex h-[100dvh] w-full bg-[#f1f5f9] overflow-hidden font-sans text-slate-900">
       {/* ==================== 1. DESKTOP SIDEBAR (lg+, Collapsible) ==================== */}
       <aside
         className={`hidden lg:flex ${
@@ -342,9 +342,9 @@ export default function AdminLayout({ children }) {
       </aside>
 
       {/* ==================== 2. MAIN WORKSPACE AREA ==================== */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        {/* Top App Bar (Compact Context Header) */}
-        <header className="bg-[#020617] text-white border-b border-slate-800 px-3.5 sm:px-6 h-14 flex items-center justify-between shrink-0 z-40">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        {/* Top App Bar (Compact Context Header - Sticky & Fixed on Mobile & Desktop) */}
+        <header className="sticky top-0 z-40 bg-[#020617] text-white border-b border-slate-800 px-3.5 sm:px-6 h-14 flex items-center justify-between shrink-0 shadow-xs">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/30 text-amber-400 flex items-center justify-center shrink-0">
               <CurrentIcon size={16} />
@@ -387,8 +387,8 @@ export default function AdminLayout({ children }) {
           </div>
         </header>
 
-        {/* Scrollable Content Viewport — pt-0 so sticky top-0 inside pages sits 100% flush */}
-        <main className="flex-1 overflow-y-auto px-3.5 sm:px-6 pb-28 lg:pb-12 pt-0 scroll-smooth w-full">
+        {/* Scrollable Content Viewport — overscroll-contain keeps top header firmly pinned on mobile */}
+        <main className="flex-1 overflow-y-auto px-3.5 sm:px-6 pb-28 lg:pb-12 pt-0 scroll-smooth w-full overscroll-contain">
           <div className="max-w-[1600px] mx-auto w-full">{children}</div>
         </main>
       </div>
