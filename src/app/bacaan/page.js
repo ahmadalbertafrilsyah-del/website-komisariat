@@ -846,7 +846,7 @@ export default function BacaanKaderPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
             {filteredBooks.map((book, idx) => (
               <motion.div
                 key={`${book.id || "bk"}-${idx}`}
@@ -855,19 +855,19 @@ export default function BacaanKaderPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.25 }}
                 onClick={() => openBookReader(book)}
-                className="group cursor-pointer bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 hover:border-blue-500/60 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col justify-between"
+                className="group cursor-pointer bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 hover:border-blue-500/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col justify-between"
               >
-                <div className="flex gap-4 items-start">
+                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-4 items-center sm:items-start text-center sm:text-left">
                   {/* 3D Physical Book Cover Representation */}
                   <div
-                    className="relative w-28 sm:w-32 aspect-[3/4.2] shrink-0 rounded-r-lg rounded-l-sm shadow-lg group-hover:-translate-y-1 transition-transform duration-300 overflow-hidden border border-slate-300 dark:border-slate-700"
+                    className="relative w-20 sm:w-28 md:w-32 aspect-[3/4.2] shrink-0 rounded-r-lg rounded-l-sm shadow-md sm:shadow-lg group-hover:-translate-y-1 transition-transform duration-300 overflow-hidden border border-slate-300 dark:border-slate-700 mx-auto sm:mx-0"
                     style={{
                       boxShadow:
-                        "-4px 0 0 #1e293b, -6px 4px 14px rgba(0,0,0,0.22)",
+                        "-3px 0 0 #1e293b, -4px 3px 10px rgba(0,0,0,0.2)",
                     }}
                   >
                     {/* Spine crease highlight */}
-                    <div className="absolute top-0 bottom-0 left-0 w-2.5 bg-gradient-to-r from-black/45 via-white/15 to-transparent z-20 pointer-events-none" />
+                    <div className="absolute top-0 bottom-0 left-0 w-2 sm:w-2.5 bg-gradient-to-r from-black/45 via-white/15 to-transparent z-20 pointer-events-none" />
                     <SafeBookCover
                       src={book.coverUrl}
                       title={book.judul}
@@ -876,26 +876,26 @@ export default function BacaanKaderPage() {
                   </div>
 
                   {/* Book Metadata */}
-                  <div className="flex-1 min-w-0">
-                    <span className="inline-block text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-amber-400 border border-blue-200 dark:border-blue-800 mb-2">
+                  <div className="flex-1 min-w-0 w-full">
+                    <span className="inline-block text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-amber-400 border border-blue-200 dark:border-blue-800 mb-1 sm:mb-2 truncate max-w-full">
                       {book.kategori || "Modul Kader"}
                     </span>
 
-                    <h3 className="font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-amber-400 transition-colors text-base sm:text-lg leading-snug line-clamp-2">
+                    <h3 className="font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-amber-400 transition-colors text-xs sm:text-base md:text-lg leading-tight sm:leading-snug line-clamp-2">
                       {book.judul}
                     </h3>
 
-                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5 truncate">
-                      <User size={12} className="text-blue-500 shrink-0" />
+                    <p className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1 sm:mt-1.5 flex items-center justify-center sm:justify-start gap-1 truncate">
+                      <User size={11} className="text-blue-500 shrink-0" />
                       <span className="truncate">
                         {book.penulis || "Tim Kaderisasi PMII"}
                       </span>
                     </p>
 
-                    <div className="flex flex-wrap items-center gap-2 mt-2 text-[11px] font-mono text-slate-400">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 sm:gap-2 mt-1 sm:mt-2 text-[10px] sm:text-[11px] font-mono text-slate-400">
                       {book.tahun && (
                         <span className="flex items-center gap-1">
-                          <Calendar size={11} /> {book.tahun}
+                          <Calendar size={10} /> {book.tahun}
                         </span>
                       )}
                       {book.tebalHalaman && (
@@ -903,7 +903,7 @@ export default function BacaanKaderPage() {
                       )}
                     </div>
 
-                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 mt-2.5 leading-relaxed">
+                    <p className="hidden sm:block text-xs text-slate-600 dark:text-slate-300 line-clamp-2 md:line-clamp-3 mt-2.5 leading-relaxed">
                       {book.deskripsi ||
                         "Klik untuk membuka buku dengan animasi lembaran halaman interaktif."}
                     </p>
@@ -911,16 +911,17 @@ export default function BacaanKaderPage() {
                 </div>
 
                 {/* Action Footer */}
-                <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5 sm:gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       openBookReader(book);
                     }}
-                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition"
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 sm:py-2.5 px-2 sm:px-4 rounded-lg sm:rounded-xl text-[10px] sm:text-xs flex items-center justify-center gap-1.5 shadow-sm transition truncate"
                   >
-                    <BookOpen size={15} /> Buka & Baca Buku (Flipbook)
+                    <BookOpen size={13} className="shrink-0" />
+                    <span className="truncate">Baca Flipbook</span>
                   </button>
 
                   {book.fileUrl && (
@@ -929,10 +930,10 @@ export default function BacaanKaderPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition"
+                      className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition shrink-0"
                       title="Unduh File PDF"
                     >
-                      <Download size={15} />
+                      <Download size={13} />
                     </a>
                   )}
                 </div>

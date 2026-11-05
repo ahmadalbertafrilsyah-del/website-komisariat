@@ -189,7 +189,7 @@ export default function Navbar() {
         <nav
           className={`transition-all duration-300 border-b ${
             scrolled
-              ? "bg-[#050a14]/95 backdrop-blur-xl border-slate-800/90 shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
+              ? "bg-[#050a14]/95 backdrop-blur-xl border-slate-800/90"
               : "bg-[#070e1c]/95 backdrop-blur-md border-white/10"
           } text-white`}
         >
@@ -207,22 +207,20 @@ export default function Navbar() {
                 }}
                 className="group flex items-center gap-2.5 shrink-0 min-w-0"
               >
-                <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-slate-900/90 border border-slate-700/80 group-hover:border-yellow-400/60 flex items-center justify-center p-1.5 transition-colors shrink-0">
-                  {LOGO_URL ? (
-                    <img
-                      src={LOGO_URL}
-                      alt="Logo PMII"
-                      className="w-full h-full object-contain drop-shadow-sm"
-                    />
-                  ) : (
-                    <span className="text-yellow-400 font-black text-xs">
-                      {globalConfig.logoText}
-                    </span>
-                  )}
-                </div>
+                {LOGO_URL ? (
+                  <img
+                    src={LOGO_URL}
+                    alt="Logo PMII"
+                    className="w-11 h-11 md:w-12 md:h-12 object-contain shrink-0 transition-transform duration-200 group-hover:scale-105"
+                  />
+                ) : (
+                  <span className="text-yellow-400 font-black text-sm shrink-0">
+                    {globalConfig.logoText}
+                  </span>
+                )}
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="hidden sm:inline-block text-[9px] font-mono font-bold uppercase tracking-widest text-yellow-400/90">
+                    <span className="inline-block text-[8px] sm:text-[9px] font-mono font-bold uppercase tracking-widest text-yellow-400/90 leading-none">
                       PENGURUS KOMISARIAT
                     </span>
                   </div>
@@ -441,18 +439,16 @@ export default function Navbar() {
 
               {/* MOBILE & TABLET RIGHT ACTIONS (< xl) — Tanpa Icon Login Admin */}
               <div className="flex items-center gap-2 xl:hidden">
-                <Link
-                  href="/bacaan"
+                <a
+                  href="https://siakad.pmii-uinmalang.or.id/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={() => setIsOpen(false)}
-                  className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1.5 transition-all ${
-                    checkActive("/bacaan")
-                      ? "bg-yellow-400 text-slate-950 border-yellow-400"
-                      : "bg-slate-900/90 border-slate-700/80 text-yellow-300 hover:border-yellow-400/40"
-                  }`}
+                  className="px-2.5 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1.5 whitespace-nowrap transition-all bg-slate-900/90 border-slate-700/80 text-yellow-300 hover:border-yellow-400/40"
                 >
-                  <BookOpen size={13} />
-                  <span>Buku 3D</span>
-                </Link>
+                  <ExternalLink size={13} />
+                  <span>SIAKAD</span>
+                </a>
 
                 <ThemeToggle />
               </div>
@@ -462,7 +458,7 @@ export default function Navbar() {
       </header>
 
       {/* ==================== 2. MOBILE NATIVE BOTTOM NAVIGATION DOCK (5 TAB) ==================== */}
-      <div className="xl:hidden fixed bottom-0 inset-x-0 bg-[#050a14]/95 backdrop-blur-xl border-t border-slate-800/90 shadow-[0_-8px_25px_rgba(0,0,0,0.45)] z-50 pb-[env(safe-area-inset-bottom)]">
+      <div className="xl:hidden fixed bottom-0 inset-x-0 bg-[#050a14]/95 backdrop-blur-xl border-t border-slate-800/90 z-50 pb-[env(safe-area-inset-bottom)]">
         <div className="grid grid-cols-5 h-16 px-1.5 max-w-lg mx-auto">
           {[
             { label: "Beranda", href: "/", icon: Home },
@@ -544,7 +540,7 @@ export default function Navbar() {
           />
 
           {/* Bottom Sheet Container */}
-          <div className="xl:hidden fixed bottom-16 inset-x-0 bg-[#0b1324] text-white p-4 sm:p-5 rounded-t-3xl shadow-[0_-16px_48px_rgba(0,0,0,0.65)] max-h-[75vh] overflow-y-auto z-40 border-t border-slate-800 animate-in slide-in-from-bottom-full duration-200">
+          <div className="xl:hidden fixed bottom-16 inset-x-0 bg-[#0b1324] text-white p-4 sm:p-5 rounded-t-3xl max-h-[75vh] overflow-y-auto z-40 border-t border-slate-800 animate-in slide-in-from-bottom-full duration-200">
             {/* Pull Handle */}
             <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-3.5" />
 

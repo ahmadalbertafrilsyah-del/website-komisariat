@@ -53,6 +53,7 @@ export default function AdminRayonEditor() {
       deskripsi: "", 
       logoUrl: "", 
       alamat: "",     
+      prodi: "",
       mapUrl: "",     
       igUrl: "",      
       ketua: "", waKetua: "", 
@@ -116,6 +117,7 @@ export default function AdminRayonEditor() {
       "Deskripsi": "Semboyan/deskripsi singkat...",
       "URL Logo": "https://...",
       "Alamat Basecamp": "Jl. Joyo Tamansari...",
+      "Program Studi": "Pendidikan Agama Islam; Pendidikan Guru MI; Tadris Matematika",
       "URL G-Maps": "https://maps...",
       "URL IG": "https://instagram...",
       "Nama Ketua": "Achmad", "WA Ketua": "628...",
@@ -148,6 +150,7 @@ export default function AdminRayonEditor() {
           deskripsi: String(row["Deskripsi"] || "").trim(),
           logoUrl: String(row["URL Logo"] || "").trim(),
           alamat: String(row["Alamat Basecamp"] || "").trim(),
+          prodi: String(row["Program Studi"] || "").split(/[;\n]+/).map(p => p.trim()).filter(Boolean).join("\n"),
           mapUrl: String(row["URL G-Maps"] || "").trim(),
           igUrl: String(row["URL IG"] || "").trim(),
           ketua: String(row["Nama Ketua"] || "").trim(), waKetua: String(row["WA Ketua"] || "").trim(),
@@ -325,8 +328,15 @@ export default function AdminRayonEditor() {
                                <input type="file" accept="image/png, image/jpeg" className="hidden" onChange={(e) => handleImageUpload(e, idx)} disabled={uploadingIdx !== null} />
                              </label>
                              <input type="text" value={rayon.logoUrl || ""} onChange={(e) => handleInputChange(idx, "logoUrl", e.target.value)} className={`${inputStyle} font-mono text-[11px] text-emerald-600 bg-slate-50`} placeholder="URL gambar otomatis terisi..." readOnly/>
-                          </div>
-                        </div>
+                           </div>
+                         </div>
+                       </div>
+
+                      {/* Program Studi (tampil di kartu Ekosistem Beranda) */}
+                      <div>
+                        <label className={labelStyle}>Program Studi di Fakultas Rayon</label>
+                        <textarea rows="3" value={rayon.prodi || ""} onChange={(e) => handleInputChange(idx, "prodi", e.target.value)} className={`${inputStyle} resize-y`} placeholder={"Satu prodi per baris, misal:\nPendidikan Agama Islam\nPendidikan Guru MI\nTadris Matematika"}/>
+                        <p className="text-[11px] text-slate-500 mt-1">Tulis satu program studi per baris (boleh juga dipisah koma). Ditampilkan di kartu rayon pada halaman Beranda.</p>
                       </div>
 
                       {/* INFO BASECAMP DAN SOSIAL MEDIA */}

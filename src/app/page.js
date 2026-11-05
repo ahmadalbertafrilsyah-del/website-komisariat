@@ -35,6 +35,7 @@ import {
   Plus,
   Upload,
   Loader2,
+  MapPin,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -472,6 +473,17 @@ export default function Home() {
   const [quickSearch, setQuickSearch] = useState("");
   const [activeExplorerTab, setActiveExplorerTab] = useState("rayon");
   const [activeKaderisasiIdx, setActiveKaderisasiIdx] = useState(0);
+  const [rayonSpotIdx, setRayonSpotIdx] = useState(0);
+  const [rayonSpotPaused, setRayonSpotPaused] = useState(false);
+
+  // Autoplay kartu Rayon (1 kartu per tampilan, berganti tiap 9 detik)
+  useEffect(() => {
+    if (rayonSpotPaused || allRayon.length < 2) return;
+    const t = setInterval(() => {
+      setRayonSpotIdx((prev) => (prev + 1) % allRayon.length);
+    }, 9000);
+    return () => clearInterval(t);
+  }, [rayonSpotPaused, allRayon.length]);
 
   useEffect(() => {
     async function fetchData() {
@@ -1480,7 +1492,7 @@ export default function Home() {
             </div>
 
             {/* Grid Rak Buku Hardcover 3D (4 Buku Pilihan) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
               {allBuku.slice(0, 4).map((buku, idx) => {
                 const spineColors = [
                   "from-[#1e3a8a] via-[#0f172a] to-[#020617]",
@@ -1497,15 +1509,15 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: idx * 0.08, duration: 0.35 }}
-                    className="group bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-yellow-400/50 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300"
+                    className="group bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-yellow-400/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between transition-all duration-300"
                   >
                     <div>
                       {/* Visual Buku Hardcover 3D */}
                       <Link
                         href={`/bacaan?buku=${encodeURIComponent(buku.id)}`}
-                        className="block relative pt-2 pb-4 px-3 mb-4 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-center overflow-hidden"
+                        className="block relative pt-1.5 sm:pt-2 pb-3 sm:pb-4 px-2 sm:px-3 mb-2.5 sm:mb-4 rounded-lg sm:rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-center overflow-hidden"
                       >
-                        <div className="relative w-32 sm:w-36 aspect-[3/4] transition-transform duration-500 group-hover:-translate-y-1.5 group-hover:rotate-[-2deg]">
+                        <div className="relative w-20 sm:w-32 md:w-36 aspect-[3/4] transition-transform duration-500 group-hover:-translate-y-1.5 group-hover:rotate-[-2deg]">
                           {/* Bayangan Bawah Buku */}
                           <div className="absolute -bottom-2.5 inset-x-2 h-4 bg-black/70 blur-md rounded-full" />
 
@@ -1514,11 +1526,11 @@ export default function Home() {
 
                           {/* Sampul Depan Hardcover */}
                           <div
-                            className={`relative w-full h-full rounded-r-lg rounded-l-[3px] overflow-hidden border border-white/15 bg-gradient-to-br ${bgGradient} shadow-[6px_8px_20px_rgba(0,0,0,0.65)] flex flex-col justify-between p-3`}
+                            className={`relative w-full h-full rounded-r-lg rounded-l-[3px] overflow-hidden border border-white/15 bg-gradient-to-br ${bgGradient} shadow-[6px_8px_20px_rgba(0,0,0,0.65)] flex flex-col justify-between p-2 sm:p-3`}
                           >
                             {/* Lipatan Engsel Punggung Buku (Book Spine) */}
-                            <div className="absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/60 via-white/10 to-transparent pointer-events-none z-20" />
-                            <div className="absolute inset-1.5 border border-yellow-400/25 rounded-r-md pointer-events-none z-20" />
+                            <div className="absolute inset-y-0 left-0 w-2.5 sm:w-3 bg-gradient-to-r from-black/60 via-white/10 to-transparent pointer-events-none z-20" />
+                            <div className="absolute inset-1 sm:inset-1.5 border border-yellow-400/25 rounded-r-md pointer-events-none z-20" />
 
                             {buku.coverUrl ? (
                               <img
@@ -1528,18 +1540,18 @@ export default function Home() {
                               />
                             ) : (
                               <>
-                                <div className="relative z-10 pl-1.5">
-                                  <span className="inline-block px-1.5 py-0.5 rounded bg-yellow-400/20 border border-yellow-400/40 text-yellow-300 text-[8px] font-mono font-bold uppercase tracking-wider">
+                                <div className="relative z-10 pl-1">
+                                  <span className="inline-block px-1 py-0.5 rounded bg-yellow-400/20 border border-yellow-400/40 text-yellow-300 text-[7px] sm:text-[8px] font-mono font-bold uppercase tracking-wider">
                                     {buku.kategori || "MODUL PMII"}
                                   </span>
                                 </div>
-                                <div className="relative z-10 pl-1.5 my-auto">
-                                  <h4 className="text-[11px] sm:text-xs font-black text-white leading-snug line-clamp-4 drop-shadow-xs">
+                                <div className="relative z-10 pl-1 my-auto">
+                                  <h4 className="text-[10px] sm:text-xs font-black text-white leading-tight sm:leading-snug line-clamp-3 sm:line-clamp-4 drop-shadow-xs">
                                     {buku.judul}
                                   </h4>
                                 </div>
-                                <div className="relative z-10 pl-1.5 pt-1.5 border-t border-white/15 flex items-center justify-between text-[8px] font-mono text-amber-300/90">
-                                  <span className="truncate max-w-[75px]">
+                                <div className="relative z-10 pl-1 pt-1 border-t border-white/15 flex items-center justify-between text-[7px] sm:text-[8px] font-mono text-amber-300/90">
+                                  <span className="truncate max-w-[50px] sm:max-w-[75px]">
                                     {buku.penulis || "PK. PMII"}
                                   </span>
                                   <span>{buku.tahun || "2025"}</span>
@@ -1551,11 +1563,11 @@ export default function Home() {
                       </Link>
 
                       {/* Metadata Buku */}
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-yellow-400 truncate">
+                      <div className="flex items-center justify-between gap-1 sm:gap-2 mb-1 sm:mb-1.5">
+                        <span className="text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider text-yellow-400 truncate">
                           {buku.kategori || "Bahan Bacaan"}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                        <span className="text-[9px] sm:text-[10px] font-mono text-slate-400 shrink-0">
                           {buku.tebalHalaman || "Modul"}
                         </span>
                       </div>
@@ -1563,16 +1575,16 @@ export default function Home() {
                       <Link
                         href={`/bacaan?buku=${encodeURIComponent(buku.id)}`}
                       >
-                        <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-yellow-400 transition-colors line-clamp-2 leading-snug mb-1.5">
+                        <h3 className="text-xs sm:text-base font-bold text-white group-hover:text-yellow-400 transition-colors line-clamp-2 leading-tight sm:leading-snug mb-1 sm:mb-1.5">
                           {buku.judul}
                         </h3>
                       </Link>
 
-                      <p className="text-[11px] text-slate-400 line-clamp-1 mb-2">
+                      <p className="text-[10px] sm:text-[11px] text-slate-400 line-clamp-1 mb-1.5 sm:mb-2">
                         Oleh: {buku.penulis || "Tim Kaderisasi PMII"}
                       </p>
 
-                      <p className="text-xs text-slate-400/90 line-clamp-2 leading-relaxed mb-4">
+                      <p className="hidden sm:block text-xs text-slate-400/90 line-clamp-2 leading-relaxed mb-3 sm:mb-4">
                         {buku.deskripsi ||
                           "Baca modul dan materi pergerakan dalam format buku interaktif 3D."}
                       </p>
@@ -1581,13 +1593,13 @@ export default function Home() {
                     {/* Tombol Buka Buku 3D */}
                     <Link
                       href={`/bacaan?buku=${encodeURIComponent(buku.id)}`}
-                      className="w-full py-2.5 px-3.5 rounded-xl bg-white/[0.06] group-hover:bg-yellow-400 text-slate-200 group-hover:text-slate-950 border border-white/10 group-hover:border-yellow-400 font-bold text-xs flex items-center justify-between transition-all"
+                      className="w-full py-2 sm:py-2.5 px-2.5 sm:px-3.5 rounded-lg sm:rounded-xl bg-white/[0.06] group-hover:bg-yellow-400 text-slate-200 group-hover:text-slate-950 border border-white/10 group-hover:border-yellow-400 font-bold text-[10px] sm:text-xs flex items-center justify-between transition-all"
                     >
-                      <span className="flex items-center gap-1.5">
-                        <BookOpen className="w-3.5 h-3.5" />
-                        <span>Baca Mode Buku 3D</span>
+                      <span className="flex items-center gap-1 sm:gap-1.5 truncate">
+                        <BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                        <span className="truncate">Baca Mode 3D</span>
                       </span>
-                      <ArrowUpRight className="w-3.5 h-3.5" />
+                      <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                     </Link>
                   </motion.div>
                 );
@@ -1673,53 +1685,215 @@ export default function Home() {
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.25 }}
                 >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-                    {allRayon.slice(0, 6).map((rayon, idx) => {
-                      const rayonSlug = encodeURIComponent(
-                        (rayon.nama || "").toLowerCase().replace(/\s+/g, "-")
-                      );
-                      return (
-                        <Link
-                          key={idx}
-                          href={`/rayon/${rayonSlug}`}
-                          className="group flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-800/80 hover:border-blue-500/60 dark:hover:border-yellow-400/50 transition-all"
-                        >
-                          <div className="relative w-12 h-12 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1.5 shrink-0 overflow-hidden">
-                            {rayon.logoUrl ? (
-                              <Image
-                                src={rayon.logoUrl}
-                                alt={rayon.nama}
-                                fill
-                                className="object-contain p-1.5"
-                                sizes="48px"
-                              />
-                            ) : (
-                              <Compass className="w-5 h-5 text-blue-600 dark:text-yellow-400" />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-blue-600 dark:text-yellow-400 block truncate">
-                              {rayon.fakultas || "Tingkat Fakultas"}
-                            </span>
-                            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-yellow-400 transition-colors">
-                              {rayon.nama}
-                            </h4>
-                          </div>
-                          <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 dark:group-hover:text-yellow-400 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                        </Link>
-                      );
-                    })}
-                  </div>
+                  {(() => {
+                    const total = allRayon.length;
+                    const safeIdx = total > 0 ? rayonSpotIdx % total : 0;
+                    const rayon = allRayon[safeIdx];
+                    if (!rayon) return null;
+                    const rayonSlug = encodeURIComponent(
+                      (rayon.nama || "").toLowerCase().replace(/\s+/g, "-")
+                    );
+                    const prodiList = (
+                      Array.isArray(rayon.prodi)
+                        ? rayon.prodi
+                        : String(rayon.prodi || "").split(/[\n,;]+/)
+                    )
+                      .map((p) => String(p).trim())
+                      .filter(Boolean);
+                    const bph = [
+                      { jabatan: "Ketua", nama: rayon.ketua },
+                      { jabatan: "Sekretaris", nama: rayon.sekretaris },
+                      { jabatan: "Bendahara", nama: rayon.bendahara },
+                    ].filter((b) => b.nama && String(b.nama).trim() !== "");
+                    const goPrev = () => {
+                      setRayonSpotIdx((safeIdx - 1 + total) % total);
+                      setRayonSpotPaused(true);
+                    };
+                    const goNext = () => {
+                      setRayonSpotIdx((safeIdx + 1) % total);
+                      setRayonSpotPaused(true);
+                    };
+                    return (
+                      <div
+                        onMouseEnter={() => setRayonSpotPaused(true)}
+                        onMouseLeave={() => setRayonSpotPaused(false)}
+                      >
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={`rayon-spot-${safeIdx}`}
+                            initial={{ opacity: 0, x: 16 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -16 }}
+                            transition={{ duration: 0.25 }}
+                            className="grid lg:grid-cols-12 gap-5 lg:gap-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 p-4 sm:p-6"
+                          >
+                            {/* Identitas Rayon */}
+                            <div className="lg:col-span-4 flex flex-col items-center lg:items-start text-center lg:text-left gap-3">
+                              <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0">
+                                {rayon.logoUrl ? (
+                                  <Image
+                                    src={rayon.logoUrl}
+                                    alt={rayon.nama}
+                                    fill
+                                    className="object-contain"
+                                    sizes="112px"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                                    <Compass className="w-9 h-9 text-blue-600 dark:text-yellow-400" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-blue-600 dark:text-yellow-400 block">
+                                  {rayon.fakultas || "Tingkat Fakultas"}
+                                </span>
+                                <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight mt-1">
+                                  {rayon.nama}
+                                </h3>
+                                {rayon.deskripsi && (
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed line-clamp-3">
+                                    {rayon.deskripsi}
+                                  </p>
+                                )}
+                              </div>
+                              <Link
+                                href={`/rayon/${rayonSlug}`}
+                                className="mt-auto inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-yellow-400 hover:underline"
+                              >
+                                <span>Profil Lengkap Rayon</span>
+                                <ArrowUpRight className="w-3.5 h-3.5" />
+                              </Link>
+                            </div>
 
-                  <div className="mt-6 flex justify-end">
-                    <Link
-                      href="/rayon"
-                      className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-600 dark:text-yellow-400 hover:underline"
-                    >
-                      <span>Lihat Seluruh Rayon ({allRayon.length})</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </div>
+                            {/* Detail: Alamat, Prodi, BPH */}
+                            <div className="lg:col-span-8 grid sm:grid-cols-2 gap-3.5">
+                              <div className="sm:col-span-2 rounded-xl bg-white dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 p-4">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mb-1.5">
+                                  <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-yellow-400" />
+                                  Alamat Basecamp
+                                </span>
+                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-line">
+                                  {rayon.alamat || "Alamat belum dicantumkan."}
+                                </p>
+                                {rayon.mapUrl && (
+                                  <a
+                                    href={rayon.mapUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-blue-600 dark:text-yellow-400 hover:underline"
+                                  >
+                                    Buka di Google Maps
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                              </div>
+
+                              <div className="rounded-xl bg-white dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 p-4">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mb-2">
+                                  <GraduationCap className="w-3.5 h-3.5 text-blue-600 dark:text-yellow-400" />
+                                  Program Studi
+                                </span>
+                                {prodiList.length > 0 ? (
+                                  <ul className="space-y-1.5">
+                                    {prodiList.map((p, i) => (
+                                      <li
+                                        key={i}
+                                        className="flex items-start gap-2 text-xs sm:text-[13px] font-medium text-slate-700 dark:text-slate-200"
+                                      >
+                                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-yellow-400 shrink-0" />
+                                        <span>{p}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="text-xs text-slate-400">Belum dicantumkan.</p>
+                                )}
+                              </div>
+
+                              <div className="rounded-xl bg-white dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 p-4">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mb-2">
+                                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-yellow-400" />
+                                  Pengurus Inti (BPH)
+                                </span>
+                                {bph.length > 0 ? (
+                                  <ul className="space-y-2">
+                                    {bph.map((b) => (
+                                      <li key={b.jabatan} className="flex items-center gap-2.5">
+                                        <span className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-[11px] font-black text-blue-700 dark:text-yellow-400 shrink-0">
+                                          {String(b.nama).trim().charAt(0).toUpperCase()}
+                                        </span>
+                                        <span className="min-w-0">
+                                          <span className="block text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                                            {b.jabatan}
+                                          </span>
+                                          <span className="block text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">
+                                            {b.nama}
+                                          </span>
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="text-xs text-slate-400">Belum dicantumkan.</p>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        </AnimatePresence>
+
+                        {/* Navigasi: panah, titik, dan tautan semua rayon */}
+                        <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={goPrev}
+                              aria-label="Rayon sebelumnya"
+                              className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-yellow-400 flex items-center justify-center transition-colors"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <div className="flex items-center gap-1.5 max-w-[190px] sm:max-w-none overflow-x-auto no-scrollbar">
+                              {allRayon.map((_, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => {
+                                    setRayonSpotIdx(i);
+                                    setRayonSpotPaused(true);
+                                  }}
+                                  aria-label={`Rayon ${i + 1}`}
+                                  className={`h-2 rounded-full transition-all shrink-0 ${
+                                    i === safeIdx
+                                      ? "w-6 bg-blue-600 dark:bg-yellow-400"
+                                      : "w-2 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={goNext}
+                              aria-label="Rayon berikutnya"
+                              className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-yellow-400 flex items-center justify-center transition-colors"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                            <span className="text-[11px] font-mono text-slate-400">
+                              {safeIdx + 1}/{total}
+                            </span>
+                          </div>
+                          <Link
+                            href="/rayon"
+                            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-600 dark:text-yellow-400 hover:underline"
+                          >
+                            <span>Lihat Seluruh Rayon ({total})</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </motion.div>
               ) : (
                 <motion.div

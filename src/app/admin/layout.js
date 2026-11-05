@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
@@ -217,8 +218,15 @@ export default function AdminLayout({ children }) {
         >
           {!isSidebarCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-xs text-amber-300 border border-blue-400/30 shadow-sm shrink-0">
-                PK
+              <div className="relative w-9 h-9 shrink-0">
+                <Image
+                  src="/logo.png"
+                  alt="Logo PMII"
+                  fill
+                  sizes="36px"
+                  className="object-contain"
+                  priority
+                />
               </div>
               <div className="min-w-0">
                 <h2 className="text-xs font-black tracking-wider text-white uppercase truncate">
