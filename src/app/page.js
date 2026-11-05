@@ -1580,13 +1580,8 @@ export default function Home() {
                         </h3>
                       </Link>
 
-                      <p className="text-[10px] sm:text-[11px] text-slate-400 line-clamp-1 mb-1.5 sm:mb-2">
+                      <p className="text-[10px] sm:text-[11px] text-slate-400 line-clamp-1 mb-3 sm:mb-4">
                         Oleh: {buku.penulis || "Tim Kaderisasi PMII"}
-                      </p>
-
-                      <p className="hidden sm:block text-xs text-slate-400/90 line-clamp-2 leading-relaxed mb-3 sm:mb-4">
-                        {buku.deskripsi ||
-                          "Baca modul dan materi pergerakan dalam format buku interaktif 3D."}
                       </p>
                     </div>
 

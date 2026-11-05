@@ -902,11 +902,6 @@ export default function BacaanKaderPage() {
                         <span>• {book.tebalHalaman}</span>
                       )}
                     </div>
-
-                    <p className="hidden sm:block text-xs text-slate-600 dark:text-slate-300 line-clamp-2 md:line-clamp-3 mt-2.5 leading-relaxed">
-                      {book.deskripsi ||
-                        "Klik untuk membuka buku dengan animasi lembaran halaman interaktif."}
-                    </p>
                   </div>
                 </div>
 
