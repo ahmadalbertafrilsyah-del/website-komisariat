@@ -608,8 +608,8 @@ export default function AlumniClient() {
                 Jejaring Profesional & Korps Alumni
               </div>
               <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-[1.08] text-white">
-                Direktori & Jejaring{" "}
-                <span className="text-amber-400">Alumni PMII</span>
+                Database{" "}
+                <span className="text-amber-400">Alumni</span>
               </h1>
               <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
                 Pangkalan data lintas-angkatan yang memetakan distribusi profesi,
@@ -647,7 +647,7 @@ export default function AlumniClient() {
               </div>
               <div className="bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3">
                 <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-                  Bidang Profesi
+                  Profesi
                 </p>
                 <p className="text-2xl sm:text-3xl font-black text-amber-400 mt-0.5">
                   {uniqueProfesiCount}
@@ -661,63 +661,6 @@ export default function AlumniClient() {
                   {Math.max(0, listRayon.length - 1)}
                 </p>
               </div>
-            </div>
-          </div>
-
-          {/* Jenjang Kaderisasi Quick Filter Strip */}
-          <div className="mt-8 pt-6 border-t border-slate-800/80">
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-[11px] font-mono uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                <Award size={13} className="text-amber-400" /> Filter Cepat Riwayat
-                Jenjang Kaderisasi Alumni
-              </span>
-              {selectedJenjang !== "Semua" && (
-                <button
-                  onClick={() => {
-                    setSelectedJenjang("Semua");
-                    setCurrentPage(1);
-                  }}
-                  className="text-[11px] font-mono text-amber-400 hover:underline"
-                >
-                  Reset ({selectedJenjang}) ✕
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-              {JENJANG_KEYS.map((key) => {
-                const isSelected = selectedJenjang === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setSelectedJenjang(isSelected ? "Semua" : key);
-                      setCurrentPage(1);
-                    }}
-                    className={`text-left px-3 py-2.5 rounded-xl border transition-all ${
-                      isSelected
-                        ? "bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-600/20"
-                        : "bg-slate-900/80 hover:bg-slate-900 text-slate-200 border-slate-800 hover:border-slate-700"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`text-[10px] font-mono font-bold uppercase tracking-wider ${
-                          isSelected ? "text-amber-300" : "text-slate-400"
-                        }`}
-                      >
-                        {key}
-                      </span>
-                      <Award
-                        size={12}
-                        className={isSelected ? "text-amber-300" : "text-slate-500"}
-                      />
-                    </div>
-                    <p className="text-lg sm:text-xl font-black mt-0.5 leading-none">
-                      {jenjangCounts[key] || 0}
-                    </p>
-                  </button>
-                );
-              })}
             </div>
           </div>
         </div>
@@ -838,20 +781,6 @@ export default function AlumniClient() {
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* Filter summary bar */}
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <span>
-              Menampilkan{" "}
-              <strong className="text-slate-900 dark:text-white">
-                {filteredData.length}
-              </strong>{" "}
-              alumni terdaftar
-            </span>
-            <span className="text-[11px] font-mono text-blue-600 dark:text-amber-400">
-              Klik kartu alumni untuk membuka Dossier Profesi & Riwayat Kaderisasi →
-            </span>
           </div>
         </div>
       </section>

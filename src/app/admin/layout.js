@@ -49,11 +49,11 @@ const ADMIN_MENU_GROUPS = [
     ],
   },
   {
-    groupLabel: "Basis Data Organisasi",
+    groupLabel: "Database Organisasi",
     items: [
       {
         href: "/admin/struktur",
-        label: "Struktur Pengurus",
+        label: "Database Pengurus",
         shortLabel: "Pengurus",
         icon: ShieldCheck,
       },
@@ -65,19 +65,19 @@ const ADMIN_MENU_GROUPS = [
       },
       {
         href: "/admin/rayon",
-        label: "Data Pangkalan Rayon",
+        label: "Database Rayon",
         shortLabel: "Rayon",
         icon: Compass,
       },
       {
         href: "/admin/alumni",
-        label: "Direktori Alumni",
+        label: "Database Alumni",
         shortLabel: "Alumni",
         icon: GraduationCap,
       },
       {
         href: "/admin/apresiasi",
-        label: "Apresiasi & Prestasi",
+        label: "Apresiasi Kader",
         shortLabel: "Apresiasi",
         icon: Trophy,
       },
@@ -88,13 +88,13 @@ const ADMIN_MENU_GROUPS = [
     items: [
       {
         href: "/admin/buku",
-        label: "Bahan Bacaan Kader",
+        label: "Perpustakaan",
         shortLabel: "Bacaan",
         icon: BookOpen,
       },
       {
         href: "/admin/berita",
-        label: "Berita & Artikel",
+        label: "Kabar Pergerakan",
         shortLabel: "Berita",
         icon: Newspaper,
       },
@@ -361,22 +361,6 @@ export default function AdminLayout({ children }) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href="/bacaan"
-              target="_blank"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-800 text-xs font-bold transition"
-            >
-              <BookOpen size={13} /> Perpustakaan
-            </Link>
-            <Link
-              href="/"
-              target="_blank"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-blue-600 text-slate-200 hover:text-white border border-slate-800 text-xs font-bold transition"
-            >
-              <span className="hidden sm:inline">Lihat Website</span>
-              <span className="sm:hidden">Web</span>
-              <ExternalLink size={12} />
-            </Link>
             <button
               onClick={() => setDrawerOpen(true)}
               className="lg:hidden p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition"

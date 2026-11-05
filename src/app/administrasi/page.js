@@ -565,15 +565,11 @@ export default function AdministrasiPage() {
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] font-mono font-bold uppercase tracking-widest text-[#facc15] mb-4">
-                <FolderArchive size={14} className="text-[#facc15]" />
                 <span>BIROKRASI & TATA KELOLA ORGANISASI</span>
               </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-[1.12] mb-4">
                 Arsip Digital
               </h1>
-              <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
-                Satu pintu transparansi administrasi PK. PMII Sunan Ampel Malang — mencakup registrasi surat masuk/keluar, matriks program kerja, produk hukum, LPJ, inventaris barang, hingga pengajuan surat rekomendasi SK & RTAR.
-              </p>
             </div>
 
             {/* Live Telemetry Strip */}

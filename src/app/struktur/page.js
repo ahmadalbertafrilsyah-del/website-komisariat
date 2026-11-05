@@ -289,19 +289,7 @@ export default function StrukturPage() {
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-yellow-400/40 to-transparent" />
 
         <div className="relative z-10 max-w-7xl mx-auto">
-          {/* Top Metadata Strip */}
-          <div className="flex items-center justify-between py-2.5 mb-6 md:mb-8 border-b border-white/10 text-[11px] font-mono text-slate-400">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-yellow-400" />
-              <span className="uppercase tracking-widest text-slate-200">
-                DIREKTORI & BAGAN ORGANISASI
-              </span>
-            </div>
-            <span className="hidden sm:inline text-yellow-400 font-semibold">
-              {selectedPeriode ? `MASA KHIDMAT ${String(selectedPeriode.periode).toUpperCase()}` : "MASA KHIDMAT BERJALAN"}
-            </span>
-          </div>
-
+          
           <div className="grid lg:grid-cols-12 gap-8 items-end">
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 text-xs font-mono uppercase tracking-wider mb-4">
@@ -309,14 +297,8 @@ export default function StrukturPage() {
                 <span>Nakhoda Pergerakan Komisariat</span>
               </div>
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] mb-4">
-                Struktur{" "}
-                <span className="text-yellow-400">Kepengurusan.</span>
+                Struktur Kepengurusan{" "}
               </h1>
-              <p className="text-slate-300/90 text-sm sm:text-base lg:text-lg max-w-2xl leading-relaxed">
-                Sinergi Badan Pengurus Harian (BPH), Biro, dan Lembaga Semi
-                Otonom dalam menggerakkan roda kaderisasi, intelektualitas, dan
-                pengabdian.
-              </p>
 
               {/* Pemilih Periode Kepengurusan */}
               {periodeList.length > 0 && (
@@ -352,37 +334,37 @@ export default function StrukturPage() {
             <div className="lg:col-span-5 grid grid-cols-3 gap-2.5 sm:gap-3">
               <div className="bg-white/[0.04] border border-white/10 rounded-xl p-3.5 sm:p-4">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-yellow-400 block mb-1">
-                  /01 UNIT
+                  UNIT
                 </span>
                 <p className="text-2xl sm:text-3xl font-black text-white tabular-nums leading-none">
                   {statsSummary.totalUnit}
                 </p>
                 <span className="text-[11px] text-slate-400 mt-1 block truncate">
-                  Biro & Divisi
+                  Bagan
                 </span>
               </div>
 
               <div className="bg-white/[0.04] border border-white/10 rounded-xl p-3.5 sm:p-4">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-yellow-400 block mb-1">
-                  /02 PERSONIL
+                  PERSONIL
                 </span>
                 <p className="text-2xl sm:text-3xl font-black text-white tabular-nums leading-none">
                   {statsSummary.totalPersonil}
                 </p>
                 <span className="text-[11px] text-slate-400 mt-1 block truncate">
-                  Pengurus Aktif
+                  Pengurus
                 </span>
               </div>
 
               <div className="bg-white/[0.04] border border-white/10 rounded-xl p-3.5 sm:p-4">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-yellow-400 block mb-1">
-                  /03 BASIS
+                  RAYON
                 </span>
                 <p className="text-2xl sm:text-3xl font-black text-white tabular-nums leading-none">
                   {statsSummary.totalRayon || "-"}
                 </p>
                 <span className="text-[11px] text-slate-400 mt-1 block truncate">
-                  Rayon Terwakili
+                  Rayon Aktif
                 </span>
               </div>
             </div>

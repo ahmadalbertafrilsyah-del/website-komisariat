@@ -1,5 +1,12 @@
 "use client";
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -227,7 +234,29 @@ function SafeBookCover({ src, title, kategori }) {
   );
 }
 
+function subscribeDesktopMedia(callback) {
+  if (typeof window === "undefined") return () => {};
+  const mql = window.matchMedia("(min-width: 1024px)");
+  mql.addEventListener("change", callback);
+  return () => mql.removeEventListener("change", callback);
+}
+
+function getDesktopSnapshot() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
+function getDesktopServerSnapshot() {
+  return false;
+}
+
 export default function BacaanKaderPage() {
+  const isDesktop = useSyncExternalStore(
+    subscribeDesktopMedia,
+    getDesktopSnapshot,
+    getDesktopServerSnapshot
+  );
+
   const [loading, setLoading] = useState(true);
   const [books, setBooks] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -382,8 +411,10 @@ export default function BacaanKaderPage() {
 
   const totalPages = virtualPages.length;
 
-  // Kalkulasi spread halaman aktif (2 Halaman Terbuka vs 1 Halaman)
+  // Kalkulasi spread halaman aktif (Hanya 2 Halaman jika di Layar Laptop/Desktop >= 1024px dan spreadMode === "double")
+  // Di HP/Mobile, frame SELALU 1 lembar (single page) pas proporsional tanpa gepeng.
   const isDoubleSpread =
+    isDesktop &&
     spreadMode === "double" &&
     currentSheetIndex > 0 &&
     currentSheetIndex < totalPages - 1;
@@ -402,7 +433,7 @@ export default function BacaanKaderPage() {
       const step = dir > 0 ? 1 : -1;
       setFlipDirection(step);
       setCurrentSheetIndex((prev) => {
-        if (spreadMode === "double") {
+        if (isDoubleSpread) {
           if (step > 0) {
             // Balik ke lembaran berikutnya
             if (prev === 0) return Math.min(1, totalPages - 1);
@@ -427,7 +458,7 @@ export default function BacaanKaderPage() {
         }
       });
     },
-    [spreadMode, totalPages]
+    [isDoubleSpread, totalPages]
   );
 
   // Keyboard arrow navigation when reader modal is open
@@ -926,19 +957,10 @@ export default function BacaanKaderPage() {
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-950/80 border border-blue-800/70 text-amber-400 text-[11px] font-mono uppercase tracking-widest mb-4">
-                <Sparkles size={13} />
                 Pustaka Digital & Modul Kaderisasi
               </div>
               <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-[1.08] text-white">
                 Pustaka Kader</h1>
-              <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
-                Koleksi modul kaderisasi, buku saku Aswaja, filsafat gerakan,
-                dan bahan suplemen intelektual yang dilengkapi{" "}
-                <strong className="text-amber-300">
-                  Mode Membuka Buku Interaktif (3D Flipbook)
-                </strong>
-                .
-              </p>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 w-full lg:w-auto shrink-0">

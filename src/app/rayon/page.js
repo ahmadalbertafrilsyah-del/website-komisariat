@@ -185,17 +185,6 @@ export default function RayonPage() {
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-yellow-400/40 to-transparent" />
 
         <div className="relative z-10 max-w-7xl mx-auto">
-          <div className="flex items-center justify-between py-2.5 mb-6 md:mb-8 border-b border-white/10 text-[11px] font-mono text-slate-400">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-yellow-400" />
-              <span className="uppercase tracking-widest text-slate-200">
-                PETA BASIS PERGERAKAN TINGKAT FAKULTAS
-              </span>
-            </div>
-            <span className="hidden sm:inline text-yellow-400 font-semibold">
-              PK. PMII SUNAN AMPEL MALANG
-            </span>
-          </div>
 
           <div className="grid lg:grid-cols-12 gap-8 items-end">
             <div className="lg:col-span-7">
@@ -204,7 +193,7 @@ export default function RayonPage() {
                 <span>Ujung Tombak Kaderisasi</span>
               </div>
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] mb-4">
-                Basis <span className="text-yellow-400">Rayon.</span>
+                Database <span className="text-yellow-400">Rayon</span>
               </h1>
               <p className="text-slate-300/90 text-sm sm:text-base lg:text-lg max-w-2xl leading-relaxed">
                 Kenali lebih dekat ruang dialektika, sekretariat, pengurus inti
@@ -223,7 +212,7 @@ export default function RayonPage() {
                   {rayonData.length}
                 </p>
                 <span className="text-[11px] text-slate-400 mt-1 block truncate">
-                  Basis Aktif
+                  Rayon Aktif
                 </span>
               </div>
               <div className="bg-white/[0.04] border border-white/10 rounded-xl p-3.5 sm:p-4">

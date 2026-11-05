@@ -66,22 +66,22 @@ const ThemeToggle = ({ className = "" }) => {
 
 const DATABASE_ITEMS = [
   {
+    label: "Rayon",
+    sub: "Database Rayon",
+    href: "/rayon",
+    icon: Compass,
+  },
+  {
     label: "Anggota",
-    sub: "Direktori Kader Aktif",
+    sub: "Database Anggota",
     href: "/anggota",
     icon: Users,
   },
   {
     label: "Alumni",
-    sub: "Jejaring IKA & Alumni",
+    sub: "Database Alumni",
     href: "/alumni",
     icon: GraduationCap,
-  },
-  {
-    label: "Rayon",
-    sub: "Basis Tingkat Fakultas",
-    href: "/rayon",
-    icon: Compass,
   },
 ];
 

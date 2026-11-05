@@ -970,22 +970,6 @@ export default function Home() {
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-yellow-400/40 to-transparent" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          {/* Top Editorial Bar */}
-          <div className="flex items-center justify-between py-3 mb-6 md:mb-10 border-b border-white/10 text-[11px] font-mono text-slate-300/80">
-            <div className="flex items-center gap-2 truncate">
-              <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 shrink-0" />
-              <span className="tracking-wider uppercase truncate">
-                PK. PMII {globalConfig?.komisariatName || "SUNAN AMPEL MALANG"}
-              </span>
-            </div>
-            <div className="hidden sm:flex items-center gap-4 text-slate-400 shrink-0">
-              <span>DZIKIR • FIKIR • AMAL SHOLEH</span>
-              <span className="text-white/20">|</span>
-              <span className="text-yellow-400 font-semibold">
-                SLIDE 0{currentSlide + 1} / 0{HERO_SLIDES.length}
-              </span>
-            </div>
-          </div>
 
           <AnimatePresence mode="wait">
             <motion.div
@@ -1540,11 +1524,6 @@ export default function Home() {
                 <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">
                   Bacaan Kader & Modul Pergerakan
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-300/85 mt-2 leading-relaxed">
-                  Akses materi wajib MAPABA, PKD, SIG, SKP, kajian Aswaja, hingga
-                  modul analisis sosial dengan pengalaman membuka lembaran buku
-                  fisik 3D langsung dari HP maupun laptop.
-                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 shrink-0">
@@ -1670,31 +1649,6 @@ export default function Home() {
                   </motion.div>
                 );
               })}
-            </div>
-
-            {/* Footer Strip Fitur Ruang Baca */}
-            <div className="mt-7 pt-5 border-t border-slate-800/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-400">
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400" />
-                  <span>Animasi Balik Lembaran Kertas 3D</span>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400" />
-                  <span>Mode Kertas Sepia, Putih & Malam</span>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400" />
-                  <span>Nyaman Dibaca di HP (Swipe) & Laptop</span>
-                </span>
-              </div>
-              <Link
-                href="/bacaan"
-                className="font-mono font-bold text-yellow-400 hover:underline inline-flex items-center gap-1 shrink-0"
-              >
-                <span>LIHAT SEMUA KOLEKSI ({allBuku.length})</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
             </div>
           </div>
         </div>
@@ -2219,9 +2173,6 @@ export default function Home() {
                   Alur & Jenjang Kaderisasi
                 </h3>
               </div>
-              <p className="text-xs sm:text-sm text-slate-400 max-w-md">
-                Pilih rumpun kaderisasi (Formal PMII / KOPRI) dan klik tahapan di bawah untuk melihat fokus pembentukan dan kompetensi kader.
-              </p>
             </div>
 
             {/* TAB SWITCHER RUMPUN KADERISASI */}
@@ -2464,8 +2415,7 @@ export default function Home() {
                 Apa Kata Mereka Tentang PMII?
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5 max-w-2xl">
-                Kesan, refleksi, dan pandangan dari para kader, alumni, serta
-                keluarga besar PK. PMII Sunan Ampel Malang.
+                Kesan, refleksi, dan pandangan dari para kader, alumni, serta keluarga besar PMII Sunan Ampel Malang.
               </p>
             </div>
 

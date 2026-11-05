@@ -232,18 +232,11 @@ export default function Berita() {
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
               <div className="max-w-2xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-950/80 border border-blue-800/70 text-amber-400 text-[11px] font-mono uppercase tracking-widest mb-4">
-                  <Sparkles size={13} />
                   Pers & Dialektika Intelektual
                 </div>
                 <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-[1.08] text-white">
-                  Kabar & Wacana{" "}
-                  <span className="text-amber-400">Pergerakan</span>
+                  Kabar Pergerakan{" "}
                 </h1>
-                <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
-                  &ldquo;Menanam Gagasan, Menuai Perubahan.&rdquo; Ruang
-                  dialektika kader—tempat wacana dirawat, opini intelektual
-                  disuarakan, dan kabar organisasi didokumentasikan.
-                </p>
 
                 {externalLink && (
                   <div className="mt-5">

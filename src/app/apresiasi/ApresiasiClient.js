@@ -356,17 +356,11 @@ export default function ApresiasiClient() {
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-950/80 border border-blue-800/70 text-amber-400 text-[11px] font-mono uppercase tracking-widest mb-4">
-                <Sparkles size={13} />
                 Hall of Fame & Karya Intelektual
               </div>
               <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-[1.08] text-white">
-                <span className="text-amber-400">Prestasi Kader</span>
+                <span className="text-white">Prestasi Kader</span>
               </h1>
-              <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
-                Arsip pencapaian akademik, publikasi jurnal ilmiah, kejuaraan
-                lomba, serta rekam jejak kaderisasi sahabat/i PK. PMII Sunan
-                Ampel Malang.
-              </p>
             </div>
 
             {/* Live Telemetry Strip */}
