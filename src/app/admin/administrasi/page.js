@@ -1225,10 +1225,10 @@ export default function AdminAdministrasi() {
 
                 {activeTab === "persuratan" && (
                   <>
-                    <th className="py-3.5 px-4">Nomor Surat</th>
+                    <th className="py-3.5 px-4 min-w-[280px]">Nomor Surat</th>
                     <th className="py-3.5 px-4">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</th>
                     <th className="py-3.5 px-4">Tanggal</th>
-                    <th className="py-3.5 px-4">Perihal</th>
+                    <th className="py-3.5 px-4 w-32 text-center">Perihal</th>
                     <th className="py-3.5 px-4 max-w-[200px]">Keterangan</th>
                   </>
                 )}
@@ -1309,7 +1309,11 @@ export default function AdminAdministrasi() {
 
                       {activeTab === "persuratan" && (
                         <>
-                          <td className="py-3 px-4 font-mono font-bold text-blue-700">{item.nomorSurat || "-"}</td>
+                          <td className="py-3 px-4">
+                            <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                              {item.nomorSurat || "-"}
+                            </span>
+                          </td>
                           <td className="py-3 px-4 text-slate-700 font-medium">
                             {activeSuratTab === "masuk" ? (item.asalSurat || "-") : (item.tujuanSurat || "-")}
                           </td>
@@ -1322,7 +1326,11 @@ export default function AdminAdministrasi() {
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 px-4 font-bold text-slate-900">{item.hal || item.perihalSurat || "-"}</td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="inline-block px-2 py-0.5 rounded text-[11px] font-mono font-bold uppercase text-slate-800 bg-slate-100 border border-slate-200">
+                              {item.hal || item.perihalSurat || "-"}
+                            </span>
+                          </td>
                           <td className="py-3 px-4 text-slate-500 truncate max-w-[180px]">{item.ket || item.deskripsiSurat || "-"}</td>
                         </>
                       )}

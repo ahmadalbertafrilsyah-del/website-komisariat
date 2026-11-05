@@ -935,16 +935,16 @@ export default function AdministrasiPage() {
                   {/* DESKTOP / TABLE VIEW (Default on md+, or when viewMode === 'table') */}
                   <div className={`${viewMode === "card" ? "hidden" : viewMode === "table" ? "block" : "hidden md:block"} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden`}>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[900px]">
+                      <table className="w-full text-left border-collapse min-w-[1040px]">
                         <thead>
                           <tr className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            <th className="py-3.5 px-4 w-14 text-center font-bold">No</th>
-                            <th className="py-3.5 px-4 w-64 font-bold">Nomor Surat</th>
-                            <th className="py-3.5 px-4 w-56 font-bold">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</th>
-                            <th className="py-3.5 px-3 w-28 text-center font-bold">Tgl Buat</th>
-                            <th className="py-3.5 px-3 w-28 text-center font-bold">{activeSuratTab === "masuk" ? "Tgl Terima" : "Tgl Kirim"}</th>
-                            <th className="py-3.5 px-4 font-bold">Perihal / Hal</th>
-                            <th className="py-3.5 px-4 w-52 font-bold">Keterangan</th>
+                            <th className="py-3.5 px-4 w-12 text-center font-bold">No</th>
+                            <th className="py-3.5 px-4 w-[310px] font-bold whitespace-nowrap">Nomor Surat</th>
+                            <th className="py-3.5 px-4 w-60 font-bold">{activeSuratTab === "masuk" ? "Asal Surat" : "Tujuan Surat"}</th>
+                            <th className="py-3.5 px-3 w-28 text-center font-bold whitespace-nowrap">Tgl Buat</th>
+                            <th className="py-3.5 px-3 w-28 text-center font-bold whitespace-nowrap">{activeSuratTab === "masuk" ? "Tgl Terima" : "Tgl Kirim"}</th>
+                            <th className="py-3.5 px-3 w-32 text-center font-bold whitespace-nowrap">Perihal / Hal</th>
+                            <th className="py-3.5 px-4 min-w-[180px] font-bold">Keterangan</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs sm:text-sm">
@@ -958,9 +958,9 @@ export default function AdministrasiPage() {
                                 className="hover:bg-blue-50/40 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
                               >
                                 <td className="py-3 px-4 text-center font-mono font-bold text-slate-400">{realNumber}</td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 whitespace-nowrap">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-1 rounded border border-blue-200/60 dark:border-blue-900">
+                                    <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded border border-blue-200/60 dark:border-blue-900 whitespace-nowrap">
                                       {docItem.nomorSurat || "-"}
                                     </span>
                                     <button
@@ -985,10 +985,12 @@ export default function AdministrasiPage() {
                                 <td className="py-3 px-3 text-center font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
                                   {activeSuratTab === "masuk" ? formatDisplayDate(docItem.tglDatang) : formatDisplayDate(docItem.tglKirim)}
                                 </td>
-                                <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-100 text-xs leading-relaxed">
-                                  {docItem.hal || docItem.perihalSurat || "-"}
+                                <td className="py-3 px-3 text-center whitespace-nowrap">
+                                  <span className="inline-block px-2 py-0.5 rounded text-[11px] font-mono font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+                                    {docItem.hal || docItem.perihalSurat || "-"}
+                                  </span>
                                 </td>
-                                <td className="py-3 px-4 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                                <td className="py-3 px-4 text-xs text-slate-500 dark:text-slate-400">
                                   {docItem.ket || docItem.deskripsiSurat || "-"}
                                 </td>
                               </tr>
