@@ -1,10 +1,15 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import {
+  EkoranSheet,
+  downloadArticleAsEkoranPng,
+  printEkoranClean,
+} from "@/components/EkoranPMII";
 import {
   ArrowLeft,
   Calendar,
@@ -27,6 +32,9 @@ import {
   Share2,
   Type,
   ArrowUpRight,
+  Download,
+  Printer,
+  BookOpen,
 } from "lucide-react";
 
 import { db } from "@/lib/firebase";
@@ -158,6 +166,53 @@ export default function BeritaClient({ initialArticle }) {
   // Reader Comfort State ("sm" | "md" | "lg")
   const [fontScale, setFontScale] = useState("md");
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Mode E-Koran ("web" | "ekoran") & Download State
+  const [readingMode, setReadingMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get("mode") === "ekoran") return "ekoran";
+    }
+    return "web";
+  });
+  const [isDownloadingEkoran, setIsDownloadingEkoran] = useState(false);
+  const ekoranSheetRef = useRef(null);
+
+  const handleDownloadEkoranPng = async () => {
+    setIsDownloadingEkoran(true);
+    try {
+      if (readingMode !== "ekoran") {
+        setReadingMode("ekoran");
+      }
+      if (article) {
+        const cleanTitle = createSlug(article?.title || "berita-pmii").slice(0, 45);
+        await downloadArticleAsEkoranPng(
+          {
+            ...article,
+            rawDate: article.createdAt,
+          },
+          `E-Koran-PMII-${cleanTitle}.png`
+        );
+      }
+    } catch (err) {
+      console.error("Gagal mengunduh gambar E-Koran:", err);
+      alert("Gagal mengunduh gambar E-Koran: " + (err?.message || "Silakan coba lagi."));
+    } finally {
+      setIsDownloadingEkoran(false);
+    }
+  };
+
+  const handlePrintEkoranPdf = async () => {
+    if (readingMode !== "ekoran") {
+      setReadingMode("ekoran");
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    if (ekoranSheetRef.current) {
+      printEkoranClean(ekoranSheetRef.current, article?.title);
+    } else {
+      window.print();
+    }
+  };
 
   // Related Articles State
   const [relatedArticles, setRelatedArticles] = useState([]);
@@ -454,8 +509,88 @@ export default function BeritaClient({ initialArticle }) {
           </button>
         </div>
 
-        {/* ARTICLE CARD CONTAINER */}
-        <article className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm">
+        {/* BAR PILIHAN MODE BACA WEB vs E-KORAN PMII (BISA DI-DOWNLOAD) */}
+        <div className="mb-5 bg-[#020617] text-white rounded-2xl p-3 sm:p-4 border border-slate-800 shadow-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 print:hidden">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/40 text-[#facc15] flex items-center justify-center shrink-0">
+              <Newspaper size={18} />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#facc15] block">
+                FITUR E-KORAN
+              </span>
+              <p className="text-xs sm:text-sm font-bold text-white">
+                Baca dalam tampilan E-Koran
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setReadingMode("web")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+                  readingMode === "web"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <BookOpen size={13} /> Artikel Web
+              </button>
+              <button
+                type="button"
+                onClick={() => setReadingMode("ekoran")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+                  readingMode === "ekoran"
+                    ? "bg-[#facc15] text-slate-950 shadow-xs"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <Newspaper size={13} /> Mode E-Koran
+              </button>
+            </div>
+
+            <button
+              type="button"
+              disabled={isDownloadingEkoran}
+              onClick={handleDownloadEkoranPng}
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold inline-flex items-center gap-1.5 transition shadow-xs disabled:opacity-60"
+            >
+              {isDownloadingEkoran ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Download size={14} />
+              )}
+              <span>PNG</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrintEkoranPdf}
+              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold inline-flex items-center gap-1.5 transition border border-slate-700"
+              title="Cetak atau Simpan sebagai PDF"
+            >
+              <Printer size={14} /> PDF
+            </button>
+          </div>
+        </div>
+
+        {readingMode === "ekoran" ? (
+          <div className="mb-8">
+            <EkoranSheet
+              article={{
+                ...article,
+                date: publishDate,
+                rawDate: article.createdAt,
+                readTime,
+              }}
+              sheetRef={ekoranSheetRef}
+            />
+          </div>
+        ) : (
+          /* ARTICLE CARD CONTAINER */
+          <article className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm">
           {/* Top Navigation & Category */}
           <header className="mb-6 sm:mb-8">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -835,6 +970,7 @@ export default function BeritaClient({ initialArticle }) {
             </div>
           </div>
         </article>
+        )}
 
         {/* RELATED ARTICLES ("BACA JUGA") */}
         {relatedArticles.length > 0 && (

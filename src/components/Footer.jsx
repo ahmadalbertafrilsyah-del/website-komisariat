@@ -15,6 +15,7 @@ import {
   ExternalLink,
   ShieldCheck,
 } from "lucide-react";
+import { PwaFooterInstallCard } from "@/components/PwaRegister";
 
 const DEFAULT_CONFIG = {
   logoText: "PMII",
@@ -79,38 +80,40 @@ export default function Footer() {
         {/* ================= MAIN 4-COLUMN ARCHITECTURAL GRID ================= */}
         <div className="py-12 sm:py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
           {/* Kolom 1: Identitas Organisasi & Sekretariat (4 cols) */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0">
-                <img
-                  src="/logo.png"
-                  alt="Logo PMII"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div>
-                <div className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-yellow-400 mb-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-                  <span>Pengurus Komisariat</span>
+          <div className="lg:col-span-4 flex flex-col justify-between gap-6">
+            <div className="space-y-5">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0">
+                  <img
+                    src="/logo.png"
+                    alt="Logo PMII"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
-                <h3 className="text-base sm:text-lg font-black text-white tracking-tight leading-none">
-                  PMII{" "}
-                  <span className="text-yellow-400">
-                    {(config.komisariatName || "SUNAN AMPEL MALANG").replace(
-                      "Komisariat ",
-                      ""
-                    )}
-                  </span>
-                </h3>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Pergerakan Mahasiswa Islam Indonesia
-                </p>
+                <div>
+                  <div className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-yellow-400 mb-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                    <span>Pengurus Komisariat</span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-white tracking-tight leading-none">
+                    PMII{" "}
+                    <span className="text-yellow-400">
+                      {(config.komisariatName || "SUNAN AMPEL MALANG").replace(
+                        "Komisariat ",
+                        ""
+                      )}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Pergerakan Mahasiswa Islam Indonesia
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <p className="text-xs sm:text-sm leading-relaxed text-slate-400 whitespace-pre-line">
-              {config.tentangPmii}
-            </p>
+              <p className="text-xs sm:text-sm leading-relaxed text-slate-400 whitespace-pre-line">
+                {config.tentangPmii}
+              </p>
+            </div>
 
             {/* Kartu Lokasi Sekretariat */}
             <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800/90 flex items-start gap-3">
@@ -192,54 +195,58 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Kolom 4: Jam Operasional & Portal Kaderisasi (3 cols) */}
-          <div className="lg:col-span-3 space-y-4">
-            <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest text-yellow-400 mb-5">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Jam Layanan Sekretariat</span>
+          {/* Kolom 4: Jam Operasional, Portal Kaderisasi & Install Aplikasi (3 cols) */}
+          <div className="lg:col-span-3 flex flex-col justify-between gap-2.5">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest text-yellow-400 mb-3.5">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Jam Layanan Sekretariat</span>
+              </div>
+
+              <div className="rounded-xl bg-slate-900/80 border border-slate-800 px-3.5 py-2.5 space-y-1.5">
+                <div className="flex items-center justify-between text-xs pb-1.5 border-b border-slate-800">
+                  <span className="text-slate-400 font-medium">Senin – Jumat</span>
+                  <span className="font-mono font-bold text-slate-200">
+                    {config.jamSeninJumat}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-medium">Sabtu – Minggu</span>
+                  <span className="font-mono font-bold text-yellow-400">
+                    {config.jamSabtuMinggu}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 space-y-3">
-              <div className="flex items-center justify-between text-xs pb-2.5 border-b border-slate-800">
-                <span className="text-slate-400 font-medium">Senin – Jumat</span>
-                <span className="font-mono font-bold text-slate-200">
-                  {config.jamSeninJumat}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-medium">Sabtu – Minggu</span>
-                <span className="font-mono font-bold text-yellow-400">
-                  {config.jamSabtuMinggu}
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-gradient-to-br from-blue-950/60 via-slate-900 to-slate-900 border border-blue-500/25 p-4">
-              <div className="flex items-center justify-between mb-1.5">
+            <div className="rounded-xl bg-gradient-to-br from-blue-950/60 via-slate-900 to-slate-900 border border-blue-500/25 p-3">
+              <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-400">
                   Kaderisasi Terbuka
                 </span>
-                <ShieldCheck className="w-4 h-4 text-yellow-400" />
+                <ShieldCheck className="w-3.5 h-3.5 text-yellow-400" />
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed mb-3">
-                Bergabung bersama keluarga besar PK. PMII Sunan Ampel Malang atau
-                baca modul materi kaderisasi secara daring.
+              <p className="text-[11px] text-slate-300 leading-snug mb-2.5">
+                Bergabung bersama PK. PMII Sunan Ampel Malang atau baca modul kaderisasi daring.
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <Link
                   href="/pendaftaran"
-                  className="text-center bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black py-2 px-3 rounded-lg text-[11px] transition"
+                  className="text-center bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black py-1.5 px-2.5 rounded-lg text-[11px] transition"
                 >
                   Daftar Kader
                 </Link>
                 <Link
                   href="/bacaan"
-                  className="text-center bg-white/5 hover:bg-white/10 text-white border border-white/15 font-bold py-2 px-3 rounded-lg text-[11px] transition"
+                  className="text-center bg-white/5 hover:bg-white/10 text-white border border-white/15 font-bold py-1.5 px-2.5 rounded-lg text-[11px] transition"
                 >
                   Baca Buku 3D
                 </Link>
               </div>
             </div>
+
+            {/* Kotak Install Aplikasi PMII (Sejajar & Pas dengan Kolom Footer) */}
+            <PwaFooterInstallCard />
           </div>
         </div>
 

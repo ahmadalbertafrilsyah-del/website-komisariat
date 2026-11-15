@@ -1,18 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Share2, X, PlusSquare } from "lucide-react";
+import { Download, Share2, X, PlusSquare, CheckCircle2 } from "lucide-react";
+
+let globalDeferredPrompt = null;
+const listeners = new Set();
+
+function notifyListeners() {
+  listeners.forEach((fn) => fn(globalDeferredPrompt));
+}
 
 export default function PwaRegister() {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isIos, setIsIos] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [showIosGuide, setShowIosGuide] = useState(false);
-
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     // 1. Register Service Worker
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+    if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker
           .register("/sw.js")
@@ -20,7 +23,31 @@ export default function PwaRegister() {
       });
     }
 
-    // 2. Deteksi status standalone & perangkat iOS
+    // 2. Simpan event beforeinstallprompt agar bisa dipanggil dari tombol di Footer
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      globalDeferredPrompt = e;
+      notifyListeners();
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+    };
+  }, []);
+
+  return null;
+}
+
+export function PwaFooterInstallCard() {
+  const [deferredPrompt, setDeferredPrompt] = useState(globalDeferredPrompt);
+  const [isIos, setIsIos] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showIosGuide, setShowIosGuide] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const checkStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       window.navigator.standalone === true;
@@ -30,34 +57,22 @@ export default function PwaRegister() {
       /iphone|ipad|ipod/.test(ua) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-    // Cek apakah user pernah menutup banner dalam 7 hari terakhir
-    const dismissedAt = localStorage.getItem("pmii_pwa_dismissed");
-    const isDismissedRecently =
-      dismissedAt && Date.now() - Number(dismissedAt) < 7 * 24 * 60 * 60 * 1000;
-
-    // 3. Tangkap beforeinstallprompt (Android / Chrome)
-    const handleBeforeInstall = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      if (!isDismissedRecently && !checkStandalone) {
-        setShowPrompt(true);
-      }
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
-
-    // Tampilkan prompt setelah delay agar tidak mengganggu pengguna saat pertama kali buka
-    const initTimer = setTimeout(() => {
+    const timer = setTimeout(() => {
       setIsStandalone(checkStandalone);
       setIsIos(isIosDevice);
-      if (isIosDevice && !isDismissedRecently && !checkStandalone) {
-        setShowPrompt(true);
+      if (globalDeferredPrompt) {
+        setDeferredPrompt(globalDeferredPrompt);
       }
-    }, 3500);
+    }, 0);
+
+    const listener = (promptEvent) => {
+      setDeferredPrompt(promptEvent);
+    };
+    listeners.add(listener);
 
     return () => {
-      clearTimeout(initTimer);
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      clearTimeout(timer);
+      listeners.delete(listener);
     };
   }, []);
 
@@ -67,78 +82,55 @@ export default function PwaRegister() {
       return;
     }
 
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+    const activePrompt = deferredPrompt || globalDeferredPrompt;
+    if (activePrompt) {
+      activePrompt.prompt();
+      const { outcome } = await activePrompt.userChoice;
       if (outcome === "accepted") {
-        setShowPrompt(false);
+        globalDeferredPrompt = null;
+        setDeferredPrompt(null);
       }
-      setDeferredPrompt(null);
     } else {
-      // Fallback jika browser lain di HP
-      alert("Untuk memasang aplikasi ini di layar utama: Buka menu titik tiga browser (⋮) lalu pilih 'Tambahkan ke Layar Utama' / 'Install App'.");
+      alert(
+        "Untuk memasang aplikasi ini di layar utama: Buka menu titik tiga browser (⋮) lalu pilih 'Tambahkan ke Layar Utama' / 'Install App'."
+      );
     }
   };
 
-  const handleDismiss = () => {
-    setShowPrompt(false);
-    setShowIosGuide(false);
-    localStorage.setItem("pmii_pwa_dismissed", String(Date.now()));
-  };
-
-  if (isStandalone) return null;
-
   return (
     <>
-      {/* Banner / Floating Button Install PWA */}
-      {showPrompt && (
-        <aside
-          role="region"
-          aria-label="Pemberitahuan Pemasangan Aplikasi"
-          className="fixed bottom-20 sm:bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-50 bg-[#091122]/95 backdrop-blur-md text-white border border-yellow-400/40 rounded-2xl p-4 shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-300"
-        >
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-yellow-400/15 border border-yellow-400/30 flex items-center justify-center shrink-0 text-yellow-400">
-              <Download className="w-5 h-5 animate-bounce" />
+      <div className="rounded-xl bg-[#091122] text-white border border-yellow-400/30 p-3 shadow-sm">
+        <div className="flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-yellow-400/15 border border-yellow-400/30 flex items-center justify-center shrink-0 text-yellow-400">
+              <Download className="w-4 h-4" />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-white tracking-tight">
-                  Pasang Aplikasi PMII
-                </h4>
-                <button
-                  type="button"
-                  onClick={handleDismiss}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg"
-                  aria-label="Tutup"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
-                Akses cepat baca buku & berita pergerakan langsung dari layar utama HP / iOS Anda.
+            <div className="min-w-0">
+              <h4 className="text-xs font-bold text-white tracking-tight truncate">
+                Pasang Aplikasi PMII
+              </h4>
+              <p className="text-[10px] text-slate-400 truncate">
+                Akses cepat di layar utama HP / iOS
               </p>
-              <div className="flex items-center gap-2 mt-3">
-                <button
-                  type="button"
-                  onClick={handleInstallClick}
-                  className="px-3.5 py-1.5 bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Install Sekarang</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDismiss}
-                  className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200"
-                >
-                  Nanti Saja
-                </button>
-              </div>
             </div>
           </div>
-        </aside>
-      )}
+
+          {isStandalone ? (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Terpasang
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-[11px] rounded-lg shadow-sm transition-all active:scale-95 inline-flex items-center gap-1 shrink-0"
+            >
+              <Download className="w-3 h-3" />
+              <span>Install</span>
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Modal Panduan Khusus iOS (Safari iPhone / iPad) */}
       {showIosGuide && (
@@ -168,7 +160,8 @@ export default function PwaRegister() {
                   1
                 </span>
                 <span>
-                  Tekan tombol <strong>Bagikan (Share)</strong> <Share2 className="w-3.5 h-3.5 inline mx-1 text-blue-400" /> di bilah bawah browser Safari Anda.
+                  Tekan tombol <strong>Bagikan (Share)</strong>{" "}
+                  <Share2 className="w-3.5 h-3.5 inline mx-1 text-blue-400" /> di bilah bawah browser Safari Anda.
                 </span>
               </li>
               <li className="flex items-start gap-2.5">
@@ -176,7 +169,9 @@ export default function PwaRegister() {
                   2
                 </span>
                 <span>
-                  Gulir ke bawah dan pilih <strong>Tambahkan ke Layar Utama (Add to Home Screen)</strong> <PlusSquare className="w-3.5 h-3.5 inline mx-1 text-emerald-400" />.
+                  Gulir ke bawah dan pilih{" "}
+                  <strong>Tambahkan ke Layar Utama (Add to Home Screen)</strong>{" "}
+                  <PlusSquare className="w-3.5 h-3.5 inline mx-1 text-emerald-400" />.
                 </span>
               </li>
             </ol>
@@ -194,4 +189,3 @@ export default function PwaRegister() {
     </>
   );
 }
-
